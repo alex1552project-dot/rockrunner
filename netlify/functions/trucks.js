@@ -1,14 +1,10 @@
-// RockRunner Logistics - Trucks API
-// Manage truck fleet roster
-
 const { MongoClient, ObjectId } = require('mongodb');
 
-let cachedDb = null;
+let cachedClient = null;
 async function connectToDatabase() {
-  if (cachedDb) return cachedDb;
-  const client = await MongoClient.connect(process.env.MONGODB_URI);
-  cachedDb = client.db('gotrocks');
-  return cachedDb;
+  if (cachedClient) return cachedClient.db('gotrocks');
+  cachedClient = await MongoClient.connect(process.env.MONGODB_URI);
+  return cachedClient.db('gotrocks');
 }
 
 const headers = {
@@ -29,40 +25,33 @@ exports.handler = async (event) => {
 
     // GET - List all trucks
     if (event.httpMethod === 'GET') {
-      const trucks = await collection.find({ active: true }).sort({ truckNumber: 1 }).toArray();
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, trucks })
-      };
+      const trucks = await collection.find({ active: { $ne: false } }).sort({ truckNumber: 1 }).toArray();
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, trucks }) };
     }
 
     // POST - Add new truck
     if (event.httpMethod === 'POST') {
-      const { truckNumber, capacity, type, notes } = JSON.parse(event.body);
+      const body = JSON.parse(event.body || '{}');
+      const { truckNumber, capacity, type, notes } = body;
       
       if (!truckNumber || !capacity) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Truck number and capacity required' })
-        };
+        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Truck number and capacity required' }) };
       }
 
-      // Check for duplicate
-      const existing = await collection.findOne({ truckNumber, active: true });
+      // Check for duplicate - case insensitive
+      const existing = await collection.findOne({ 
+        truckNumber: { $regex: new RegExp(`^${truckNumber.trim()}$`, 'i') }, 
+        active: { $ne: false } 
+      });
+      
       if (existing) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Truck number already exists' })
-        };
+        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: `Truck "${truckNumber}" already exists in roster` }) };
       }
 
       const truck = {
-        truckNumber,
+        truckNumber: truckNumber.trim(),
         capacity: parseFloat(capacity),
-        type: type || 'dump', // dump, end-dump, belly-dump, etc.
+        type: type || 'semi',
         notes: notes || '',
         active: true,
         createdAt: new Date(),
@@ -72,80 +61,48 @@ exports.handler = async (event) => {
       const result = await collection.insertOne(truck);
       truck._id = result.insertedId;
 
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify({ success: true, truck })
-      };
+      return { statusCode: 201, headers, body: JSON.stringify({ success: true, truck }) };
     }
 
     // PUT - Update truck
     if (event.httpMethod === 'PUT') {
-      const { id, truckNumber, capacity, type, notes, active } = JSON.parse(event.body);
+      const body = JSON.parse(event.body || '{}');
+      const { id, truckNumber, capacity, type, notes, active } = body;
       
       if (!id) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Truck ID required' })
-        };
+        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Truck ID required' }) };
       }
 
       const updateData = { updatedAt: new Date() };
-      if (truckNumber !== undefined) updateData.truckNumber = truckNumber;
+      if (truckNumber !== undefined) updateData.truckNumber = truckNumber.trim();
       if (capacity !== undefined) updateData.capacity = parseFloat(capacity);
       if (type !== undefined) updateData.type = type;
       if (notes !== undefined) updateData.notes = notes;
       if (active !== undefined) updateData.active = active;
 
-      await collection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: updateData }
-      );
+      await collection.updateOne({ _id: new ObjectId(id) }, { $set: updateData });
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, message: 'Truck updated' })
-      };
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Truck updated' }) };
     }
 
-    // DELETE - Deactivate truck (soft delete)
+    // DELETE - Deactivate truck
     if (event.httpMethod === 'DELETE') {
-      const { id } = JSON.parse(event.body);
+      const body = JSON.parse(event.body || '{}');
+      const { id } = body;
       
       if (!id) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Truck ID required' })
-        };
+        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Truck ID required' }) };
       }
 
-      await collection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { active: false, updatedAt: new Date() } }
-      );
+      await collection.updateOne({ _id: new ObjectId(id) }, { $set: { active: false, updatedAt: new Date() } });
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, message: 'Truck deactivated' })
-      };
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Truck removed' }) };
     }
 
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 
   } catch (error) {
     console.error('Trucks API error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Internal server error', message: error.message })
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: error.message || 'Server error' }) };
   }
 };
