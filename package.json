@@ -1,0 +1,8 @@
+{
+  "name": "rockrunner-logistics",
+  "version": "1.0.0",
+  "description": "RockRunner Logistics - Dispatch Management System",
+  "dependencies": {
+    "mongodb": "^6.3.0"
+  }
+}

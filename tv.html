@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RockRunner Logistics - Dispatch Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #C65D2A;
+            --accent: #6BB8D1;
+            --navy: #1E3A5F;
+            --bg-dark: #0A1218;
+            --bg-card: #141E28;
+            --text-primary: #FFFFFF;
+            --text-secondary: #8AA4B8;
+            --border: rgba(255,255,255,0.08);
+            --tc-color: #6BB8D1;
+            --yard-color: #FFC857;
+            --tgr-color: #4CAF50;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'DM Sans', sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text-primary); 
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #A04D20 100%);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+        }
+        .logo img { width: 100%; height: 100%; object-fit: cover; }
+        .brand h1 { font-size: 32px; font-weight: 800; }
+        .brand span { font-size: 16px; opacity: 0.9; }
+        .header-right {
+            text-align: right;
+        }
+        .current-date {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .current-time {
+            font-size: 48px;
+            font-weight: 800;
+            font-family: monospace;
+        }
+        
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 40px;
+            padding: 16px 40px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .legend-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+        .legend-dot.tc { background: var(--tc-color); }
+        .legend-dot.yard { background: var(--yard-color); }
+        .legend-dot.tgr { background: var(--tgr-color); }
+        
+        /* Calendar */
+        .calendar-container {
+            height: calc(100vh - 180px);
+            overflow: hidden;
+            padding: 20px 40px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 100px repeat(var(--truck-count, 3), 1fr);
+            height: 100%;
+            gap: 2px;
+            background: var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .time-column {
+            background: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+        }
+        .time-header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            background: var(--navy);
+        }
+        .time-slot {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
+        }
+        .time-slot.current-hour {
+            background: rgba(198,93,42,0.2);
+            color: var(--primary);
+        }
+        .truck-column {
+            background: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+        }
+        .truck-header {
+            height: 70px;
+            background: var(--navy);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+        }
+        .truck-header .capacity {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .schedule-cell {
+            flex: 1;
+            border-top: 1px solid var(--border);
+            padding: 6px;
+            display: flex;
+            align-items: stretch;
+        }
+        .schedule-cell.current-hour {
+            background: rgba(198,93,42,0.1);
+        }
+        
+        /* Delivery Card */
+        .delivery-card {
+            flex: 1;
+            background: var(--bg-dark);
+            border-radius: 10px;
+            padding: 12px 16px;
+            border-left: 6px solid var(--tc-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .delivery-card.tc { border-left-color: var(--tc-color); }
+        .delivery-card.yard { border-left-color: var(--yard-color); }
+        .delivery-card.tgr { border-left-color: var(--tgr-color); }
+        .delivery-customer {
+            font-weight: 700;
+            font-size: 18px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .delivery-details {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .delivery-tons {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-top: 6px;
+        }
+        
+        /* Empty Slot */
+        .empty-slot {
+            flex: 1;
+            border: 2px dashed rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            padding: 12px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border);
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .status-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .status-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .refresh-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .pulse {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--tgr-color);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-section">
+            <div class="logo">
+                <img src="logo.jpg" alt="RockRunner">
+            </div>
+            <div class="brand">
+                <h1>RockRunner Logistics</h1>
+                <span>Dispatch Board</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="current-date" id="currentDate">Tuesday, Feb 4</div>
+            <div class="current-time" id="currentTime">8:30 AM</div>
+        </div>
+    </header>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot tc"></div> T&C Materials</div>
+        <div class="legend-item"><div class="legend-dot yard"></div> Yard Sale</div>
+        <div class="legend-item"><div class="legend-dot tgr"></div> Texas Got Rocks</div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar-container">
+        <div class="calendar-grid" id="calendarGrid">
+            <!-- Loaded dynamically -->
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="status-value" id="totalDeliveries">0</span>
+            <span class="status-label">Deliveries Today</span>
+        </div>
+        <div class="status-item">
+            <span class="status-value" id="totalTons">0</span>
+            <span class="status-label">Total Tons</span>
+        </div>
+        <div class="status-item">
+            <span class="status-value" id="activeTrucks">0</span>
+            <span class="status-label">Active Trucks</span>
+        </div>
+        <div class="refresh-indicator">
+            <div class="pulse"></div>
+            <span>Live • Auto-refresh every 30s</span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/.netlify/functions';
+        let trucks = [];
+        let deliveries = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateClock();
+            setInterval(updateClock, 1000);
+            loadData();
+            setInterval(loadData, 30000); // Refresh every 30 seconds
+        });
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric'
+            });
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        async function loadData() {
+            try {
+                // Load trucks
+                const trucksRes = await fetch(`${API_BASE}/trucks`);
+                const trucksData = await trucksRes.json();
+                trucks = trucksData.trucks || [];
+
+                // Load today's deliveries
+                const today = new Date().toISOString().split('T')[0];
+                const deliveriesRes = await fetch(`${API_BASE}/dispatch?date=${today}`);
+                const deliveriesData = await deliveriesRes.json();
+                deliveries = deliveriesData.deliveries || [];
+
+                renderCalendar();
+                updateStats();
+            } catch (err) {
+                console.error('Error loading data:', err);
+            }
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const hours = [6,7,8,9,10,11,12,13,14,15,16,17];
+            const currentHour = new Date().getHours();
+            
+            grid.style.setProperty('--truck-count', trucks.length || 1);
+
+            let html = '';
+
+            // Time column
+            html += '<div class="time-column">';
+            html += '<div class="time-header">TIME</div>';
+            hours.forEach(hour => {
+                const isCurrentHour = hour === currentHour;
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour > 12 ? hour - 12 : hour;
+                html += `<div class="time-slot ${isCurrentHour ? 'current-hour' : ''}">${displayHour} ${ampm}</div>`;
+            });
+            html += '</div>';
+
+            // Truck columns
+            trucks.forEach(truck => {
+                html += '<div class="truck-column">';
+                html += `<div class="truck-header">${truck.truckNumber}<span class="capacity">${truck.capacity} tons</span></div>`;
+                
+                hours.forEach(hour => {
+                    const isCurrentHour = hour === currentHour;
+                    const delivery = deliveries.find(d => 
+                        d.truckId === truck._id && 
+                        d.hour === hour &&
+                        d.status !== 'cancelled'
+                    );
+                    
+                    html += `<div class="schedule-cell ${isCurrentHour ? 'current-hour' : ''}">`;
+                    
+                    if (delivery) {
+                        const sourceClass = delivery.source === 'T&C Materials' ? 'tc' : 
+                                          delivery.source === 'Yard Sale' ? 'yard' : 'tgr';
+                        html += `
+                            <div class="delivery-card ${sourceClass}">
+                                <div class="delivery-customer">${delivery.customer || 'Delivery'}</div>
+                                <div class="delivery-details">${delivery.material || ''} → ${delivery.city || ''}</div>
+                                <div class="delivery-tons">${delivery.tons || 0} tons</div>
+                            </div>
+                        `;
+                    } else {
+                        html += '<div class="empty-slot"></div>';
+                    }
+                    
+                    html += '</div>';
+                });
+                
+                html += '</div>';
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function updateStats() {
+            const activeDeliveries = deliveries.filter(d => d.status !== 'cancelled');
+            document.getElementById('totalDeliveries').textContent = activeDeliveries.length;
+            document.getElementById('totalTons').textContent = activeDeliveries.reduce((sum, d) => sum + (d.tons || 0), 0).toFixed(1);
+            
+            const trucksWithDeliveries = new Set(activeDeliveries.map(d => d.truckId));
+            document.getElementById('activeTrucks').textContent = trucksWithDeliveries.size;
+        }
+    </script>
+</body>
+</html>
