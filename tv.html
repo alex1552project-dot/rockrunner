@@ -3,423 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RockRunner Logistics - Dispatch Board</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <title>RockRunner - Dispatch Board</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #C65D2A;
-            --accent: #6BB8D1;
-            --navy: #1E3A5F;
-            --bg-dark: #0A1218;
-            --bg-card: #141E28;
-            --text-primary: #FFFFFF;
-            --text-secondary: #8AA4B8;
-            --border: rgba(255,255,255,0.08);
-            --tc-color: #6BB8D1;
-            --yard-color: #FFC857;
-            --tgr-color: #4CAF50;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: 'DM Sans', sans-serif; 
-            background: var(--bg-dark); 
-            color: var(--text-primary); 
-            min-height: 100vh;
-            overflow: hidden;
-        }
-        
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, var(--primary) 0%, #A04D20 100%);
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        .logo {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            overflow: hidden;
-            background: white;
-        }
-        .logo img { width: 100%; height: 100%; object-fit: cover; }
-        .brand h1 { font-size: 32px; font-weight: 800; }
-        .brand span { font-size: 16px; opacity: 0.9; }
-        .header-right {
-            text-align: right;
-        }
-        .current-date {
-            font-size: 28px;
-            font-weight: 700;
-        }
-        .current-time {
-            font-size: 48px;
-            font-weight: 800;
-            font-family: monospace;
-        }
-        
-        /* Legend */
-        .legend {
-            display: flex;
-            gap: 40px;
-            padding: 16px 40px;
-            background: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            justify-content: center;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 18px;
-            font-weight: 500;
-        }
-        .legend-dot {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-        }
-        .legend-dot.tc { background: var(--tc-color); }
-        .legend-dot.yard { background: var(--yard-color); }
-        .legend-dot.tgr { background: var(--tgr-color); }
-        
-        /* Calendar */
-        .calendar-container {
-            height: calc(100vh - 180px);
-            overflow: hidden;
-            padding: 20px 40px;
-        }
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: 100px repeat(var(--truck-count, 3), 1fr);
-            height: 100%;
-            gap: 2px;
-            background: var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-        }
-        .time-column {
-            background: var(--bg-card);
-            display: flex;
-            flex-direction: column;
-        }
-        .time-header {
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: var(--text-secondary);
-            font-weight: 600;
-            background: var(--navy);
-        }
-        .time-slot {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            border-top: 1px solid var(--border);
-        }
-        .time-slot.current-hour {
-            background: rgba(198,93,42,0.2);
-            color: var(--primary);
-        }
-        .truck-column {
-            background: var(--bg-card);
-            display: flex;
-            flex-direction: column;
-        }
-        .truck-header {
-            height: 70px;
-            background: var(--navy);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 20px;
-        }
-        .truck-header .capacity {
-            font-size: 14px;
-            color: var(--accent);
-            font-weight: 500;
-        }
-        .schedule-cell {
-            flex: 1;
-            border-top: 1px solid var(--border);
-            padding: 6px;
-            display: flex;
-            align-items: stretch;
-        }
-        .schedule-cell.current-hour {
-            background: rgba(198,93,42,0.1);
-        }
-        
-        /* Delivery Card */
-        .delivery-card {
-            flex: 1;
-            background: var(--bg-dark);
-            border-radius: 10px;
-            padding: 12px 16px;
-            border-left: 6px solid var(--tc-color);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        .delivery-card.tc { border-left-color: var(--tc-color); }
-        .delivery-card.yard { border-left-color: var(--yard-color); }
-        .delivery-card.tgr { border-left-color: var(--tgr-color); }
-        .delivery-customer {
-            font-weight: 700;
-            font-size: 18px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .delivery-details {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-top: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .delivery-tons {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--accent);
-            margin-top: 6px;
-        }
-        
-        /* Empty Slot */
-        .empty-slot {
-            flex: 1;
-            border: 2px dashed rgba(255,255,255,0.1);
-            border-radius: 10px;
-        }
-        
-        /* Status Bar */
-        .status-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-card);
-            padding: 12px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 1px solid var(--border);
-        }
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .status-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        .status-label {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        .refresh-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-        .pulse {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--tgr-color);
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
+        :root{--primary:#C65D2A;--accent:#6BB8D1;--navy:#1E3A5F;--bg-dark:#0A1218;--bg-card:#141E28;--bg-hover:#1C2832;--text-primary:#FFF;--text-secondary:#8AA4B8;--border:rgba(255,255,255,0.08);--tc-color:#6BB8D1;--yard-color:#FFC857;--tgr-color:#4CAF50}
+        *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:var(--bg-dark);color:var(--text-primary);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+        .header{background:linear-gradient(135deg,var(--primary),#A04D20);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+        .logo-section{display:flex;align-items:center;gap:12px}.logo{width:45px;height:45px;border-radius:10px;overflow:hidden;background:#fff}.logo img{width:100%;height:100%;object-fit:cover}
+        .brand h1{font-size:22px;font-weight:800}.brand span{font-size:12px;opacity:.9}
+        .header-right{text-align:right}.current-date{font-size:18px;font-weight:600}.current-time{font-size:32px;font-weight:800;font-family:monospace}
+        .legend{display:flex;gap:24px;padding:8px 24px;background:var(--bg-card);border-bottom:1px solid var(--border);justify-content:center;flex-shrink:0}
+        .legend-item{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500}.legend-dot{width:12px;height:12px;border-radius:50%}.legend-dot.tc{background:var(--tc-color)}.legend-dot.yard{background:var(--yard-color)}.legend-dot.tgr{background:var(--tgr-color)}
+        .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+        .day-section{flex:3;display:flex;flex-direction:column;border-bottom:3px solid var(--primary);overflow:hidden}
+        .section-header{background:var(--navy);padding:8px 20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);flex-shrink:0;display:flex;justify-content:space-between}
+        .day-grid{flex:1;display:grid;grid-template-columns:60px repeat(var(--truck-count,1),1fr);overflow:auto}
+        .time-column{background:var(--bg-card);border-right:1px solid var(--border)}.time-header{height:36px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)}
+        .time-slot{height:50px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border)}.time-slot.current{background:rgba(198,93,42,.2);color:var(--primary)}
+        .truck-column{border-right:1px solid var(--border)}.truck-header{height:36px;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:13px;border-bottom:1px solid var(--border)}.truck-header .cap{font-size:10px;color:var(--accent);font-weight:500}
+        .schedule-cell{height:50px;border-bottom:1px solid var(--border);padding:2px}.schedule-cell.current{background:rgba(198,93,42,.1)}
+        .delivery-card{height:100%;background:var(--bg-hover);border-radius:5px;padding:4px 8px;border-left:3px solid var(--tc-color);position:relative;overflow:hidden}
+        .delivery-card.tc{border-left-color:var(--tc-color)}.delivery-card.yard{border-left-color:var(--yard-color)}.delivery-card.tgr{border-left-color:var(--tgr-color)}
+        .delivery-customer{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:40px}
+        .delivery-details{font-size:10px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .delivery-tons{font-size:10px;font-weight:700;color:var(--accent)}
+        .delivery-source{position:absolute;top:3px;right:3px;font-size:8px;padding:2px 5px;border-radius:3px;font-weight:700}
+        .delivery-card.tc .delivery-source{background:rgba(107,184,209,.2);color:var(--tc-color)}
+        .delivery-card.yard .delivery-source{background:rgba(255,200,87,.2);color:var(--yard-color)}
+        .delivery-card.tgr .delivery-source{background:rgba(76,175,80,.2);color:var(--tgr-color)}
+        .empty-slot{height:100%;border:1px dashed rgba(255,255,255,.1);border-radius:4px}
+        .week-section{flex:2;display:flex;flex-direction:column;overflow:hidden}
+        .week-grid{flex:1;display:flex;overflow:hidden}
+        .week-day{flex:1;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}.week-day:last-child{border-right:none}
+        .week-day-header{padding:8px;text-align:center;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0}
+        .week-day-header.today{background:rgba(198,93,42,.2)}
+        .week-day-name{font-size:10px;font-weight:700;color:var(--text-secondary)}.week-day-date{font-size:16px;font-weight:700;margin-top:2px}
+        .week-day-header.today .week-day-date{color:var(--primary)}
+        .week-day-content{flex:1;overflow-y:auto;padding:4px}
+        .week-delivery{margin-bottom:4px;padding:6px;border-radius:4px;font-size:10px;border-left:3px solid var(--tc-color);background:var(--bg-hover)}
+        .week-delivery.tc{border-left-color:var(--tc-color)}.week-delivery.yard{border-left-color:var(--yard-color)}.week-delivery.tgr{border-left-color:var(--tgr-color)}
+        .week-delivery-time{font-weight:700;color:var(--accent)}.week-delivery-customer{font-weight:600;margin-top:1px}.week-delivery-info{color:var(--text-secondary);font-size:9px;margin-top:1px}
+        .week-no-deliveries{text-align:center;padding:15px;color:var(--text-secondary);font-size:10px}
+        .status-bar{background:var(--bg-card);padding:8px 24px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);flex-shrink:0}
+        .stats{display:flex;gap:32px}.stat{text-align:center}.stat-value{font-size:24px;font-weight:800;color:var(--accent)}.stat-label{font-size:10px;color:var(--text-secondary);text-transform:uppercase}
+        .refresh-info{font-size:11px;color:var(--text-secondary)}
     </style>
 </head>
 <body>
-    <!-- Header -->
     <header class="header">
-        <div class="logo-section">
-            <div class="logo">
-                <img src="logo.jpg" alt="RockRunner">
-            </div>
-            <div class="brand">
-                <h1>RockRunner Logistics</h1>
-                <span>Dispatch Board</span>
-            </div>
-        </div>
-        <div class="header-right">
-            <div class="current-date" id="currentDate">Tuesday, Feb 4</div>
-            <div class="current-time" id="currentTime">8:30 AM</div>
-        </div>
+        <div class="logo-section"><div class="logo"><img src="logo.jpg" alt="RockRunner"></div><div class="brand"><h1>RockRunner Logistics</h1><span>Dispatch Board</span></div></div>
+        <div class="header-right"><div class="current-date" id="currentDate">Loading...</div><div class="current-time" id="currentTime">--:--</div></div>
     </header>
-
-    <!-- Legend -->
-    <div class="legend">
-        <div class="legend-item"><div class="legend-dot tc"></div> T&C Materials</div>
-        <div class="legend-item"><div class="legend-dot yard"></div> Yard Sale</div>
-        <div class="legend-item"><div class="legend-dot tgr"></div> Texas Got Rocks</div>
-    </div>
-
-    <!-- Calendar -->
-    <div class="calendar-container">
-        <div class="calendar-grid" id="calendarGrid">
-            <!-- Loaded dynamically -->
+    <div class="legend"><div class="legend-item"><div class="legend-dot tc"></div>T&C Materials</div><div class="legend-item"><div class="legend-dot yard"></div>Yard Sale</div><div class="legend-item"><div class="legend-dot tgr"></div>Texas Got Rocks</div></div>
+    <div class="main-content">
+        <div class="day-section">
+            <div class="section-header"><span>📅 TODAY'S SCHEDULE</span><span id="todayDate"></span></div>
+            <div class="day-grid" id="dayGrid"></div>
+        </div>
+        <div class="week-section">
+            <div class="section-header"><span>📆 THIS WEEK</span></div>
+            <div class="week-grid" id="weekGrid"></div>
         </div>
     </div>
-
-    <!-- Status Bar -->
     <div class="status-bar">
-        <div class="status-item">
-            <span class="status-value" id="totalDeliveries">0</span>
-            <span class="status-label">Deliveries Today</span>
-        </div>
-        <div class="status-item">
-            <span class="status-value" id="totalTons">0</span>
-            <span class="status-label">Total Tons</span>
-        </div>
-        <div class="status-item">
-            <span class="status-value" id="activeTrucks">0</span>
-            <span class="status-label">Active Trucks</span>
-        </div>
-        <div class="refresh-indicator">
-            <div class="pulse"></div>
-            <span>Live • Auto-refresh every 30s</span>
-        </div>
+        <div class="stats"><div class="stat"><div class="stat-value" id="totalDeliveries">0</div><div class="stat-label">Today's Deliveries</div></div><div class="stat"><div class="stat-value" id="totalTons">0</div><div class="stat-label">Total Tons</div></div><div class="stat"><div class="stat-value" id="activeTrucks">0</div><div class="stat-label">Active Trucks</div></div></div>
+        <div class="refresh-info">Auto-refresh: 30s | <span id="lastUpdate">--</span></div>
     </div>
+<script>
+let trucks=[],deliveries=[];
+const API='/.netlify/functions';
 
-    <script>
-        const API_BASE = '/.netlify/functions';
-        let trucks = [];
-        let deliveries = [];
+async function loadData(){
+    try{
+        const[tRes,dRes]=await Promise.all([fetch(API+'/trucks'),fetch(API+'/dispatch?startDate='+getWeekStart()+'&endDate='+getWeekEnd())]);
+        const tData=await tRes.json();const dData=await dRes.json();
+        trucks=tData.success?tData.trucks||[]:[];
+        deliveries=dData.deliveries||[];
+        renderDayView();renderWeekView();updateStats();
+    }catch(e){console.error(e)}
+}
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            updateClock();
-            setInterval(updateClock, 1000);
-            loadData();
-            setInterval(loadData, 30000); // Refresh every 30 seconds
+function toDS(d){return d.toISOString().split('T')[0]}
+function getWeekStart(){const d=new Date();d.setDate(d.getDate()-d.getDay());return toDS(d)}
+function getWeekEnd(){const d=new Date();d.setDate(d.getDate()+(6-d.getDay()));return toDS(d)}
+
+function renderDayView(){
+    const c=document.getElementById('dayGrid');
+    const today=toDS(new Date());
+    const currentHour=new Date().getHours();
+    const hrs=[6,7,8,9,10,11,12,13,14,15,16,17];
+    
+    document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    
+    let h='<div class="time-column"><div class="time-header">TIME</div>';
+    hrs.forEach(hr=>{
+        const isCurrent=hr===currentHour;
+        h+='<div class="time-slot'+(isCurrent?' current':'')+'">'+(hr>12?hr-12:hr)+' '+(hr>=12?'PM':'AM')+'</div>';
+    });
+    h+='</div>';
+    
+    if(!trucks.length){
+        h+='<div class="truck-column"><div class="truck-header">No Trucks</div>';
+        hrs.forEach(()=>h+='<div class="schedule-cell"></div>');
+        h+='</div>';
+    }else{
+        c.style.setProperty('--truck-count',trucks.length);
+        trucks.forEach(t=>{
+            h+='<div class="truck-column"><div class="truck-header">'+t.truckNumber+'<span class="cap">'+t.capacity+'T</span></div>';
+            hrs.forEach(hr=>{
+                const isCurrent=hr===currentHour;
+                const del=deliveries.find(d=>d.truckId===t._id&&d.date===today&&d.hour===hr&&d.status!=='cancelled');
+                h+='<div class="schedule-cell'+(isCurrent?' current':'')+'">';
+                if(del){
+                    const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
+                    const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'YARD':'TGR';
+                    h+='<div class="delivery-card '+sc+'"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.material||'')+' → '+(del.city||'')+'</div><div class="delivery-tons">'+(del.tons||0)+'T</div></div>';
+                }else{
+                    h+='<div class="empty-slot"></div>';
+                }
+                h+='</div>';
+            });
+            h+='</div>';
         });
+    }
+    c.innerHTML=h;
+}
 
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric'
+function renderWeekView(){
+    const c=document.getElementById('weekGrid');
+    const startOfWeek=new Date();startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
+    const today=toDS(new Date());
+    
+    let h='';
+    for(let i=0;i<7;i++){
+        const d=new Date(startOfWeek);d.setDate(d.getDate()+i);
+        const ds=toDS(d);
+        const isToday=ds===today;
+        const dayDels=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled').sort((a,b)=>a.hour-b.hour);
+        
+        h+='<div class="week-day"><div class="week-day-header'+(isToday?' today':'')+'"><div class="week-day-name">'+d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase()+'</div><div class="week-day-date">'+d.getDate()+'</div></div><div class="week-day-content">';
+        
+        if(dayDels.length){
+            dayDels.forEach(del=>{
+                const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
+                const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
+                const hr=del.hour>12?del.hour-12:del.hour;
+                const ampm=del.hour>=12?'PM':'AM';
+                h+='<div class="week-delivery '+sc+'"><div class="week-delivery-time">'+hr+' '+ampm+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-info">'+srcLabel+' • '+(del.tons||0)+'T • '+(del.truckNumber||'')+'</div></div>';
             });
-            document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
+        }else{
+            h+='<div class="week-no-deliveries">No deliveries</div>';
         }
+        h+='</div></div>';
+    }
+    c.innerHTML=h;
+}
 
-        async function loadData() {
-            try {
-                // Load trucks
-                const trucksRes = await fetch(`${API_BASE}/trucks`);
-                const trucksData = await trucksRes.json();
-                trucks = trucksData.trucks || [];
+function updateStats(){
+    const today=toDS(new Date());
+    const todayDels=deliveries.filter(d=>d.date===today&&d.status!=='cancelled');
+    document.getElementById('totalDeliveries').textContent=todayDels.length;
+    document.getElementById('totalTons').textContent=todayDels.reduce((s,d)=>s+(d.tons||0),0);
+    document.getElementById('activeTrucks').textContent=trucks.length;
+}
 
-                // Load today's deliveries
-                const today = new Date().toISOString().split('T')[0];
-                const deliveriesRes = await fetch(`${API_BASE}/dispatch?date=${today}`);
-                const deliveriesData = await deliveriesRes.json();
-                deliveries = deliveriesData.deliveries || [];
+function updateClock(){
+    const now=new Date();
+    document.getElementById('currentDate').textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+    document.getElementById('currentTime').textContent=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('lastUpdate').textContent='Updated '+now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
 
-                renderCalendar();
-                updateStats();
-            } catch (err) {
-                console.error('Error loading data:', err);
-            }
-        }
-
-        function renderCalendar() {
-            const grid = document.getElementById('calendarGrid');
-            const hours = [6,7,8,9,10,11,12,13,14,15,16,17];
-            const currentHour = new Date().getHours();
-            
-            grid.style.setProperty('--truck-count', trucks.length || 1);
-
-            let html = '';
-
-            // Time column
-            html += '<div class="time-column">';
-            html += '<div class="time-header">TIME</div>';
-            hours.forEach(hour => {
-                const isCurrentHour = hour === currentHour;
-                const ampm = hour >= 12 ? 'PM' : 'AM';
-                const displayHour = hour > 12 ? hour - 12 : hour;
-                html += `<div class="time-slot ${isCurrentHour ? 'current-hour' : ''}">${displayHour} ${ampm}</div>`;
-            });
-            html += '</div>';
-
-            // Truck columns
-            trucks.forEach(truck => {
-                html += '<div class="truck-column">';
-                html += `<div class="truck-header">${truck.truckNumber}<span class="capacity">${truck.capacity} tons</span></div>`;
-                
-                hours.forEach(hour => {
-                    const isCurrentHour = hour === currentHour;
-                    const delivery = deliveries.find(d => 
-                        d.truckId === truck._id && 
-                        d.hour === hour &&
-                        d.status !== 'cancelled'
-                    );
-                    
-                    html += `<div class="schedule-cell ${isCurrentHour ? 'current-hour' : ''}">`;
-                    
-                    if (delivery) {
-                        const sourceClass = delivery.source === 'T&C Materials' ? 'tc' : 
-                                          delivery.source === 'Yard Sale' ? 'yard' : 'tgr';
-                        html += `
-                            <div class="delivery-card ${sourceClass}">
-                                <div class="delivery-customer">${delivery.customer || 'Delivery'}</div>
-                                <div class="delivery-details">${delivery.material || ''} → ${delivery.city || ''}</div>
-                                <div class="delivery-tons">${delivery.tons || 0} tons</div>
-                            </div>
-                        `;
-                    } else {
-                        html += '<div class="empty-slot"></div>';
-                    }
-                    
-                    html += '</div>';
-                });
-                
-                html += '</div>';
-            });
-
-            grid.innerHTML = html;
-        }
-
-        function updateStats() {
-            const activeDeliveries = deliveries.filter(d => d.status !== 'cancelled');
-            document.getElementById('totalDeliveries').textContent = activeDeliveries.length;
-            document.getElementById('totalTons').textContent = activeDeliveries.reduce((sum, d) => sum + (d.tons || 0), 0).toFixed(1);
-            
-            const trucksWithDeliveries = new Set(activeDeliveries.map(d => d.truckId));
-            document.getElementById('activeTrucks').textContent = trucksWithDeliveries.size;
-        }
-    </script>
+loadData();
+updateClock();
+setInterval(updateClock,1000);
+setInterval(loadData,30000);
+</script>
 </body>
 </html>

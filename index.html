@@ -39,9 +39,10 @@
         .time-column{background:var(--bg-card);border-right:1px solid var(--border);position:sticky;left:0;z-index:10}.time-header{height:44px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted)}
         .time-slot{height:70px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-secondary)}
         .truck-column{border-right:1px solid var(--border)}.truck-header-cell{height:44px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;position:sticky;top:0;z-index:5}.truck-header-cell .cap{font-size:10px;color:var(--text-muted);margin-left:6px}
-        .schedule-cell{height:70px;border-bottom:1px solid var(--border);padding:3px}.schedule-cell:hover{background:rgba(198,93,42,.05)}
+        .schedule-cell{height:70px;border-bottom:1px solid var(--border);padding:3px;position:relative}.schedule-cell:hover{background:rgba(198,93,42,.05)}
+        .schedule-cell.blocked{background:rgba(255,107,107,.1)}.schedule-cell.blocked::after{content:'🚫';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.3}
         .delivery-card{background:var(--bg-hover);border-radius:6px;padding:6px 8px;height:100%;cursor:pointer;border-left:3px solid var(--tc-color);overflow:hidden;position:relative}.delivery-card.tc{border-left-color:var(--tc-color)}.delivery-card.yard{border-left-color:var(--yard-color)}.delivery-card.tgr{border-left-color:var(--tgr-color)}
-        .delivery-card:hover{background:var(--bg-card)}.delivery-customer{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:50px}.delivery-details{font-size:10px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.delivery-tons{font-size:10px;font-weight:600;color:var(--accent)}
+        .delivery-card:hover{background:var(--bg-card)}.delivery-customer{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:45px}.delivery-details{font-size:10px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.delivery-tons{font-size:10px;font-weight:600;color:var(--accent)}
         .delivery-source{position:absolute;top:4px;right:4px;font-size:8px;padding:2px 5px;border-radius:3px;font-weight:600;text-transform:uppercase}
         .delivery-card.tc .delivery-source{background:rgba(107,184,209,.2);color:var(--tc-color)}
         .delivery-card.yard .delivery-source{background:rgba(255,200,87,.2);color:var(--yard-color)}
@@ -55,17 +56,27 @@
         .month-header-cell{background:var(--bg-card);padding:10px;text-align:center;font-weight:600;font-size:12px;color:var(--text-secondary)}
         .month-day{background:var(--bg-dark);min-height:80px;padding:8px;cursor:pointer}.month-day:hover{background:var(--bg-card)}.month-day.other-month{opacity:.3}.month-day.today{background:rgba(198,93,42,.15)}
         .month-day-number{font-weight:600;font-size:13px;margin-bottom:4px}.month-day.today .month-day-number{background:var(--primary);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
-        .month-delivery-count{font-size:10px;padding:2px 5px;border-radius:3px;margin-top:2px;display:inline-block}.month-delivery-count.tc{background:rgba(107,184,209,.2);color:var(--tc-color)}.month-delivery-count.yard{background:rgba(255,200,87,.2);color:var(--yard-color)}.month-delivery-count.tgr{background:rgba(76,175,80,.2);color:var(--tgr-color)}
+        .month-summary{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+        .month-badge{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
+        .month-badge.tc{background:rgba(107,184,209,.2);color:var(--tc-color)}
+        .month-badge.yard{background:rgba(255,200,87,.2);color:var(--yard-color)}
+        .month-badge.tgr{background:rgba(76,175,80,.2);color:var(--tgr-color)}
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000}.modal-overlay.active{display:flex}
-        .modal{background:var(--bg-card);border-radius:16px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
+        .modal{background:var(--bg-card);border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
         .modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.modal-header h3{font-size:17px}.modal-close{width:32px;height:32px;border-radius:8px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;font-size:20px}.modal-close:hover{background:var(--bg-hover)}
         .modal-body{padding:20px}.form-group{margin-bottom:16px}.form-label{display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
         .form-input,.form-select{width:100%;padding:10px 14px;background:var(--bg-dark);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:inherit}.form-input:focus,.form-select:focus{outline:none;border-color:var(--primary)}
         .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
         .source-options{display:flex;gap:8px}.source-option{flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;cursor:pointer;text-align:center}.source-option:hover{border-color:var(--text-muted)}.source-option.selected{border-color:var(--primary);background:rgba(198,93,42,.1)}.source-option.tc.selected{border-color:var(--tc-color);background:rgba(107,184,209,.1)}.source-option.yard.selected{border-color:var(--yard-color);background:rgba(255,200,87,.1)}.source-option.tgr.selected{border-color:var(--tgr-color);background:rgba(76,175,80,.1)}
         .source-label{font-size:11px;font-weight:600;display:block;margin-top:4px;color:var(--text-primary)}.source-dot{width:14px;height:14px;border-radius:50%;margin:0 auto}
         .modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}.btn-danger{background:var(--danger);color:#fff}
-        .toast{position:fixed;bottom:24px;right:24px;padding:14px 20px;background:var(--bg-card);border-radius:10px;border-left:4px solid var(--success);box-shadow:0 8px 32px rgba(0,0,0,.3);transform:translateY(100px);opacity:0;transition:all .3s;z-index:2000}.toast.show{transform:translateY(0);opacity:1}.toast.error{border-left-color:var(--danger)}
+        .return-time-group{background:var(--bg-dark);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px}
+        .return-time-group.required{border-color:var(--warning)}
+        .return-time-label{font-size:11px;color:var(--warning);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+        .conflict-warning{background:rgba(255,107,107,.1);border:1px solid var(--danger);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--danger)}
+        .auto-calc-note{font-size:11px;color:var(--tgr-color);margin-top:8px;padding:8px;background:rgba(76,175,80,.1);border-radius:6px}
+        .toast{position:fixed;bottom:24px;right:24px;padding:14px 20px;background:var(--bg-card);border-radius:10px;border-left:4px solid var(--success);box-shadow:0 8px 32px rgba(0,0,0,.3);transform:translateY(100px);opacity:0;transition:all .3s;z-index:2000}.toast.show{transform:translateY(0);opacity:1}.toast.error{border-left-color:var(--danger)}.toast.warning{border-left-color:var(--warning)}
     </style>
 </head>
 <body>
@@ -92,15 +103,23 @@
             <div class="modal-header"><h3 id="deliveryModalTitle">Add Delivery</h3><button class="modal-close" onclick="closeDeliveryModal()">×</button></div>
             <div class="modal-body">
                 <input type="hidden" id="deliveryId">
-                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="deliveryDate"></div><div class="form-group"><label class="form-label">Time</label><select class="form-select" id="deliveryHour"><option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option><option value="9">9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option><option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option><option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option></select></div></div>
-                <div class="form-group"><label class="form-label">Truck</label><select class="form-select" id="deliveryTruck"></select></div>
                 <div class="form-group"><label class="form-label">Source</label><div class="source-options"><button type="button" class="source-option tc selected" onclick="selectSource('T&C Materials')"><div class="source-dot" style="background:var(--tc-color)"></div><span class="source-label">T&C Materials</span></button><button type="button" class="source-option yard" onclick="selectSource('Yard Sale')"><div class="source-dot" style="background:var(--yard-color)"></div><span class="source-label">Yard Sale</span></button><button type="button" class="source-option tgr" onclick="selectSource('Texas Got Rocks')"><div class="source-dot" style="background:var(--tgr-color)"></div><span class="source-label">Texas Got Rocks</span></button></div><input type="hidden" id="deliverySource" value="T&C Materials"></div>
-                <div class="form-group"><label class="form-label">Customer</label><input type="text" class="form-input" id="deliveryCustomer" placeholder="Customer name"></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Address</label><input type="text" class="form-input" id="deliveryAddress" placeholder="Street"></div><div class="form-group"><label class="form-label">City</label><input type="text" class="form-input" id="deliveryCity" placeholder="City"></div></div>
+                <div class="form-group"><label class="form-label">Truck</label><select class="form-select" id="deliveryTruck" onchange="checkConflicts()"></select></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="deliveryDate" onchange="checkConflicts()"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryHour" onchange="checkConflicts()"><option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option><option value="9">9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option><option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option><option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option></select></div></div>
+                <div class="return-time-group" id="returnTimeGroup">
+                    <div class="return-time-label" id="returnTimeLabel">⚠️ Return time required for scheduling</div>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:0"><label class="form-label">Return Time</label><select class="form-select" id="deliveryReturnHour" onchange="checkConflicts()"><option value="">Select return...</option><option value="7">7 AM</option><option value="8">8 AM</option><option value="9">9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option><option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option><option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option><option value="18">6 PM</option></select></div>
+                    </div>
+                    <div class="auto-calc-note" id="autoCalcNote" style="display:none">🚚 Return time auto-calculated based on delivery distance</div>
+                </div>
+                <div id="conflictWarning" class="conflict-warning" style="display:none"></div>
+                <div class="form-group" style="margin-top:16px"><label class="form-label">Customer</label><input type="text" class="form-input" id="deliveryCustomer" placeholder="Customer name"></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Address</label><input type="text" class="form-input" id="deliveryAddress" placeholder="Street address" onchange="calcReturnTime()"></div><div class="form-group"><label class="form-label">City</label><input type="text" class="form-input" id="deliveryCity" placeholder="City" onchange="calcReturnTime()"></div></div>
                 <div class="form-row"><div class="form-group"><label class="form-label">Material</label><select class="form-select" id="deliveryMaterial"><option value="">Select material...</option></select></div><div class="form-group"><label class="form-label">Tons</label><input type="number" class="form-input" id="deliveryTons" placeholder="0" step="0.5"></div></div>
                 <div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" id="deliveryNotes" placeholder="Special instructions"></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-danger" id="deleteDeliveryBtn" style="display:none" onclick="deleteDelivery()">Delete</button><button class="btn btn-secondary" onclick="closeDeliveryModal()">Cancel</button><button class="btn btn-primary" onclick="saveDelivery()">Save</button></div>
+            <div class="modal-footer"><button class="btn btn-danger" id="deleteDeliveryBtn" style="display:none" onclick="deleteDelivery()">Delete</button><button class="btn btn-secondary" onclick="closeDeliveryModal()">Cancel</button><button class="btn btn-primary" id="saveDeliveryBtn" onclick="saveDelivery()">Save</button></div>
         </div>
     </div>
     <div class="modal-overlay" id="truckModal">
@@ -119,11 +138,10 @@
 <script>
 let trucks=[],deliveries=[],materials=[],currentDate=new Date(),currentView='day';
 const API='/.netlify/functions';
+const YARD_ADDRESS='Conroe, TX';
 
 document.addEventListener('DOMContentLoaded',()=>{
-    loadTrucks();
-    loadMaterials();
-    updateDisplay();
+    loadTrucks();loadMaterials();updateDisplay();
     if(localStorage.getItem('sbCol')==='1')document.getElementById('sidebar').classList.add('collapsed');
 });
 
@@ -132,8 +150,8 @@ function toDS(d){return d.toISOString().split('T')[0]}
 function formatWeekRange(d){const s=new Date(d);s.setDate(s.getDate()-s.getDay());const e=new Date(s);e.setDate(e.getDate()+6);return s.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' - '+e.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
 
 function updateDisplay(){
-    if(currentView==='month') document.getElementById('currentDate').textContent=currentDate.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-    else if(currentView==='week') document.getElementById('currentDate').textContent=formatWeekRange(currentDate);
+    if(currentView==='month')document.getElementById('currentDate').textContent=currentDate.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    else if(currentView==='week')document.getElementById('currentDate').textContent=formatWeekRange(currentDate);
     else document.getElementById('currentDate').textContent=currentDate.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
     loadDeliveries();
 }
@@ -143,23 +161,8 @@ function nextPeriod(){if(currentView==='month')currentDate.setMonth(currentDate.
 function goToday(){currentDate=new Date();updateDisplay()}
 function setView(v){currentView=v;document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1)).classList.add('active');updateDisplay()}
 
-async function loadTrucks(){
-    try{
-        const r=await fetch(API+'/trucks');
-        const d=await r.json();
-        trucks=d.success?d.trucks||[]:[];
-    }catch(e){trucks=[];console.error(e)}
-    renderTrucks();renderCal();popTruckSel();
-}
-
-async function loadMaterials(){
-    try{
-        const r=await fetch(API+'/products');
-        const d=await r.json();
-        materials=d.success?d.materials||[]:[];
-        popMaterialSel();
-    }catch(e){materials=[];console.error(e)}
-}
+async function loadTrucks(){try{const r=await fetch(API+'/trucks');const d=await r.json();trucks=d.success?d.trucks||[]:[];}catch(e){trucks=[];console.error(e)}renderTrucks();renderCal();popTruckSel()}
+async function loadMaterials(){try{const r=await fetch(API+'/products');const d=await r.json();materials=d.success?d.materials||[]:[];popMaterialSel()}catch(e){materials=[];console.error(e)}}
 
 function renderTrucks(){
     const l=document.getElementById('truckList');
@@ -168,38 +171,28 @@ function renderTrucks(){
     l.innerHTML=trucks.map(t=>'<div class="truck-item"><div class="truck-header"><span class="truck-number">'+t.truckNumber+'</span><span class="truck-capacity">'+t.capacity+'T</span></div><div class="truck-type">'+(tp[t.type]||t.type||'Semi')+'</div><div class="truck-actions"><button class="truck-action-btn" onclick="event.stopPropagation();editTruck(\''+t._id+'\')">Edit</button><button class="truck-action-btn delete" onclick="event.stopPropagation();delTruck(\''+t._id+'\')">Remove</button></div></div>').join('');
 }
 
-function popTruckSel(){
-    const s=document.getElementById('deliveryTruck');
-    s.innerHTML=trucks.length?trucks.map(t=>'<option value="'+t._id+'" data-num="'+t.truckNumber+'">'+t.truckNumber+' ('+t.capacity+'T)</option>').join(''):'<option value="">Add truck first</option>';
-}
-
-function popMaterialSel(){
-    const s=document.getElementById('deliveryMaterial');
-    s.innerHTML='<option value="">Select material...</option>'+materials.map(m=>'<option value="'+m.name+'">'+m.name+'</option>').join('');
-}
+function popTruckSel(){const s=document.getElementById('deliveryTruck');s.innerHTML=trucks.length?trucks.map(t=>'<option value="'+t._id+'" data-num="'+t.truckNumber+'">'+t.truckNumber+' ('+t.capacity+'T)</option>').join(''):'<option value="">Add truck first</option>'}
+function popMaterialSel(){const s=document.getElementById('deliveryMaterial');s.innerHTML='<option value="">Select material...</option>'+materials.map(m=>'<option value="'+m.name+'">'+m.name+'</option>').join('')}
 
 async function loadDeliveries(){
     try{
         let st,en;
-        if(currentView==='month'){
-            st=toDS(new Date(currentDate.getFullYear(),currentDate.getMonth(),1));
-            en=toDS(new Date(currentDate.getFullYear(),currentDate.getMonth()+1,0));
-        }else if(currentView==='week'){
-            const s=new Date(currentDate);s.setDate(s.getDate()-s.getDay());
-            const e=new Date(s);e.setDate(e.getDate()+6);
-            st=toDS(s);en=toDS(e);
-        }else{st=en=toDS(currentDate)}
-        const r=await fetch(API+'/dispatch?startDate='+st+'&endDate='+en);
-        const d=await r.json();
-        deliveries=d.deliveries||[];
-    }catch(e){deliveries=[];console.error(e)}
-    renderCal();
+        if(currentView==='month'){st=toDS(new Date(currentDate.getFullYear(),currentDate.getMonth(),1));en=toDS(new Date(currentDate.getFullYear(),currentDate.getMonth()+1,0))}
+        else if(currentView==='week'){const s=new Date(currentDate);s.setDate(s.getDate()-s.getDay());const e=new Date(s);e.setDate(e.getDate()+6);st=toDS(s);en=toDS(e)}
+        else{st=en=toDS(currentDate)}
+        const r=await fetch(API+'/dispatch?startDate='+st+'&endDate='+en);const d=await r.json();deliveries=d.deliveries||[]
+    }catch(e){deliveries=[];console.error(e)}renderCal()
 }
 
-function renderCal(){
-    if(currentView==='month')renderMonth();
-    else if(currentView==='week')renderWeek();
-    else renderDay();
+function renderCal(){if(currentView==='month')renderMonth();else if(currentView==='week')renderWeek();else renderDay()}
+
+function getBlockedSlots(truckId,date){
+    const slots=[];
+    deliveries.filter(d=>d.truckId===truckId&&d.date===date&&d.status!=='cancelled').forEach(d=>{
+        const start=d.hour;const end=d.returnHour||d.hour+2;
+        for(let h=start;h<end;h++)slots.push(h);
+    });
+    return slots;
 }
 
 function renderDay(){
@@ -208,70 +201,50 @@ function renderDay(){
     let h='<div class="calendar-grid" style="--truck-count:'+(trucks.length||1)+'"><div class="time-column"><div class="time-header">Time</div>';
     hrs.forEach(hr=>{h+='<div class="time-slot">'+(hr>12?hr-12:hr)+' '+(hr>=12?'PM':'AM')+'</div>'});
     h+='</div>';
-    if(!trucks.length){
-        h+='<div class="truck-column"><div class="truck-header-cell">Add trucks →</div>';
-        hrs.forEach(()=>h+='<div class="schedule-cell"></div>');
-        h+='</div>';
-    }else{
+    if(!trucks.length){h+='<div class="truck-column"><div class="truck-header-cell">Add trucks →</div>';hrs.forEach(()=>h+='<div class="schedule-cell"></div>');h+='</div>'}
+    else{
         const ds=toDS(currentDate);
         trucks.forEach(t=>{
+            const blocked=getBlockedSlots(t._id,ds);
             h+='<div class="truck-column"><div class="truck-header-cell">'+t.truckNumber+'<span class="cap">'+t.capacity+'T</span></div>';
             hrs.forEach(hr=>{
                 const del=deliveries.find(d=>d.truckId===t._id&&d.date===ds&&d.hour===hr&&d.status!=='cancelled');
-                h+='<div class="schedule-cell" onclick="cellClick(\''+t._id+'\','+hr+',\''+ds+'\')">';
+                const isBlocked=!del&&blocked.includes(hr);
+                h+='<div class="schedule-cell'+(isBlocked?' blocked':'')+'" onclick="cellClick(\''+t._id+'\','+hr+',\''+ds+'\','+isBlocked+')">';
                 if(del){
                     const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
                     const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
                     h+='<div class="delivery-card '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.material||'')+' → '+(del.city||'')+'</div><div class="delivery-tons">'+(del.tons||0)+' tons</div></div>';
-                }else{
-                    h+='<div class="empty-slot">+</div>';
-                }
+                }else if(!isBlocked){h+='<div class="empty-slot">+</div>'}
                 h+='</div>';
             });
             h+='</div>';
         });
     }
-    h+='</div>';
-    c.innerHTML=h;
+    h+='</div>';c.innerHTML=h;
 }
 
 function renderWeek(){
     const c=document.getElementById('calendarScroll');
-    const startOfWeek=new Date(currentDate);
-    startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
+    const startOfWeek=new Date(currentDate);startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
     const today=toDS(new Date());
-    
     let h='<div class="week-header">';
-    for(let i=0;i<7;i++){
-        const d=new Date(startOfWeek);d.setDate(d.getDate()+i);
-        const ds=toDS(d);
-        const isToday=ds===today;
-        h+='<div class="week-day-header'+(isToday?' today':'')+'">'+d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+'</div>';
-    }
+    for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(d.getDate()+i);const ds=toDS(d);const isToday=ds===today;h+='<div class="week-day-header'+(isToday?' today':'')+'">'+d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+'</div>'}
     h+='</div><div class="week-grid">';
-    
     for(let i=0;i<7;i++){
-        const d=new Date(startOfWeek);d.setDate(d.getDate()+i);
-        const ds=toDS(d);
+        const d=new Date(startOfWeek);d.setDate(d.getDate()+i);const ds=toDS(d);
         const dayDels=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled').sort((a,b)=>a.hour-b.hour);
-        
         h+='<div class="week-day-column" onclick="goToDateView(\''+ds+'\')">';
         dayDels.forEach(del=>{
             const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
             const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
-            const hr=del.hour>12?del.hour-12:del.hour;
-            const ampm=del.hour>=12?'PM':'AM';
-            h+='<div class="week-delivery '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')">';
-            h+='<div class="week-delivery-time">'+hr+' '+ampm+'</div>';
-            h+='<div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div>';
-            h+='<div class="week-delivery-source">'+srcLabel+' • '+(del.tons||0)+'T</div>';
-            h+='</div>';
+            const hr=del.hour>12?del.hour-12:del.hour;const ampm=del.hour>=12?'PM':'AM';
+            h+='<div class="week-delivery '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><div class="week-delivery-time">'+hr+' '+ampm+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-source">'+srcLabel+' • '+(del.tons||0)+'T</div></div>';
         });
-        if(!dayDels.length) h+='<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px">No deliveries</div>';
+        if(!dayDels.length)h+='<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px">No deliveries</div>';
         h+='</div>';
     }
-    h+='</div>';
-    c.innerHTML=h;
+    h+='</div>';c.innerHTML=h;
 }
 
 function goToDateView(ds){currentDate=new Date(ds+'T12:00:00');setView('day')}
@@ -280,36 +253,37 @@ function renderMonth(){
     const c=document.getElementById('calendarScroll');
     const y=currentDate.getFullYear(),m=currentDate.getMonth();
     const fd=new Date(y,m,1),ld=new Date(y,m+1,0);
-    const sd=fd.getDay(),dm=ld.getDate();
-    const tds=toDS(new Date());
+    const sd=fd.getDay(),dm=ld.getDate();const tds=toDS(new Date());
     let h='<div class="month-grid">';
     ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>h+='<div class="month-header-cell">'+d+'</div>');
     const pm=new Date(y,m,0).getDate();
     for(let i=sd-1;i>=0;i--)h+='<div class="month-day other-month"><div class="month-day-number">'+(pm-i)+'</div></div>';
     for(let d=1;d<=dm;d++){
         const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-        const it=ds===tds;
-        const dd=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled');
+        const it=ds===tds;const dd=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled');
         const tc=dd.filter(x=>x.source==='T&C Materials').length,yd=dd.filter(x=>x.source==='Yard Sale').length,tg=dd.filter(x=>x.source==='Texas Got Rocks').length;
-        h+='<div class="month-day'+(it?' today':'')+'" onclick="goToDateView(\''+ds+'\')"><div class="month-day-number">'+d+'</div>';
-        if(tc)h+='<div class="month-delivery-count tc">'+tc+' T&C</div>';
-        if(yd)h+='<div class="month-delivery-count yard">'+yd+' Yard</div>';
-        if(tg)h+='<div class="month-delivery-count tgr">'+tg+' TGR</div>';
-        h+='</div>';
+        h+='<div class="month-day'+(it?' today':'')+'" onclick="goToDateView(\''+ds+'\')"><div class="month-day-number">'+d+'</div><div class="month-summary">';
+        if(tc)h+='<span class="month-badge tc">'+tc+' T&C</span>';
+        if(yd)h+='<span class="month-badge yard">'+yd+' Yard</span>';
+        if(tg)h+='<span class="month-badge tgr">'+tg+' TGR</span>';
+        h+='</div></div>';
     }
-    const rem=(sd+dm)%7;
-    if(rem)for(let i=1;i<=7-rem;i++)h+='<div class="month-day other-month"><div class="month-day-number">'+i+'</div></div>';
-    h+='</div>';
-    c.innerHTML=h;
+    const rem=(sd+dm)%7;if(rem)for(let i=1;i<=7-rem;i++)h+='<div class="month-day other-month"><div class="month-day-number">'+i+'</div></div>';
+    h+='</div>';c.innerHTML=h;
 }
 
-function cellClick(tid,hr,ds){if(!trucks.length){showToast('Add a truck first',1);return}openDeliveryModal(tid,hr,ds)}
+function cellClick(tid,hr,ds,isBlocked){
+    if(isBlocked){showToast('Truck unavailable - still on delivery',1);return}
+    if(!trucks.length){showToast('Add a truck first',1);return}
+    openDeliveryModal(tid,hr,ds);
+}
 
 function openDeliveryModal(tid,hr,ds){
     document.getElementById('deliveryModalTitle').textContent='Add Delivery';
     document.getElementById('deliveryId').value='';
     document.getElementById('deliveryDate').value=ds||toDS(currentDate);
     document.getElementById('deliveryHour').value=hr||8;
+    document.getElementById('deliveryReturnHour').value='';
     document.getElementById('deliveryTruck').value=tid||(trucks[0]?._id||'');
     document.getElementById('deliveryCustomer').value='';
     document.getElementById('deliveryAddress').value='';
@@ -320,7 +294,9 @@ function openDeliveryModal(tid,hr,ds){
     document.getElementById('deliverySource').value='T&C Materials';
     selectSource('T&C Materials');
     document.getElementById('deleteDeliveryBtn').style.display='none';
+    document.getElementById('conflictWarning').style.display='none';
     document.getElementById('deliveryModal').classList.add('active');
+    updateReturnTimeUI();
 }
 
 function editDel(id){
@@ -329,6 +305,7 @@ function editDel(id){
     document.getElementById('deliveryId').value=id;
     document.getElementById('deliveryDate').value=d.date;
     document.getElementById('deliveryHour').value=d.hour;
+    document.getElementById('deliveryReturnHour').value=d.returnHour||'';
     document.getElementById('deliveryTruck').value=d.truckId;
     document.getElementById('deliveryCustomer').value=d.customer||'';
     document.getElementById('deliveryAddress').value=d.address||'';
@@ -338,7 +315,9 @@ function editDel(id){
     document.getElementById('deliveryNotes').value=d.notes||'';
     selectSource(d.source);
     document.getElementById('deleteDeliveryBtn').style.display='block';
+    document.getElementById('conflictWarning').style.display='none';
     document.getElementById('deliveryModal').classList.add('active');
+    updateReturnTimeUI();
 }
 
 function closeDeliveryModal(){document.getElementById('deliveryModal').classList.remove('active')}
@@ -349,14 +328,92 @@ function selectSource(s){
         b.classList.remove('selected');
         if((s==='T&C Materials'&&b.classList.contains('tc'))||(s==='Yard Sale'&&b.classList.contains('yard'))||(s==='Texas Got Rocks'&&b.classList.contains('tgr')))b.classList.add('selected');
     });
+    updateReturnTimeUI();
+}
+
+function updateReturnTimeUI(){
+    const source=document.getElementById('deliverySource').value;
+    const isTGR=source==='Texas Got Rocks';
+    const rtg=document.getElementById('returnTimeGroup');
+    const acn=document.getElementById('autoCalcNote');
+    const rtl=document.getElementById('returnTimeLabel');
+    
+    if(isTGR){
+        rtl.innerHTML='🚚 Return time (auto-calculated for TGR)';
+        rtg.classList.remove('required');
+        acn.style.display='block';
+    }else{
+        rtl.innerHTML='⚠️ Return time required for scheduling';
+        rtg.classList.add('required');
+        acn.style.display='none';
+    }
+}
+
+function calcReturnTime(){
+    const source=document.getElementById('deliverySource').value;
+    if(source!=='Texas Got Rocks')return;
+    const city=document.getElementById('deliveryCity').value;
+    const depHour=parseInt(document.getElementById('deliveryHour').value);
+    if(!city||!depHour)return;
+    // Estimate: 30min load + round trip. Assume avg 30mi=1hr each way. Add buffer
+    // For now, simple estimate: departure + 2-3 hours depending on distance
+    let estimate=depHour+2;
+    const farCities=['houston','katy','sugar land','pearland','league city','baytown','galveston','bryan','college station'];
+    if(farCities.some(c=>city.toLowerCase().includes(c)))estimate=depHour+4;
+    else if(['spring','tomball','magnolia','willis','huntsville','montgomery'].some(c=>city.toLowerCase().includes(c)))estimate=depHour+2;
+    else estimate=depHour+3;
+    if(estimate>18)estimate=18;
+    document.getElementById('deliveryReturnHour').value=estimate;
+    checkConflicts();
+}
+
+function checkConflicts(){
+    const truckId=document.getElementById('deliveryTruck').value;
+    const date=document.getElementById('deliveryDate').value;
+    const depHour=parseInt(document.getElementById('deliveryHour').value);
+    const retHour=parseInt(document.getElementById('deliveryReturnHour').value)||depHour+2;
+    const editId=document.getElementById('deliveryId').value;
+    
+    if(!truckId||!date)return;
+    
+    const truckDels=deliveries.filter(d=>d.truckId===truckId&&d.date===date&&d.status!=='cancelled'&&d._id!==editId);
+    let conflict=null;
+    
+    for(const d of truckDels){
+        const dStart=d.hour;const dEnd=d.returnHour||d.hour+2;
+        // Check if new delivery overlaps
+        if((depHour>=dStart&&depHour<dEnd)||(retHour>dStart&&retHour<=dEnd)||(depHour<=dStart&&retHour>=dEnd)){
+            conflict=d;break;
+        }
+    }
+    
+    const cw=document.getElementById('conflictWarning');
+    if(conflict){
+        const hr=conflict.hour>12?conflict.hour-12:conflict.hour;
+        const ampm=conflict.hour>=12?'PM':'AM';
+        cw.innerHTML='⚠️ <strong>Conflict:</strong> This truck has a delivery at '+hr+' '+ampm+' for '+(conflict.customer||'customer')+'. It returns at '+(conflict.returnHour||conflict.hour+2)+':00.';
+        cw.style.display='block';
+    }else{
+        cw.style.display='none';
+    }
 }
 
 async function saveDelivery(){
+    const source=document.getElementById('deliverySource').value;
+    const retHour=document.getElementById('deliveryReturnHour').value;
+    
+    // Require return time for non-TGR
+    if(source!=='Texas Got Rocks'&&!retHour){
+        showToast('Return time is required',1);
+        return;
+    }
+    
     const id=document.getElementById('deliveryId').value;
     const ts=document.getElementById('deliveryTruck');
     const data={
         date:document.getElementById('deliveryDate').value,
         hour:parseInt(document.getElementById('deliveryHour').value),
+        returnHour:parseInt(retHour)||null,
         truckId:ts.value,
         truckNumber:ts.options[ts.selectedIndex]?.dataset.num||'',
         customer:document.getElementById('deliveryCustomer').value,
@@ -364,9 +421,16 @@ async function saveDelivery(){
         city:document.getElementById('deliveryCity').value,
         material:document.getElementById('deliveryMaterial').value,
         tons:parseFloat(document.getElementById('deliveryTons').value)||0,
-        source:document.getElementById('deliverySource').value,
+        source:source,
         notes:document.getElementById('deliveryNotes').value
     };
+    
+    // Check for conflicts before saving
+    const cw=document.getElementById('conflictWarning');
+    if(cw.style.display!=='none'){
+        if(!confirm('There is a scheduling conflict. Save anyway?'))return;
+    }
+    
     try{
         const r=await fetch(API+'/dispatch',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id,...data}:data)});
         const res=await r.json();
@@ -413,12 +477,7 @@ function closeTruckModal(){document.getElementById('truckModal').classList.remov
 
 async function saveTruck(){
     const id=document.getElementById('truckId').value;
-    const data={
-        truckNumber:document.getElementById('truckNumber').value,
-        capacity:parseFloat(document.getElementById('truckCapacity').value),
-        type:document.getElementById('truckType').value,
-        notes:document.getElementById('truckNotes').value
-    };
+    const data={truckNumber:document.getElementById('truckNumber').value,capacity:parseFloat(document.getElementById('truckCapacity').value),type:document.getElementById('truckType').value,notes:document.getElementById('truckNotes').value};
     if(!data.truckNumber||!data.capacity){showToast('Name and capacity required',1);return}
     try{
         const r=await fetch(API+'/trucks',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id,...data}:data)});
@@ -430,17 +489,12 @@ async function saveTruck(){
 
 async function delTruck(id){
     if(!confirm('Remove this truck?'))return;
-    try{
-        const r=await fetch(API+'/trucks',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
-        const res=await r.json();
-        if(res.success){showToast('Removed');loadTrucks()}
-        else showToast(res.error||'Failed',1);
-    }catch(e){showToast('Error',1)}
+    try{const r=await fetch(API+'/trucks',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const res=await r.json();if(res.success){showToast('Removed');loadTrucks()}else showToast(res.error||'Failed',1)}catch(e){showToast('Error',1)}
 }
 
 async function deleteTruck(){const id=document.getElementById('truckId').value;if(id)delTruck(id);closeTruckModal()}
 
-function showToast(m,e){const t=document.getElementById('toast');t.textContent=m;t.classList.toggle('error',!!e);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+function showToast(m,e){const t=document.getElementById('toast');t.textContent=m;t.classList.remove('error','warning');if(e===1)t.classList.add('error');if(e===2)t.classList.add('warning');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
 </script>
 </body>
 </html>
