@@ -36,24 +36,31 @@ exports.handler = async (event) => {
       }
       if (truckId) query.truckId = truckId;
 
-      const deliveries = await collection.find(query).sort({ date: 1, hour: 1 }).toArray();
+      const deliveries = await collection.find(query).sort({ date: 1, time: 1, hour: 1 }).toArray();
       return { statusCode: 200, headers, body: JSON.stringify({ success: true, deliveries }) };
     }
 
     // POST - Create delivery
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}');
-      const { date, hour, returnHour, truckId, truckNumber, customer, address, city, material, tons, source, notes } = body;
+      const { date, time, hour, returnTime, returnHour, truckId, truckNumber, customer, address, city, material, tons, source, notes } = body;
 
-      if (!date || !hour || !truckId) {
+      // Support both time (new 30-min) and hour (legacy)
+      const deliveryTime = time !== undefined ? parseFloat(time) : (hour !== undefined ? parseInt(hour) : null);
+      const deliveryReturnTime = returnTime !== undefined ? parseFloat(returnTime) : (returnHour !== undefined ? parseInt(returnHour) : null);
+
+      if (!date || deliveryTime === null || !truckId) {
         return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Date, time, and truck required' }) };
       }
 
-      // Check for conflicts
+      // Check for exact time conflict
       const existingDelivery = await collection.findOne({
         truckId,
         date,
-        hour: parseInt(hour),
+        $or: [
+          { time: deliveryTime },
+          { hour: deliveryTime, time: { $exists: false } }
+        ],
         status: { $ne: 'cancelled' }
       });
 
@@ -63,8 +70,11 @@ exports.handler = async (event) => {
 
       const delivery = {
         date,
-        hour: parseInt(hour),
-        returnHour: returnHour ? parseInt(returnHour) : null,
+        time: deliveryTime,
+        returnTime: deliveryReturnTime,
+        // Keep legacy fields for backward compatibility
+        hour: Math.floor(deliveryTime),
+        returnHour: deliveryReturnTime ? Math.floor(deliveryReturnTime) : null,
         truckId,
         truckNumber: truckNumber || '',
         customer: customer || '',
@@ -88,7 +98,7 @@ exports.handler = async (event) => {
     // PUT - Update delivery
     if (event.httpMethod === 'PUT') {
       const body = JSON.parse(event.body || '{}');
-      const { id, date, hour, returnHour, truckId, truckNumber, customer, address, city, material, tons, source, notes, status } = body;
+      const { id, date, time, hour, returnTime, returnHour, truckId, truckNumber, customer, address, city, material, tons, source, notes, status } = body;
 
       if (!id) {
         return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Delivery ID required' }) };
@@ -96,8 +106,20 @@ exports.handler = async (event) => {
 
       const updateData = { updatedAt: new Date() };
       if (date !== undefined) updateData.date = date;
-      if (hour !== undefined) updateData.hour = parseInt(hour);
-      if (returnHour !== undefined) updateData.returnHour = returnHour ? parseInt(returnHour) : null;
+      if (time !== undefined) {
+        updateData.time = parseFloat(time);
+        updateData.hour = Math.floor(parseFloat(time));
+      } else if (hour !== undefined) {
+        updateData.hour = parseInt(hour);
+        updateData.time = parseInt(hour);
+      }
+      if (returnTime !== undefined) {
+        updateData.returnTime = returnTime ? parseFloat(returnTime) : null;
+        updateData.returnHour = returnTime ? Math.floor(parseFloat(returnTime)) : null;
+      } else if (returnHour !== undefined) {
+        updateData.returnHour = returnHour ? parseInt(returnHour) : null;
+        updateData.returnTime = returnHour ? parseInt(returnHour) : null;
+      }
       if (truckId !== undefined) updateData.truckId = truckId;
       if (truckNumber !== undefined) updateData.truckNumber = truckNumber;
       if (customer !== undefined) updateData.customer = customer;

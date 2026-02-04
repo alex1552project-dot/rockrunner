@@ -18,21 +18,22 @@
         .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
         .day-section{flex:3;display:flex;flex-direction:column;border-bottom:3px solid var(--primary);overflow:hidden}
         .section-header{background:var(--navy);padding:8px 20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);flex-shrink:0;display:flex;justify-content:space-between}
-        .day-grid{flex:1;display:grid;grid-template-columns:60px repeat(var(--truck-count,1),1fr);overflow:auto}
+        .day-grid{flex:1;display:grid;grid-template-columns:70px repeat(var(--truck-count,1),1fr);overflow:auto}
         .time-column{background:var(--bg-card);border-right:1px solid var(--border)}.time-header{height:36px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)}
-        .time-slot{height:50px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border)}.time-slot.current{background:rgba(198,93,42,.2);color:var(--primary)}
+        .time-slot{height:28px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border)}.time-slot.half{border-bottom:1px dashed var(--border);font-size:9px;color:var(--text-secondary);opacity:.7}
+        .time-slot.current{background:rgba(198,93,42,.2);color:var(--primary)}
         .truck-column{border-right:1px solid var(--border)}.truck-header{height:36px;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:13px;border-bottom:1px solid var(--border)}.truck-header .cap{font-size:10px;color:var(--accent);font-weight:500}
-        .schedule-cell{height:50px;border-bottom:1px solid var(--border);padding:2px}.schedule-cell.current{background:rgba(198,93,42,.1)}
-        .delivery-card{height:100%;background:var(--bg-hover);border-radius:5px;padding:4px 8px;border-left:3px solid var(--tc-color);position:relative;overflow:hidden}
+        .schedule-cell{height:28px;border-bottom:1px solid var(--border);padding:1px}.schedule-cell.half{border-bottom:1px dashed var(--border)}.schedule-cell.current{background:rgba(198,93,42,.1)}
+        .schedule-cell.blocked{background:rgba(255,107,107,.08)}
+        .delivery-card{height:100%;background:var(--bg-hover);border-radius:4px;padding:2px 6px;border-left:3px solid var(--tc-color);position:relative;overflow:hidden;display:flex;align-items:center;gap:8px}
         .delivery-card.tc{border-left-color:var(--tc-color)}.delivery-card.yard{border-left-color:var(--yard-color)}.delivery-card.tgr{border-left-color:var(--tgr-color)}
-        .delivery-customer{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:40px}
-        .delivery-details{font-size:10px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .delivery-tons{font-size:10px;font-weight:700;color:var(--accent)}
-        .delivery-source{position:absolute;top:3px;right:3px;font-size:8px;padding:2px 5px;border-radius:3px;font-weight:700}
+        .delivery-customer{font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+        .delivery-info{font-size:9px;color:var(--text-secondary);white-space:nowrap}
+        .delivery-source{font-size:8px;padding:2px 4px;border-radius:3px;font-weight:700}
         .delivery-card.tc .delivery-source{background:rgba(107,184,209,.2);color:var(--tc-color)}
         .delivery-card.yard .delivery-source{background:rgba(255,200,87,.2);color:var(--yard-color)}
         .delivery-card.tgr .delivery-source{background:rgba(76,175,80,.2);color:var(--tgr-color)}
-        .empty-slot{height:100%;border:1px dashed rgba(255,255,255,.1);border-radius:4px}
+        .empty-slot{height:100%;border:1px dashed rgba(255,255,255,.05);border-radius:3px}
         .week-section{flex:2;display:flex;flex-direction:column;overflow:hidden}
         .week-grid{flex:1;display:flex;overflow:hidden}
         .week-day{flex:1;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}.week-day:last-child{border-right:none}
@@ -74,6 +75,25 @@
 let trucks=[],deliveries=[];
 const API='/.netlify/functions';
 
+// Time slots: 5:00 AM to 6:00 PM in 30-min intervals
+const TIME_SLOTS=[];
+for(let h=5;h<=18;h++){
+    TIME_SLOTS.push({value:h,label:formatTime(h,0)});
+    if(h<18)TIME_SLOTS.push({value:h+0.5,label:formatTime(h,30)});
+}
+
+function formatTime(h,m){
+    const hr=h>12?h-12:(h===0?12:h);
+    const ampm=h>=12?'PM':'AM';
+    return hr+':'+(m===0?'00':'30')+' '+ampm;
+}
+
+function formatTimeVal(v){
+    const h=Math.floor(v);
+    const m=(v%1)*60;
+    return formatTime(h,m);
+}
+
 async function loadData(){
     try{
         const[tRes,dRes]=await Promise.all([fetch(API+'/trucks'),fetch(API+'/dispatch?startDate='+getWeekStart()+'&endDate='+getWeekEnd())]);
@@ -88,37 +108,50 @@ function toDS(d){return d.toISOString().split('T')[0]}
 function getWeekStart(){const d=new Date();d.setDate(d.getDate()-d.getDay());return toDS(d)}
 function getWeekEnd(){const d=new Date();d.setDate(d.getDate()+(6-d.getDay()));return toDS(d)}
 
+function getBlockedSlots(truckId,date){
+    const slots=[];
+    deliveries.filter(d=>d.truckId===truckId&&d.date===date&&d.status!=='cancelled').forEach(d=>{
+        const start=d.time||d.hour;const end=d.returnTime||d.returnHour||(start+2);
+        for(let t=start;t<end;t+=0.5)slots.push(t);
+    });
+    return slots;
+}
+
 function renderDayView(){
     const c=document.getElementById('dayGrid');
     const today=toDS(new Date());
-    const currentHour=new Date().getHours();
-    const hrs=[6,7,8,9,10,11,12,13,14,15,16,17];
+    const now=new Date();
+    const currentTimeVal=now.getHours()+(now.getMinutes()>=30?0.5:0);
     
     document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     
     let h='<div class="time-column"><div class="time-header">TIME</div>';
-    hrs.forEach(hr=>{
-        const isCurrent=hr===currentHour;
-        h+='<div class="time-slot'+(isCurrent?' current':'')+'">'+(hr>12?hr-12:hr)+' '+(hr>=12?'PM':'AM')+'</div>';
+    TIME_SLOTS.forEach(t=>{
+        const isCurrent=t.value===currentTimeVal;
+        const isHalf=t.value%1!==0;
+        h+='<div class="time-slot'+(isHalf?' half':'')+(isCurrent?' current':'')+'">'+t.label+'</div>';
     });
     h+='</div>';
     
     if(!trucks.length){
         h+='<div class="truck-column"><div class="truck-header">No Trucks</div>';
-        hrs.forEach(()=>h+='<div class="schedule-cell"></div>');
+        TIME_SLOTS.forEach(()=>h+='<div class="schedule-cell"></div>');
         h+='</div>';
     }else{
         c.style.setProperty('--truck-count',trucks.length);
-        trucks.forEach(t=>{
-            h+='<div class="truck-column"><div class="truck-header">'+t.truckNumber+'<span class="cap">'+t.capacity+'T</span></div>';
-            hrs.forEach(hr=>{
-                const isCurrent=hr===currentHour;
-                const del=deliveries.find(d=>d.truckId===t._id&&d.date===today&&d.hour===hr&&d.status!=='cancelled');
-                h+='<div class="schedule-cell'+(isCurrent?' current':'')+'">';
+        trucks.forEach(tr=>{
+            const blocked=getBlockedSlots(tr._id,today);
+            h+='<div class="truck-column"><div class="truck-header">'+tr.truckNumber+'<span class="cap">'+tr.capacity+'T</span></div>';
+            TIME_SLOTS.forEach(t=>{
+                const isCurrent=t.value===currentTimeVal;
+                const isHalf=t.value%1!==0;
+                const del=deliveries.find(d=>d.truckId===tr._id&&d.date===today&&(d.time===t.value||(d.hour===t.value&&!d.time))&&d.status!=='cancelled');
+                const isBlocked=!del&&blocked.includes(t.value);
+                h+='<div class="schedule-cell'+(isHalf?' half':'')+(isCurrent?' current':'')+(isBlocked?' blocked':'')+'">';
                 if(del){
                     const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
                     const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'YARD':'TGR';
-                    h+='<div class="delivery-card '+sc+'"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.material||'')+' → '+(del.city||'')+'</div><div class="delivery-tons">'+(del.tons||0)+'T</div></div>';
+                    h+='<div class="delivery-card '+sc+'"><span class="delivery-source">'+srcLabel+'</span><span class="delivery-customer">'+(del.customer||'Delivery')+'</span><span class="delivery-info">'+(del.tons||0)+'T → '+(del.city||'')+'</span></div>';
                 }else{
                     h+='<div class="empty-slot"></div>';
                 }
@@ -140,7 +173,7 @@ function renderWeekView(){
         const d=new Date(startOfWeek);d.setDate(d.getDate()+i);
         const ds=toDS(d);
         const isToday=ds===today;
-        const dayDels=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled').sort((a,b)=>a.hour-b.hour);
+        const dayDels=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled').sort((a,b)=>(a.time||a.hour)-(b.time||b.hour));
         
         h+='<div class="week-day"><div class="week-day-header'+(isToday?' today':'')+'"><div class="week-day-name">'+d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase()+'</div><div class="week-day-date">'+d.getDate()+'</div></div><div class="week-day-content">';
         
@@ -148,9 +181,8 @@ function renderWeekView(){
             dayDels.forEach(del=>{
                 const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
                 const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
-                const hr=del.hour>12?del.hour-12:del.hour;
-                const ampm=del.hour>=12?'PM':'AM';
-                h+='<div class="week-delivery '+sc+'"><div class="week-delivery-time">'+hr+' '+ampm+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-info">'+srcLabel+' • '+(del.tons||0)+'T • '+(del.truckNumber||'')+'</div></div>';
+                const timeVal=del.time||del.hour;
+                h+='<div class="week-delivery '+sc+'"><div class="week-delivery-time">'+formatTimeVal(timeVal)+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-info">'+srcLabel+' • '+(del.tons||0)+'T • '+(del.truckNumber||'')+'</div></div>';
             });
         }else{
             h+='<div class="week-no-deliveries">No deliveries</div>';

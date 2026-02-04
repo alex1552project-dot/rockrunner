@@ -35,19 +35,19 @@
         .current-date{font-size:18px;font-weight:600}.today-btn{padding:8px 16px;background:var(--accent);color:var(--navy);border:none;border-radius:6px;font-weight:600;cursor:pointer}
         .view-toggle{display:flex;background:var(--bg-card);border-radius:8px;padding:4px}.view-btn{padding:8px 14px;border:none;background:transparent;color:var(--text-secondary);border-radius:6px;cursor:pointer;font-weight:500}.view-btn.active{background:var(--primary);color:#fff}
         .legend{display:flex;gap:20px;padding:10px 24px;background:var(--bg-card);border-bottom:1px solid var(--border)}.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)}.legend-dot{width:10px;height:10px;border-radius:50%}.legend-dot.tc{background:var(--tc-color)}.legend-dot.yard{background:var(--yard-color)}.legend-dot.tgr{background:var(--tgr-color)}
-        .calendar-scroll{flex:1;overflow:auto}.calendar-grid{display:grid;grid-template-columns:70px repeat(var(--truck-count,1),minmax(160px,1fr))}
+        .calendar-scroll{flex:1;overflow:auto}.calendar-grid{display:grid;grid-template-columns:80px repeat(var(--truck-count,1),minmax(160px,1fr))}
         .time-column{background:var(--bg-card);border-right:1px solid var(--border);position:sticky;left:0;z-index:10}.time-header{height:44px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted)}
-        .time-slot{height:70px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-secondary)}
+        .time-slot{height:40px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-secondary)}.time-slot.half{border-bottom:1px dashed var(--border);font-size:10px;color:var(--text-muted)}
         .truck-column{border-right:1px solid var(--border)}.truck-header-cell{height:44px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;position:sticky;top:0;z-index:5}.truck-header-cell .cap{font-size:10px;color:var(--text-muted);margin-left:6px}
-        .schedule-cell{height:70px;border-bottom:1px solid var(--border);padding:3px;position:relative}.schedule-cell:hover{background:rgba(198,93,42,.05)}
-        .schedule-cell.blocked{background:rgba(255,107,107,.1)}.schedule-cell.blocked::after{content:'🚫';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.3}
-        .delivery-card{background:var(--bg-hover);border-radius:6px;padding:6px 8px;height:100%;cursor:pointer;border-left:3px solid var(--tc-color);overflow:hidden;position:relative}.delivery-card.tc{border-left-color:var(--tc-color)}.delivery-card.yard{border-left-color:var(--yard-color)}.delivery-card.tgr{border-left-color:var(--tgr-color)}
-        .delivery-card:hover{background:var(--bg-card)}.delivery-customer{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:45px}.delivery-details{font-size:10px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.delivery-tons{font-size:10px;font-weight:600;color:var(--accent)}
-        .delivery-source{position:absolute;top:4px;right:4px;font-size:8px;padding:2px 5px;border-radius:3px;font-weight:600;text-transform:uppercase}
+        .schedule-cell{height:40px;border-bottom:1px solid var(--border);padding:2px;position:relative}.schedule-cell.half{border-bottom:1px dashed var(--border)}.schedule-cell:hover{background:rgba(198,93,42,.05)}
+        .schedule-cell.blocked{background:rgba(255,107,107,.08)}.schedule-cell.blocked::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,107,107,.1) 5px,rgba(255,107,107,.1) 10px)}
+        .delivery-card{background:var(--bg-hover);border-radius:5px;padding:4px 6px;height:100%;cursor:pointer;border-left:3px solid var(--tc-color);overflow:hidden;position:relative}.delivery-card.tc{border-left-color:var(--tc-color)}.delivery-card.yard{border-left-color:var(--yard-color)}.delivery-card.tgr{border-left-color:var(--tgr-color)}
+        .delivery-card:hover{background:var(--bg-card)}.delivery-customer{font-weight:600;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:40px}.delivery-details{font-size:9px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.delivery-tons{font-size:9px;font-weight:600;color:var(--accent)}
+        .delivery-source{position:absolute;top:3px;right:3px;font-size:7px;padding:2px 4px;border-radius:3px;font-weight:600;text-transform:uppercase}
         .delivery-card.tc .delivery-source{background:rgba(107,184,209,.2);color:var(--tc-color)}
         .delivery-card.yard .delivery-source{background:rgba(255,200,87,.2);color:var(--yard-color)}
         .delivery-card.tgr .delivery-source{background:rgba(76,175,80,.2);color:var(--tgr-color)}
-        .empty-slot{height:100%;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:18px;cursor:pointer;opacity:0}.schedule-cell:hover .empty-slot{opacity:1}
+        .empty-slot{height:100%;border:1px dashed var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:14px;cursor:pointer;opacity:0}.schedule-cell:hover .empty-slot{opacity:1}
         .week-header{display:flex;border-bottom:1px solid var(--border)}.week-day-header{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;border-right:1px solid var(--border)}.week-day-header.today{background:rgba(198,93,42,.15)}
         .week-grid{display:flex;flex:1}.week-day-column{flex:1;border-right:1px solid var(--border);min-height:200px}.week-delivery{margin:4px;padding:6px 8px;border-radius:6px;font-size:11px;cursor:pointer;border-left:3px solid var(--tc-color);background:var(--bg-hover)}
         .week-delivery.tc{border-left-color:var(--tc-color)}.week-delivery.yard{border-left-color:var(--yard-color)}.week-delivery.tgr{border-left-color:var(--tgr-color)}
@@ -67,7 +67,6 @@
         .modal-body{padding:20px}.form-group{margin-bottom:16px}.form-label{display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
         .form-input,.form-select{width:100%;padding:10px 14px;background:var(--bg-dark);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:inherit}.form-input:focus,.form-select:focus{outline:none;border-color:var(--primary)}
         .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-        .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
         .source-options{display:flex;gap:8px}.source-option{flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;cursor:pointer;text-align:center}.source-option:hover{border-color:var(--text-muted)}.source-option.selected{border-color:var(--primary);background:rgba(198,93,42,.1)}.source-option.tc.selected{border-color:var(--tc-color);background:rgba(107,184,209,.1)}.source-option.yard.selected{border-color:var(--yard-color);background:rgba(255,200,87,.1)}.source-option.tgr.selected{border-color:var(--tgr-color);background:rgba(76,175,80,.1)}
         .source-label{font-size:11px;font-weight:600;display:block;margin-top:4px;color:var(--text-primary)}.source-dot{width:14px;height:14px;border-radius:50%;margin:0 auto}
         .modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}.btn-danger{background:var(--danger);color:#fff}
@@ -105,12 +104,10 @@
                 <input type="hidden" id="deliveryId">
                 <div class="form-group"><label class="form-label">Source</label><div class="source-options"><button type="button" class="source-option tc selected" onclick="selectSource('T&C Materials')"><div class="source-dot" style="background:var(--tc-color)"></div><span class="source-label">T&C Materials</span></button><button type="button" class="source-option yard" onclick="selectSource('Yard Sale')"><div class="source-dot" style="background:var(--yard-color)"></div><span class="source-label">Yard Sale</span></button><button type="button" class="source-option tgr" onclick="selectSource('Texas Got Rocks')"><div class="source-dot" style="background:var(--tgr-color)"></div><span class="source-label">Texas Got Rocks</span></button></div><input type="hidden" id="deliverySource" value="T&C Materials"></div>
                 <div class="form-group"><label class="form-label">Truck</label><select class="form-select" id="deliveryTruck" onchange="checkConflicts()"></select></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="deliveryDate" onchange="checkConflicts()"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryHour" onchange="checkConflicts()"><option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option><option value="9">9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option><option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option><option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option></select></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="deliveryDate" onchange="checkConflicts()"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryTime" onchange="checkConflicts()"></select></div></div>
                 <div class="return-time-group" id="returnTimeGroup">
                     <div class="return-time-label" id="returnTimeLabel">⚠️ Return time required for scheduling</div>
-                    <div class="form-row">
-                        <div class="form-group" style="margin-bottom:0"><label class="form-label">Return Time</label><select class="form-select" id="deliveryReturnHour" onchange="checkConflicts()"><option value="">Select return...</option><option value="7">7 AM</option><option value="8">8 AM</option><option value="9">9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option><option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option><option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option><option value="18">6 PM</option></select></div>
-                    </div>
+                    <div class="form-group" style="margin-bottom:0"><label class="form-label">Return Time</label><select class="form-select" id="deliveryReturnTime" onchange="checkConflicts()"></select></div>
                     <div class="auto-calc-note" id="autoCalcNote" style="display:none">🚚 Return time auto-calculated based on delivery distance</div>
                 </div>
                 <div id="conflictWarning" class="conflict-warning" style="display:none"></div>
@@ -138,12 +135,37 @@
 <script>
 let trucks=[],deliveries=[],materials=[],currentDate=new Date(),currentView='day';
 const API='/.netlify/functions';
-const YARD_ADDRESS='Conroe, TX';
+
+// Time slots: 5:00 AM to 6:00 PM in 30-min intervals
+const TIME_SLOTS=[];
+for(let h=5;h<=18;h++){
+    TIME_SLOTS.push({value:h,label:formatTime(h,0)});
+    if(h<18)TIME_SLOTS.push({value:h+0.5,label:formatTime(h,30)});
+}
+
+function formatTime(h,m){
+    const hr=h>12?h-12:(h===0?12:h);
+    const ampm=h>=12?'PM':'AM';
+    return hr+':'+(m===0?'00':'30')+' '+ampm;
+}
+
+function formatTimeVal(v){
+    const h=Math.floor(v);
+    const m=(v%1)*60;
+    return formatTime(h,m);
+}
 
 document.addEventListener('DOMContentLoaded',()=>{
-    loadTrucks();loadMaterials();updateDisplay();
+    loadTrucks();loadMaterials();updateDisplay();populateTimeSelects();
     if(localStorage.getItem('sbCol')==='1')document.getElementById('sidebar').classList.add('collapsed');
 });
+
+function populateTimeSelects(){
+    const depSel=document.getElementById('deliveryTime');
+    const retSel=document.getElementById('deliveryReturnTime');
+    depSel.innerHTML=TIME_SLOTS.map(t=>'<option value="'+t.value+'">'+t.label+'</option>').join('');
+    retSel.innerHTML='<option value="">Select return...</option>'+TIME_SLOTS.map(t=>'<option value="'+t.value+'">'+t.label+'</option>').join('');
+}
 
 function toggleSidebar(){const s=document.getElementById('sidebar');s.classList.toggle('collapsed');localStorage.setItem('sbCol',s.classList.contains('collapsed')?'1':'0')}
 function toDS(d){return d.toISOString().split('T')[0]}
@@ -189,32 +211,35 @@ function renderCal(){if(currentView==='month')renderMonth();else if(currentView=
 function getBlockedSlots(truckId,date){
     const slots=[];
     deliveries.filter(d=>d.truckId===truckId&&d.date===date&&d.status!=='cancelled').forEach(d=>{
-        const start=d.hour;const end=d.returnHour||d.hour+2;
-        for(let h=start;h<end;h++)slots.push(h);
+        const start=d.time||d.hour;const end=d.returnTime||d.returnHour||(start+2);
+        for(let t=start;t<end;t+=0.5)slots.push(t);
     });
     return slots;
 }
 
 function renderDay(){
     const c=document.getElementById('calendarScroll');
-    const hrs=[6,7,8,9,10,11,12,13,14,15,16,17];
     let h='<div class="calendar-grid" style="--truck-count:'+(trucks.length||1)+'"><div class="time-column"><div class="time-header">Time</div>';
-    hrs.forEach(hr=>{h+='<div class="time-slot">'+(hr>12?hr-12:hr)+' '+(hr>=12?'PM':'AM')+'</div>'});
+    TIME_SLOTS.forEach(t=>{
+        const isHalf=t.value%1!==0;
+        h+='<div class="time-slot'+(isHalf?' half':'')+'">'+t.label+'</div>';
+    });
     h+='</div>';
-    if(!trucks.length){h+='<div class="truck-column"><div class="truck-header-cell">Add trucks →</div>';hrs.forEach(()=>h+='<div class="schedule-cell"></div>');h+='</div>'}
+    if(!trucks.length){h+='<div class="truck-column"><div class="truck-header-cell">Add trucks →</div>';TIME_SLOTS.forEach(()=>h+='<div class="schedule-cell"></div>');h+='</div>'}
     else{
         const ds=toDS(currentDate);
-        trucks.forEach(t=>{
-            const blocked=getBlockedSlots(t._id,ds);
-            h+='<div class="truck-column"><div class="truck-header-cell">'+t.truckNumber+'<span class="cap">'+t.capacity+'T</span></div>';
-            hrs.forEach(hr=>{
-                const del=deliveries.find(d=>d.truckId===t._id&&d.date===ds&&d.hour===hr&&d.status!=='cancelled');
-                const isBlocked=!del&&blocked.includes(hr);
-                h+='<div class="schedule-cell'+(isBlocked?' blocked':'')+'" onclick="cellClick(\''+t._id+'\','+hr+',\''+ds+'\','+isBlocked+')">';
+        trucks.forEach(tr=>{
+            const blocked=getBlockedSlots(tr._id,ds);
+            h+='<div class="truck-column"><div class="truck-header-cell">'+tr.truckNumber+'<span class="cap">'+tr.capacity+'T</span></div>';
+            TIME_SLOTS.forEach(t=>{
+                const del=deliveries.find(d=>d.truckId===tr._id&&d.date===ds&&(d.time===t.value||(d.hour===t.value&&!d.time))&&d.status!=='cancelled');
+                const isBlocked=!del&&blocked.includes(t.value);
+                const isHalf=t.value%1!==0;
+                h+='<div class="schedule-cell'+(isHalf?' half':'')+(isBlocked?' blocked':'')+'" onclick="cellClick(\''+tr._id+'\','+t.value+',\''+ds+'\','+isBlocked+')">';
                 if(del){
                     const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
                     const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
-                    h+='<div class="delivery-card '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.material||'')+' → '+(del.city||'')+'</div><div class="delivery-tons">'+(del.tons||0)+' tons</div></div>';
+                    h+='<div class="delivery-card '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.tons||0)+'T • '+(del.city||'')+'</div></div>';
                 }else if(!isBlocked){h+='<div class="empty-slot">+</div>'}
                 h+='</div>';
             });
@@ -233,13 +258,13 @@ function renderWeek(){
     h+='</div><div class="week-grid">';
     for(let i=0;i<7;i++){
         const d=new Date(startOfWeek);d.setDate(d.getDate()+i);const ds=toDS(d);
-        const dayDels=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled').sort((a,b)=>a.hour-b.hour);
+        const dayDels=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled').sort((a,b)=>(a.time||a.hour)-(b.time||b.hour));
         h+='<div class="week-day-column" onclick="goToDateView(\''+ds+'\')">';
         dayDels.forEach(del=>{
             const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
             const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
-            const hr=del.hour>12?del.hour-12:del.hour;const ampm=del.hour>=12?'PM':'AM';
-            h+='<div class="week-delivery '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><div class="week-delivery-time">'+hr+' '+ampm+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-source">'+srcLabel+' • '+(del.tons||0)+'T</div></div>';
+            const timeVal=del.time||del.hour;
+            h+='<div class="week-delivery '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><div class="week-delivery-time">'+formatTimeVal(timeVal)+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-source">'+srcLabel+' • '+(del.tons||0)+'T</div></div>';
         });
         if(!dayDels.length)h+='<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px">No deliveries</div>';
         h+='</div>';
@@ -272,18 +297,18 @@ function renderMonth(){
     h+='</div>';c.innerHTML=h;
 }
 
-function cellClick(tid,hr,ds,isBlocked){
+function cellClick(tid,time,ds,isBlocked){
     if(isBlocked){showToast('Truck unavailable - still on delivery',1);return}
     if(!trucks.length){showToast('Add a truck first',1);return}
-    openDeliveryModal(tid,hr,ds);
+    openDeliveryModal(tid,time,ds);
 }
 
-function openDeliveryModal(tid,hr,ds){
+function openDeliveryModal(tid,time,ds){
     document.getElementById('deliveryModalTitle').textContent='Add Delivery';
     document.getElementById('deliveryId').value='';
     document.getElementById('deliveryDate').value=ds||toDS(currentDate);
-    document.getElementById('deliveryHour').value=hr||8;
-    document.getElementById('deliveryReturnHour').value='';
+    document.getElementById('deliveryTime').value=time||8;
+    document.getElementById('deliveryReturnTime').value='';
     document.getElementById('deliveryTruck').value=tid||(trucks[0]?._id||'');
     document.getElementById('deliveryCustomer').value='';
     document.getElementById('deliveryAddress').value='';
@@ -304,8 +329,8 @@ function editDel(id){
     document.getElementById('deliveryModalTitle').textContent='Edit Delivery';
     document.getElementById('deliveryId').value=id;
     document.getElementById('deliveryDate').value=d.date;
-    document.getElementById('deliveryHour').value=d.hour;
-    document.getElementById('deliveryReturnHour').value=d.returnHour||'';
+    document.getElementById('deliveryTime').value=d.time||d.hour||8;
+    document.getElementById('deliveryReturnTime').value=d.returnTime||d.returnHour||'';
     document.getElementById('deliveryTruck').value=d.truckId;
     document.getElementById('deliveryCustomer').value=d.customer||'';
     document.getElementById('deliveryAddress').value=d.address||'';
@@ -337,83 +362,57 @@ function updateReturnTimeUI(){
     const rtg=document.getElementById('returnTimeGroup');
     const acn=document.getElementById('autoCalcNote');
     const rtl=document.getElementById('returnTimeLabel');
-    
-    if(isTGR){
-        rtl.innerHTML='🚚 Return time (auto-calculated for TGR)';
-        rtg.classList.remove('required');
-        acn.style.display='block';
-    }else{
-        rtl.innerHTML='⚠️ Return time required for scheduling';
-        rtg.classList.add('required');
-        acn.style.display='none';
-    }
+    if(isTGR){rtl.innerHTML='🚚 Return time (auto-calculated for TGR)';rtg.classList.remove('required');acn.style.display='block'}
+    else{rtl.innerHTML='⚠️ Return time required for scheduling';rtg.classList.add('required');acn.style.display='none'}
 }
 
 function calcReturnTime(){
     const source=document.getElementById('deliverySource').value;
     if(source!=='Texas Got Rocks')return;
     const city=document.getElementById('deliveryCity').value;
-    const depHour=parseInt(document.getElementById('deliveryHour').value);
-    if(!city||!depHour)return;
-    // Estimate: 30min load + round trip. Assume avg 30mi=1hr each way. Add buffer
-    // For now, simple estimate: departure + 2-3 hours depending on distance
-    let estimate=depHour+2;
+    const depTime=parseFloat(document.getElementById('deliveryTime').value);
+    if(!city||!depTime)return;
+    let estimate=depTime+2;
     const farCities=['houston','katy','sugar land','pearland','league city','baytown','galveston','bryan','college station'];
-    if(farCities.some(c=>city.toLowerCase().includes(c)))estimate=depHour+4;
-    else if(['spring','tomball','magnolia','willis','huntsville','montgomery'].some(c=>city.toLowerCase().includes(c)))estimate=depHour+2;
-    else estimate=depHour+3;
+    if(farCities.some(c=>city.toLowerCase().includes(c)))estimate=depTime+4;
+    else if(['spring','tomball','magnolia','willis','huntsville','montgomery'].some(c=>city.toLowerCase().includes(c)))estimate=depTime+2;
+    else estimate=depTime+3;
     if(estimate>18)estimate=18;
-    document.getElementById('deliveryReturnHour').value=estimate;
+    document.getElementById('deliveryReturnTime').value=estimate;
     checkConflicts();
 }
 
 function checkConflicts(){
     const truckId=document.getElementById('deliveryTruck').value;
     const date=document.getElementById('deliveryDate').value;
-    const depHour=parseInt(document.getElementById('deliveryHour').value);
-    const retHour=parseInt(document.getElementById('deliveryReturnHour').value)||depHour+2;
+    const depTime=parseFloat(document.getElementById('deliveryTime').value);
+    const retTime=parseFloat(document.getElementById('deliveryReturnTime').value)||(depTime+2);
     const editId=document.getElementById('deliveryId').value;
-    
     if(!truckId||!date)return;
-    
     const truckDels=deliveries.filter(d=>d.truckId===truckId&&d.date===date&&d.status!=='cancelled'&&d._id!==editId);
     let conflict=null;
-    
     for(const d of truckDels){
-        const dStart=d.hour;const dEnd=d.returnHour||d.hour+2;
-        // Check if new delivery overlaps
-        if((depHour>=dStart&&depHour<dEnd)||(retHour>dStart&&retHour<=dEnd)||(depHour<=dStart&&retHour>=dEnd)){
-            conflict=d;break;
-        }
+        const dStart=d.time||d.hour;const dEnd=d.returnTime||d.returnHour||(dStart+2);
+        if((depTime>=dStart&&depTime<dEnd)||(retTime>dStart&&retTime<=dEnd)||(depTime<=dStart&&retTime>=dEnd)){conflict=d;break}
     }
-    
     const cw=document.getElementById('conflictWarning');
     if(conflict){
-        const hr=conflict.hour>12?conflict.hour-12:conflict.hour;
-        const ampm=conflict.hour>=12?'PM':'AM';
-        cw.innerHTML='⚠️ <strong>Conflict:</strong> This truck has a delivery at '+hr+' '+ampm+' for '+(conflict.customer||'customer')+'. It returns at '+(conflict.returnHour||conflict.hour+2)+':00.';
+        const timeStr=formatTimeVal(conflict.time||conflict.hour);
+        cw.innerHTML='⚠️ <strong>Conflict:</strong> This truck has a delivery at '+timeStr+' for '+(conflict.customer||'customer')+'.';
         cw.style.display='block';
-    }else{
-        cw.style.display='none';
-    }
+    }else{cw.style.display='none'}
 }
 
 async function saveDelivery(){
     const source=document.getElementById('deliverySource').value;
-    const retHour=document.getElementById('deliveryReturnHour').value;
-    
-    // Require return time for non-TGR
-    if(source!=='Texas Got Rocks'&&!retHour){
-        showToast('Return time is required',1);
-        return;
-    }
-    
+    const retTime=document.getElementById('deliveryReturnTime').value;
+    if(source!=='Texas Got Rocks'&&!retTime){showToast('Return time is required',1);return}
     const id=document.getElementById('deliveryId').value;
     const ts=document.getElementById('deliveryTruck');
     const data={
         date:document.getElementById('deliveryDate').value,
-        hour:parseInt(document.getElementById('deliveryHour').value),
-        returnHour:parseInt(retHour)||null,
+        time:parseFloat(document.getElementById('deliveryTime').value),
+        returnTime:parseFloat(retTime)||null,
         truckId:ts.value,
         truckNumber:ts.options[ts.selectedIndex]?.dataset.num||'',
         customer:document.getElementById('deliveryCustomer').value,
@@ -424,13 +423,8 @@ async function saveDelivery(){
         source:source,
         notes:document.getElementById('deliveryNotes').value
     };
-    
-    // Check for conflicts before saving
     const cw=document.getElementById('conflictWarning');
-    if(cw.style.display!=='none'){
-        if(!confirm('There is a scheduling conflict. Save anyway?'))return;
-    }
-    
+    if(cw.style.display!=='none'){if(!confirm('There is a scheduling conflict. Save anyway?'))return}
     try{
         const r=await fetch(API+'/dispatch',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id,...data}:data)});
         const res=await r.json();
