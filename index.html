@@ -66,7 +66,7 @@
         .modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.modal-header h3{font-size:17px}.modal-close{width:32px;height:32px;border-radius:8px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;font-size:20px}.modal-close:hover{background:var(--bg-hover)}
         .modal-body{padding:20px}.form-group{margin-bottom:16px}.form-label{display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
         .form-input,.form-select{width:100%;padding:10px 14px;background:var(--bg-dark);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:inherit}.form-input:focus,.form-select:focus{outline:none;border-color:var(--primary)}
-        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px}
         .source-options{display:flex;gap:8px}.source-option{flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;cursor:pointer;text-align:center}.source-option:hover{border-color:var(--text-muted)}.source-option.selected{border-color:var(--primary);background:rgba(198,93,42,.1)}.source-option.tc.selected{border-color:var(--tc-color);background:rgba(107,184,209,.1)}.source-option.yard.selected{border-color:var(--yard-color);background:rgba(255,200,87,.1)}.source-option.tgr.selected{border-color:var(--tgr-color);background:rgba(76,175,80,.1)}
         .source-label{font-size:11px;font-weight:600;display:block;margin-top:4px;color:var(--text-primary)}.source-dot{width:14px;height:14px;border-radius:50%;margin:0 auto}
         .modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}.btn-danger{background:var(--danger);color:#fff}
@@ -104,7 +104,7 @@
                 <input type="hidden" id="deliveryId">
                 <div class="form-group"><label class="form-label">Source</label><div class="source-options"><button type="button" class="source-option tc selected" onclick="selectSource('T&C Materials')"><div class="source-dot" style="background:var(--tc-color)"></div><span class="source-label">T&C Materials</span></button><button type="button" class="source-option yard" onclick="selectSource('Yard Sale')"><div class="source-dot" style="background:var(--yard-color)"></div><span class="source-label">Yard Sale</span></button><button type="button" class="source-option tgr" onclick="selectSource('Texas Got Rocks')"><div class="source-dot" style="background:var(--tgr-color)"></div><span class="source-label">Texas Got Rocks</span></button></div><input type="hidden" id="deliverySource" value="T&C Materials"></div>
                 <div class="form-group"><label class="form-label">Truck</label><select class="form-select" id="deliveryTruck" onchange="checkConflicts()"></select></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="deliveryDate" onchange="checkConflicts()"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryTime" onchange="checkConflicts()"></select></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="deliveryDate" onchange="checkConflicts()" style="cursor:pointer;-webkit-appearance:none"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryTime" onchange="checkConflicts()"></select></div></div>
                 <div class="return-time-group" id="returnTimeGroup">
                     <div class="return-time-label" id="returnTimeLabel">⚠️ Return time required for scheduling</div>
                     <div class="form-group" style="margin-bottom:0"><label class="form-label">Return Time</label><select class="form-select" id="deliveryReturnTime" onchange="checkConflicts()"></select></div>
@@ -113,7 +113,7 @@
                 <div id="conflictWarning" class="conflict-warning" style="display:none"></div>
                 <div class="form-group" style="margin-top:16px"><label class="form-label">Customer</label><input type="text" class="form-input" id="deliveryCustomer" placeholder="Customer name"></div>
                 <div class="form-row"><div class="form-group"><label class="form-label">Address</label><input type="text" class="form-input" id="deliveryAddress" placeholder="Street address" onchange="calcReturnTime()"></div><div class="form-group"><label class="form-label">City</label><input type="text" class="form-input" id="deliveryCity" placeholder="City" onchange="calcReturnTime()"></div></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Material</label><select class="form-select" id="deliveryMaterial"><option value="">Select material...</option></select></div><div class="form-group"><label class="form-label">Tons</label><input type="number" class="form-input" id="deliveryTons" placeholder="0" step="0.5"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Material</label><select class="form-select" id="deliveryMaterial"><option value="">Select material...</option></select></div><div class="form-group"><label class="form-label">Quantity</label><input type="number" class="form-input" id="deliveryTons" placeholder="0" step="0.5"></div><div class="form-group"><label class="form-label">Units</label><select class="form-select" id="deliveryUnits"><option value="tons">Tons</option><option value="cubic_yards">Cubic Yards</option></select></div></div>
                 <div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" id="deliveryNotes" placeholder="Special instructions"></div>
             </div>
             <div class="modal-footer"><button class="btn btn-danger" id="deleteDeliveryBtn" style="display:none" onclick="deleteDelivery()">Delete</button><button class="btn btn-secondary" onclick="closeDeliveryModal()">Cancel</button><button class="btn btn-primary" id="saveDeliveryBtn" onclick="saveDelivery()">Save</button></div>
@@ -239,7 +239,7 @@ function renderDay(){
                 if(del){
                     const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
                     const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
-                    h+='<div class="delivery-card '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.tons||0)+'T • '+(del.city||'')+'</div></div>';
+                    h+='<div class="delivery-card '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.tons||0)+(del.units==='cubic_yards'?' CY':' T')+' • '+(del.city||'')+'</div></div>';
                 }else if(!isBlocked){h+='<div class="empty-slot">+</div>'}
                 h+='</div>';
             });
@@ -264,7 +264,7 @@ function renderWeek(){
             const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
             const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
             const timeVal=del.time||del.hour;
-            h+='<div class="week-delivery '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><div class="week-delivery-time">'+formatTimeVal(timeVal)+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-source">'+srcLabel+' • '+(del.tons||0)+'T</div></div>';
+            h+='<div class="week-delivery '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><div class="week-delivery-time">'+formatTimeVal(timeVal)+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-source">'+srcLabel+' • '+(del.tons||0)+(del.units==='cubic_yards'?' CY':' T')+'</div></div>';
         });
         if(!dayDels.length)h+='<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px">No deliveries</div>';
         h+='</div>';
@@ -315,6 +315,7 @@ function openDeliveryModal(tid,time,ds){
     document.getElementById('deliveryCity').value='';
     document.getElementById('deliveryMaterial').value='';
     document.getElementById('deliveryTons').value='';
+    document.getElementById('deliveryUnits').value='tons';
     document.getElementById('deliveryNotes').value='';
     document.getElementById('deliverySource').value='T&C Materials';
     selectSource('T&C Materials');
@@ -336,7 +337,8 @@ function editDel(id){
     document.getElementById('deliveryAddress').value=d.address||'';
     document.getElementById('deliveryCity').value=d.city||'';
     document.getElementById('deliveryMaterial').value=d.material||'';
-    document.getElementById('deliveryTons').value=d.tons||'';
+    document.getElementById('deliveryTons').value=d.tons||d.quantity||'';
+    document.getElementById('deliveryUnits').value=d.units||'tons';
     document.getElementById('deliveryNotes').value=d.notes||'';
     selectSource(d.source);
     document.getElementById('deleteDeliveryBtn').style.display='block';
@@ -420,6 +422,7 @@ async function saveDelivery(){
         city:document.getElementById('deliveryCity').value,
         material:document.getElementById('deliveryMaterial').value,
         tons:parseFloat(document.getElementById('deliveryTons').value)||0,
+        units:document.getElementById('deliveryUnits').value,
         source:source,
         notes:document.getElementById('deliveryNotes').value
     };
