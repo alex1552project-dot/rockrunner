@@ -10,6 +10,9 @@
     <meta name="theme-color" content="#C65D2A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
         :root{--primary:#C65D2A;--primary-light:#E07A3A;--accent:#6BB8D1;--navy:#1E3A5F;--bg-dark:#0F1A24;--bg-card:#1A2A3A;--bg-hover:#243444;--text-primary:#FFF;--text-secondary:#8AA4B8;--text-muted:#5A7488;--border:rgba(255,255,255,0.1);--success:#4CAF50;--warning:#FFC857;--danger:#FF6B6B;--tc-color:#6BB8D1;--yard-color:#FFC857;--tgr-color:#4CAF50}
         *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh}
@@ -76,6 +79,18 @@
         .conflict-warning{background:rgba(255,107,107,.1);border:1px solid var(--danger);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--danger)}
         .auto-calc-note{font-size:11px;color:var(--tgr-color);margin-top:8px;padding:8px;background:rgba(76,175,80,.1);border-radius:6px}
         .toast{position:fixed;bottom:24px;right:24px;padding:14px 20px;background:var(--bg-card);border-radius:10px;border-left:4px solid var(--success);box-shadow:0 8px 32px rgba(0,0,0,.3);transform:translateY(100px);opacity:0;transition:all .3s;z-index:2000}.toast.show{transform:translateY(0);opacity:1}.toast.error{border-left-color:var(--danger)}.toast.warning{border-left-color:var(--warning)}
+        .flatpickr-calendar{background:var(--bg-card)!important;border:1px solid var(--border)!important;box-shadow:0 8px 32px rgba(0,0,0,.4)!important;font-family:'DM Sans',sans-serif!important}
+        .flatpickr-day{color:var(--text-primary)!important;border-radius:6px!important}.flatpickr-day:hover{background:var(--bg-hover)!important;border-color:var(--bg-hover)!important}
+        .flatpickr-day.selected{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important}
+        .flatpickr-day.today{border-color:var(--accent)!important}.flatpickr-day.today:hover{background:var(--accent)!important}
+        .flatpickr-months .flatpickr-month{color:var(--text-primary)!important;background:var(--bg-card)!important}
+        .flatpickr-current-month .flatpickr-monthDropdown-months{background:var(--bg-card)!important;color:var(--text-primary)!important}
+        .flatpickr-current-month input.cur-year{color:var(--text-primary)!important}
+        span.flatpickr-weekday{color:var(--text-secondary)!important}
+        .flatpickr-months .flatpickr-prev-month,.flatpickr-months .flatpickr-next-month{color:var(--text-primary)!important;fill:var(--text-primary)!important}
+        .flatpickr-months .flatpickr-prev-month:hover,.flatpickr-months .flatpickr-next-month:hover{color:var(--primary)!important;fill:var(--primary)!important}
+        .flatpickr-day.flatpickr-disabled{color:var(--text-muted)!important}
+        input.flatpickr-input[readonly]{background:var(--bg-dark);color:var(--text-primary);cursor:pointer}
     </style>
 </head>
 <body>
@@ -104,7 +119,7 @@
                 <input type="hidden" id="deliveryId">
                 <div class="form-group"><label class="form-label">Source</label><div class="source-options"><button type="button" class="source-option tc selected" onclick="selectSource('T&C Materials')"><div class="source-dot" style="background:var(--tc-color)"></div><span class="source-label">T&C Materials</span></button><button type="button" class="source-option yard" onclick="selectSource('Yard Sale')"><div class="source-dot" style="background:var(--yard-color)"></div><span class="source-label">Yard Sale</span></button><button type="button" class="source-option tgr" onclick="selectSource('Texas Got Rocks')"><div class="source-dot" style="background:var(--tgr-color)"></div><span class="source-label">Texas Got Rocks</span></button></div><input type="hidden" id="deliverySource" value="T&C Materials"></div>
                 <div class="form-group"><label class="form-label">Truck</label><select class="form-select" id="deliveryTruck" onchange="checkConflicts()"></select></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="deliveryDate" onchange="checkConflicts()" style="cursor:pointer;-webkit-appearance:none"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryTime" onchange="checkConflicts()"></select></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="text" class="form-input" id="deliveryDate" placeholder="Select date..." readonly style="cursor:pointer"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryTime" onchange="checkConflicts()"></select></div></div>
                 <div class="return-time-group" id="returnTimeGroup">
                     <div class="return-time-label" id="returnTimeLabel">⚠️ Return time required for scheduling</div>
                     <div class="form-group" style="margin-bottom:0"><label class="form-label">Return Time</label><select class="form-select" id="deliveryReturnTime" onchange="checkConflicts()"></select></div>
@@ -157,6 +172,7 @@ function formatTimeVal(v){
 
 document.addEventListener('DOMContentLoaded',()=>{
     loadTrucks();loadMaterials();updateDisplay();populateTimeSelects();
+    window.datePicker=flatpickr('#deliveryDate',{dateFormat:'Y-m-d',altInput:true,altFormat:'m/d/Y',theme:'dark',allowInput:false,onChange:function(){checkConflicts()}});
     if(localStorage.getItem('sbCol')==='1')document.getElementById('sidebar').classList.add('collapsed');
 });
 
@@ -307,6 +323,7 @@ function openDeliveryModal(tid,time,ds){
     document.getElementById('deliveryModalTitle').textContent='Add Delivery';
     document.getElementById('deliveryId').value='';
     document.getElementById('deliveryDate').value=ds||toDS(currentDate);
+    if(window.datePicker)window.datePicker.setDate(ds||toDS(currentDate),true);
     document.getElementById('deliveryTime').value=time||8;
     document.getElementById('deliveryReturnTime').value='';
     document.getElementById('deliveryTruck').value=tid||(trucks[0]?._id||'');
@@ -330,6 +347,7 @@ function editDel(id){
     document.getElementById('deliveryModalTitle').textContent='Edit Delivery';
     document.getElementById('deliveryId').value=id;
     document.getElementById('deliveryDate').value=d.date;
+    if(window.datePicker)window.datePicker.setDate(d.date,true);
     document.getElementById('deliveryTime').value=d.time||d.hour||8;
     document.getElementById('deliveryReturnTime').value=d.returnTime||d.returnHour||'';
     document.getElementById('deliveryTruck').value=d.truckId;
