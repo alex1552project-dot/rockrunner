@@ -150,6 +150,8 @@ body {
 
 /* ─── LEFT TOP: TODAY'S BOARD ────────────────── */
 .today-panel {
+  grid-column: 1;
+  grid-row: 1;
   padding: 16px 24px;
   overflow: hidden;
   display: flex;
@@ -159,6 +161,8 @@ body {
 
 /* ─── LEFT BOTTOM: WEEKLY VIEW ───────────────── */
 .week-panel {
+  grid-column: 1;
+  grid-row: 2;
   padding: 16px 24px;
   overflow: hidden;
   display: flex;
@@ -388,6 +392,7 @@ body {
 
 /* ─── RIGHT: INCOMING QUEUE ──────────────────── */
 .queue-panel {
+  grid-column: 2;
   grid-row: 1 / 3;
   background: var(--surface);
   border-left: 1px solid var(--border);
