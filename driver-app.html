@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>RockRunner Driver</title>
+<link rel="icon" href="driver-logo.jpg" type="image/jpeg">
+<link rel="apple-touch-icon" href="driver-logo.jpg">
 <style>
 :root {
   --navy: #001F3F;
@@ -51,21 +53,22 @@ body {
   gap: 12px;
 }
 .header h1 {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--orange);
 }
 .header-date {
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-dim);
 }
 .driver-badge {
   background: var(--surface2);
   border: 1px solid var(--border);
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 /* ─── LOGIN ──────────────────────────────────── */
@@ -77,44 +80,48 @@ body {
   min-height: 100vh;
   padding: 40px 20px;
 }
-.login-logo { font-size: 48px; margin-bottom: 16px; }
-.login-title { font-size: 24px; font-weight: 700; color: var(--orange); margin-bottom: 8px; }
-.login-sub { color: var(--text-dim); margin-bottom: 32px; font-size: 14px; }
+.login-logo { width: 220px; height: 220px; border-radius: 28px; margin-bottom: 28px; object-fit: cover; }
+.login-title { font-size: 42px; font-weight: 800; color: var(--orange); margin-bottom: 10px; letter-spacing: -0.5px; }
+.login-sub { color: var(--text-dim); margin-bottom: 36px; font-size: 20px; font-weight: 600; }
 .login-input {
   width: 100%;
-  max-width: 300px;
-  padding: 14px 18px;
+  max-width: 360px;
+  padding: 20px 24px;
   background: var(--surface2);
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   color: var(--text);
-  font-size: 18px;
+  font-size: 32px;
+  font-weight: 700;
   text-align: center;
-  letter-spacing: 8px;
+  letter-spacing: 14px;
   font-family: inherit;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 .login-input:focus { outline: none; border-color: var(--orange); }
 .login-btn {
   width: 100%;
-  max-width: 300px;
-  padding: 14px;
+  max-width: 360px;
+  padding: 20px;
   background: var(--orange);
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #fff;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   cursor: pointer;
+  letter-spacing: 0.5px;
 }
 
 /* ─── ROUTE LIST ─────────────────────────────── */
-.route-list { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.route-list { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 .empty-route {
   text-align: center;
-  padding: 60px 20px;
+  padding: 80px 20px;
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 /* ─── STOP CARD ──────────────────────────────── */
@@ -125,14 +132,14 @@ body {
   overflow: hidden;
 }
 .stop-header {
-  padding: 14px 16px;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .stop-number {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--orange);
   color: #fff;
@@ -140,37 +147,38 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 .stop-number.completed { background: var(--green); }
 .stop-number.active { background: var(--purple); animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0.4)} 50%{box-shadow:0 0 0 8px rgba(168,85,247,0)} }
 .stop-info { flex: 1; }
-.stop-customer { font-size: 16px; font-weight: 600; }
-.stop-material { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
-.stop-tons { font-size: 15px; font-weight: 700; color: var(--orange); }
+.stop-customer { font-size: 18px; font-weight: 700; }
+.stop-material { font-size: 14px; color: var(--text-dim); margin-top: 2px; }
+.stop-tons { font-size: 17px; font-weight: 700; color: var(--orange); }
 
 .stop-body {
   padding: 0 16px 14px;
 }
 .stop-address {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-dim);
   margin-bottom: 8px;
 }
 .stop-time {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   margin-bottom: 12px;
 }
 .stop-notes {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--yellow);
   background: rgba(234,179,8,0.08);
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 8px;
   margin-bottom: 12px;
+  font-weight: 600;
 }
 
 /* ─── ACTION BUTTONS (BIG — glove-friendly) ──── */
@@ -181,16 +189,17 @@ body {
 }
 .action-btn {
   flex: 1;
-  padding: 16px;
+  padding: 18px;
   border-radius: 12px;
   border: none;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 60px;
   min-height: 56px;
   transition: transform 0.1s;
 }
@@ -310,7 +319,7 @@ body {
 
 <!-- ═══ LOGIN SCREEN ═══════════════════════════════ -->
 <div id="loginScreen" class="login-screen">
-  <div class="login-logo">🚛</div>
+  <img src="driver-logo.jpg" alt="RockRunner" class="login-logo">
   <div class="login-title">RockRunner Driver</div>
   <div class="login-sub">Enter your 4-digit PIN</div>
   <input class="login-input" id="pinInput" type="password" maxlength="4" inputmode="numeric" placeholder="····">
