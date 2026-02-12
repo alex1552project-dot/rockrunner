@@ -1,162 +1,345 @@
-const { MongoClient, ObjectId } = require('mongodb');
+/**
+ * dispatch.js — Delivery Lifecycle API
+ * 
+ * Collections used:
+ *   delivery_schedule  — all delivery records (any status)
+ *   trucks             — fleet roster
+ *   products           — material catalog (shared with TGR)
+ *   inventory          — stock levels (depleted on DELIVERED)
+ * 
+ * Statuses:
+ *   UNASSIGNED  — order placed, no truck yet
+ *   SCHEDULED   — truck assigned, customer notified (night before)
+ *   EN_ROUTE    — driver tapped "En Route" (real-time SMS fired)
+ *   DELIVERED   — driver confirmed + photo uploaded
+ *   CANCELLED   — order cancelled before delivery
+ * 
+ * Endpoints:
+ *   GET    /dispatch                       — list deliveries (filter by date, status, truck, driver)
+ *   GET    /dispatch?id=xxx                — single delivery by ID
+ *   POST   /dispatch                       — create new delivery (from TGR checkout or yard sale)
+ *   PUT    /dispatch                       — update delivery (assign truck, change status, etc.)
+ *   PUT    /dispatch  {action:"finalize"}  — batch finalize tomorrow's schedule (triggers SMS)
+ *   DELETE /dispatch?id=xxx                — cancel a delivery
+ */
 
-let cachedClient = null;
-async function connectToDatabase() {
-  if (cachedClient) return cachedClient.db('gotrocks');
-  cachedClient = await MongoClient.connect(process.env.MONGODB_URI);
-  return cachedClient.db('gotrocks');
-}
-
-const headers = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Content-Type': 'application/json'
-};
+const { connectToDatabase, headers, handleOptions } = require('./utils/db');
+const { ObjectId } = require('mongodb');
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
+  if (event.httpMethod === 'OPTIONS') return handleOptions();
 
   try {
-    const db = await connectToDatabase();
-    const collection = db.collection('delivery_schedule');
+    const { db } = await connectToDatabase();
+    const deliveries = db.collection('delivery_schedule');
 
-    // GET - List deliveries
+    // ─── GET — Query deliveries ───────────────────────────────
     if (event.httpMethod === 'GET') {
-      const params = event.queryStringParameters || {};
-      const { startDate, endDate, truckId } = params;
-      
-      const query = { status: { $ne: 'cancelled' } };
-      if (startDate && endDate) {
-        query.date = { $gte: startDate, $lte: endDate };
-      } else if (startDate) {
-        query.date = startDate;
-      }
-      if (truckId) query.truckId = truckId;
+      const p = event.queryStringParameters || {};
 
-      const deliveries = await collection.find(query).sort({ date: 1, time: 1, hour: 1 }).toArray();
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true, deliveries }) };
+      // Single delivery by ID
+      if (p.id) {
+        const doc = await deliveries.findOne({ _id: new ObjectId(p.id) });
+        return { statusCode: doc ? 200 : 404, headers, body: JSON.stringify(doc || { error: 'Not found' }) };
+      }
+
+      const query = {};
+
+      // Date range filter
+      if (p.date) {
+        query.deliveryDate = p.date; // "2026-02-13"
+      } else if (p.startDate && p.endDate) {
+        query.deliveryDate = { $gte: p.startDate, $lte: p.endDate };
+      }
+
+      // Status filter (single or comma-separated)
+      if (p.status) {
+        const statuses = p.status.split(',');
+        query.status = statuses.length === 1 ? statuses[0] : { $in: statuses };
+      }
+
+      // Truck filter
+      if (p.truckId) query.truckId = p.truckId;
+
+      // Driver filter (for driver app)
+      if (p.driverId) query.driverId = p.driverId;
+
+      // Source filter
+      if (p.source) query.source = p.source;
+
+      const results = await deliveries
+        .find(query)
+        .sort({ deliveryDate: 1, timeWindow: 1, stopOrder: 1 })
+        .toArray();
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true, deliveries: results, count: results.length })
+      };
     }
 
-    // POST - Create delivery
+    // ─── POST — Create new delivery ──────────────────────────
     if (event.httpMethod === 'POST') {
-      const body = JSON.parse(event.body || '{}');
-      const { date, time, hour, returnTime, returnHour, truckId, truckNumber, customer, address, city, material, tons, source, notes } = body;
+      const body = JSON.parse(event.body);
 
-      // Support both time (new 30-min) and hour (legacy)
-      const deliveryTime = time !== undefined ? parseFloat(time) : (hour !== undefined ? parseInt(hour) : null);
-      const deliveryReturnTime = returnTime !== undefined ? parseFloat(returnTime) : (returnHour !== undefined ? parseInt(returnHour) : null);
-
-      if (!date || deliveryTime === null || !truckId) {
-        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Date, time, and truck required' }) };
-      }
-
-      // Check for exact time conflict
-      const existingDelivery = await collection.findOne({
-        truckId,
-        date,
-        $or: [
-          { time: deliveryTime },
-          { hour: deliveryTime, time: { $exists: false } }
-        ],
-        status: { $ne: 'cancelled' }
-      });
-
-      if (existingDelivery) {
-        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Time slot already booked for this truck' }) };
-      }
-
-      const delivery = {
-        date,
-        time: deliveryTime,
-        returnTime: deliveryReturnTime,
-        // Keep legacy fields for backward compatibility
-        hour: Math.floor(deliveryTime),
-        returnHour: deliveryReturnTime ? Math.floor(deliveryReturnTime) : null,
-        truckId,
-        truckNumber: truckNumber || '',
-        customer: customer || '',
-        address: address || '',
-        city: city || '',
-        material: material || '',
-        tons: parseFloat(tons) || 0,
-        source: source || 'T&C Materials',
-        notes: notes || '',
-        status: 'scheduled',
+      const newDelivery = {
+        // Order info
+        source: body.source || 'Yard Sale',         // "Texas Got Rocks", "Yard Sale", "T&C Materials"
+        orderId: body.orderId || null,               // TGR order ID or null for yard sales
+        
+        // Customer
+        customerName: body.customerName,
+        customerPhone: body.customerPhone || '',
+        customerEmail: body.customerEmail || '',
+        
+        // Delivery address
+        deliveryAddress: body.deliveryAddress || '',
+        deliveryCity: body.deliveryCity || '',
+        deliveryState: body.deliveryState || 'TX',
+        deliveryZip: body.deliveryZip || '',
+        deliveryLat: body.deliveryLat || null,
+        deliveryLng: body.deliveryLng || null,
+        
+        // Material
+        productId: body.productId || null,
+        materialName: body.materialName,
+        quantity: parseFloat(body.quantity) || 0,     // tons
+        unit: body.unit || 'tons',
+        
+        // Scheduling
+        deliveryDate: body.deliveryDate,              // "2026-02-13" (requested or selected)
+        timeWindow: body.timeWindow || null,          // "10:00 AM - 12:00 PM" (set by dispatcher)
+        hour: body.hour || null,                      // 10 (numeric hour, for calendar slot)
+        
+        // Assignment (set by dispatcher)
+        truckId: body.truckId || null,
+        truckNumber: body.truckNumber || null,
+        driverId: body.driverId || null,
+        driverName: body.driverName || null,
+        stopOrder: body.stopOrder || null,            // 1, 2, 3... (position in truck route)
+        
+        // Status lifecycle
+        status: body.truckId ? 'SCHEDULED' : 'UNASSIGNED',
+        
+        // Timestamps
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        scheduledAt: body.truckId ? new Date() : null,
+        enRouteAt: null,
+        deliveredAt: null,
+        cancelledAt: null,
+        
+        // Proof of delivery
+        deliveryPhoto: null,
+        deliveryNotes: body.deliveryNotes || '',
+        
+        // Notifications
+        scheduleSmsSent: false,
+        enRouteSmsSent: false,
+        
+        // Audit trail
+        statusHistory: [{
+          status: body.truckId ? 'SCHEDULED' : 'UNASSIGNED',
+          timestamp: new Date(),
+          updatedBy: body.createdBy || 'system',
+          notes: 'Order created'
+        }],
+        createdBy: body.createdBy || 'system'
       };
 
-      const result = await collection.insertOne(delivery);
-      delivery._id = result.insertedId;
+      const result = await deliveries.insertOne(newDelivery);
 
-      return { statusCode: 201, headers, body: JSON.stringify({ success: true, delivery }) };
+      return {
+        statusCode: 201,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          deliveryId: result.insertedId,
+          status: newDelivery.status
+        })
+      };
     }
 
-    // PUT - Update delivery
+    // ─── PUT — Update delivery ───────────────────────────────
     if (event.httpMethod === 'PUT') {
-      const body = JSON.parse(event.body || '{}');
-      const { id, date, time, hour, returnTime, returnHour, truckId, truckNumber, customer, address, city, material, tons, source, notes, status } = body;
+      const body = JSON.parse(event.body);
 
+      // ── Batch finalize: lock tomorrow's schedule + trigger SMS ──
+      if (body.action === 'finalize') {
+        const date = body.date; // "2026-02-13"
+        if (!date) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'date required for finalize' }) };
+        }
+
+        // Find all UNASSIGNED deliveries that now have trucks assigned for this date
+        // (dispatcher already dragged them to trucks but hasn't finalized)
+        const result = await deliveries.updateMany(
+          { deliveryDate: date, status: 'SCHEDULED', scheduleSmsSent: false },
+          {
+            $set: { scheduleSmsSent: true, updatedAt: new Date() },
+            $push: {
+              statusHistory: {
+                status: 'FINALIZED',
+                timestamp: new Date(),
+                updatedBy: body.updatedBy || 'dispatcher',
+                notes: 'Schedule finalized — SMS queued'
+              }
+            }
+          }
+        );
+
+        // Return the deliveries that need SMS (caller handles Brevo)
+        const toNotify = await deliveries.find({
+          deliveryDate: date,
+          status: 'SCHEDULED',
+          $or: [{ customerPhone: { $ne: '' } }, { customerEmail: { $ne: '' } }]
+        }).toArray();
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            finalized: result.modifiedCount,
+            toNotify: toNotify.map(d => ({
+              id: d._id,
+              customerName: d.customerName,
+              customerPhone: d.customerPhone,
+              customerEmail: d.customerEmail || '',
+              materialName: d.materialName,
+              quantity: d.quantity,
+              timeWindow: d.timeWindow,
+              deliveryDate: d.deliveryDate
+            }))
+          })
+        };
+      }
+
+      // ── Single delivery update ──
+      const id = body.id || body._id;
       if (!id) {
-        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Delivery ID required' }) };
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'id required' }) };
       }
 
-      const updateData = { updatedAt: new Date() };
-      if (date !== undefined) updateData.date = date;
-      if (time !== undefined) {
-        updateData.time = parseFloat(time);
-        updateData.hour = Math.floor(parseFloat(time));
-      } else if (hour !== undefined) {
-        updateData.hour = parseInt(hour);
-        updateData.time = parseInt(hour);
-      }
-      if (returnTime !== undefined) {
-        updateData.returnTime = returnTime ? parseFloat(returnTime) : null;
-        updateData.returnHour = returnTime ? Math.floor(parseFloat(returnTime)) : null;
-      } else if (returnHour !== undefined) {
-        updateData.returnHour = returnHour ? parseInt(returnHour) : null;
-        updateData.returnTime = returnHour ? parseInt(returnHour) : null;
-      }
-      if (truckId !== undefined) updateData.truckId = truckId;
-      if (truckNumber !== undefined) updateData.truckNumber = truckNumber;
-      if (customer !== undefined) updateData.customer = customer;
-      if (address !== undefined) updateData.address = address;
-      if (city !== undefined) updateData.city = city;
-      if (material !== undefined) updateData.material = material;
-      if (tons !== undefined) updateData.tons = parseFloat(tons);
-      if (source !== undefined) updateData.source = source;
-      if (notes !== undefined) updateData.notes = notes;
-      if (status !== undefined) updateData.status = status;
+      const update = { $set: { updatedAt: new Date() }, $push: {} };
+      const historyEntry = { timestamp: new Date(), updatedBy: body.updatedBy || 'system' };
 
-      await collection.updateOne({ _id: new ObjectId(id) }, { $set: updateData });
-
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Delivery updated' }) };
-    }
-
-    // DELETE - Cancel delivery
-    if (event.httpMethod === 'DELETE') {
-      const body = JSON.parse(event.body || '{}');
-      const { id } = body;
-
-      if (!id) {
-        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Delivery ID required' }) };
+      // Assign truck (dispatcher drags to truck)
+      if (body.truckId !== undefined) {
+        update.$set.truckId = body.truckId;
+        update.$set.truckNumber = body.truckNumber || null;
+        update.$set.driverId = body.driverId || null;
+        update.$set.driverName = body.driverName || null;
+        if (body.truckId && body.status !== 'UNASSIGNED') {
+          update.$set.status = 'SCHEDULED';
+          update.$set.scheduledAt = new Date();
+          historyEntry.status = 'SCHEDULED';
+          historyEntry.notes = `Assigned to truck ${body.truckNumber || body.truckId}`;
+        }
       }
 
-      await collection.updateOne(
+      // Update time window
+      if (body.timeWindow !== undefined) {
+        update.$set.timeWindow = body.timeWindow;
+        update.$set.hour = body.hour || null;
+      }
+
+      // Update stop order
+      if (body.stopOrder !== undefined) {
+        update.$set.stopOrder = body.stopOrder;
+      }
+
+      // Status change
+      if (body.status) {
+        update.$set.status = body.status;
+        historyEntry.status = body.status;
+        historyEntry.notes = body.notes || `Status changed to ${body.status}`;
+
+        if (body.status === 'EN_ROUTE') {
+          update.$set.enRouteAt = new Date();
+        }
+        if (body.status === 'DELIVERED') {
+          update.$set.deliveredAt = new Date();
+          if (body.deliveryPhoto) {
+            update.$set.deliveryPhoto = body.deliveryPhoto;
+          }
+          if (body.deliveryNotes) {
+            update.$set.deliveryNotes = body.deliveryNotes;
+          }
+        }
+        if (body.status === 'CANCELLED') {
+          update.$set.cancelledAt = new Date();
+        }
+      }
+
+      // SMS tracking
+      if (body.enRouteSmsSent) update.$set.enRouteSmsSent = true;
+
+      // Push history entry if it has a status
+      if (historyEntry.status) {
+        update.$push.statusHistory = historyEntry;
+      } else {
+        delete update.$push;
+      }
+
+      const result = await deliveries.updateOne(
         { _id: new ObjectId(id) },
-        { $set: { status: 'cancelled', updatedAt: new Date() } }
+        update
       );
 
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Delivery cancelled' }) };
+      // ── If DELIVERED, deplete inventory ──
+      if (body.status === 'DELIVERED') {
+        const delivery = await deliveries.findOne({ _id: new ObjectId(id) });
+        if (delivery && delivery.productId) {
+          const inventory = db.collection('inventory');
+          await inventory.updateOne(
+            { productId: delivery.productId },
+            { $inc: { currentStock: -(delivery.quantity) } }
+          );
+        }
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true, modified: result.modifiedCount })
+      };
+    }
+
+    // ─── DELETE — Cancel delivery ─────────────────────────────
+    if (event.httpMethod === 'DELETE') {
+      const p = event.queryStringParameters || {};
+      if (!p.id) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'id required' }) };
+      }
+
+      const result = await deliveries.updateOne(
+        { _id: new ObjectId(p.id) },
+        {
+          $set: { status: 'CANCELLED', cancelledAt: new Date(), updatedAt: new Date() },
+          $push: {
+            statusHistory: {
+              status: 'CANCELLED',
+              timestamp: new Date(),
+              updatedBy: p.by || 'admin',
+              notes: p.reason || 'Cancelled'
+            }
+          }
+        }
+      );
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true, cancelled: result.modifiedCount })
+      };
     }
 
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 
-  } catch (error) {
-    console.error('Dispatch API error:', error);
-    return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: error.message || 'Server error' }) };
+  } catch (err) {
+    console.error('Dispatch API error:', err);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };

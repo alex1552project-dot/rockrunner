@@ -1,515 +1,1210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RockRunner Logistics</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="apple-touch-icon" href="icon-180.png">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#C65D2A">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <style>
-        :root{--primary:#C65D2A;--primary-light:#E07A3A;--accent:#6BB8D1;--navy:#1E3A5F;--bg-dark:#0F1A24;--bg-card:#1A2A3A;--bg-hover:#243444;--text-primary:#FFF;--text-secondary:#8AA4B8;--text-muted:#5A7488;--border:rgba(255,255,255,0.1);--success:#4CAF50;--warning:#FFC857;--danger:#FF6B6B;--tc-color:#6BB8D1;--yard-color:#FFC857;--tgr-color:#4CAF50}
-        *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh}
-        .header{background:linear-gradient(135deg,var(--navy),var(--bg-dark));padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-        .logo-section{display:flex;align-items:center;gap:16px}.logo{width:50px;height:50px;border-radius:12px;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}
-        .brand h1{font-size:22px;font-weight:700;color:var(--primary)}.brand span{font-size:13px;color:var(--text-secondary)}
-        .header-actions{display:flex;gap:12px}.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;gap:8px}
-        .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-light)}.btn-secondary{background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border)}.btn-secondary:hover{background:var(--bg-hover)}
-        .main-layout{display:flex;height:calc(100vh - 83px)}
-        .sidebar{width:280px;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width .3s}.sidebar.collapsed{width:50px}.sidebar.collapsed .sidebar-content,.sidebar.collapsed .sidebar-header h2,.sidebar.collapsed .add-truck-btn{display:none}
-        .sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}.sidebar-header h2{font-size:15px;white-space:nowrap;flex:1}
-        .collapse-btn,.add-truck-btn{width:32px;height:32px;min-width:32px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
-        .collapse-btn{background:var(--bg-dark);color:var(--text-secondary);border:1px solid var(--border)}.collapse-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
-        .add-truck-btn{background:var(--primary);color:#fff;font-size:20px}
-        .truck-list{flex:1;overflow-y:auto;padding:12px}
-        .truck-item{background:var(--bg-dark);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}.truck-item:hover{border-color:var(--primary)}
-        .truck-header{display:flex;justify-content:space-between;margin-bottom:6px}.truck-number{font-weight:700}.truck-capacity{background:var(--accent);color:var(--navy);padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600}
-        .truck-type{font-size:12px;color:var(--text-secondary)}.truck-actions{display:flex;gap:8px;margin-top:10px}
-        .truck-action-btn{flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer}.truck-action-btn:hover{background:var(--bg-hover);color:var(--text-primary)}.truck-action-btn.delete:hover{background:rgba(255,107,107,.2);color:var(--danger)}
-        .calendar-container{flex:1;display:flex;flex-direction:column;overflow:hidden}
-        .calendar-header{padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
-        .date-nav{display:flex;align-items:center;gap:12px}.date-nav-btn{width:36px;height:36px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);cursor:pointer}.date-nav-btn:hover{background:var(--bg-hover)}
-        .current-date{font-size:18px;font-weight:600}.today-btn{padding:8px 16px;background:var(--accent);color:var(--navy);border:none;border-radius:6px;font-weight:600;cursor:pointer}
-        .view-toggle{display:flex;background:var(--bg-card);border-radius:8px;padding:4px}.view-btn{padding:8px 14px;border:none;background:transparent;color:var(--text-secondary);border-radius:6px;cursor:pointer;font-weight:500}.view-btn.active{background:var(--primary);color:#fff}
-        .legend{display:flex;gap:20px;padding:10px 24px;background:var(--bg-card);border-bottom:1px solid var(--border)}.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)}.legend-dot{width:10px;height:10px;border-radius:50%}.legend-dot.tc{background:var(--tc-color)}.legend-dot.yard{background:var(--yard-color)}.legend-dot.tgr{background:var(--tgr-color)}
-        .calendar-scroll{flex:1;overflow:auto}.calendar-grid{display:grid;grid-template-columns:80px repeat(var(--truck-count,1),minmax(160px,1fr))}
-        .time-column{background:var(--bg-card);border-right:1px solid var(--border);position:sticky;left:0;z-index:10}.time-header{height:44px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted)}
-        .time-slot{height:40px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-secondary)}.time-slot.half{border-bottom:1px dashed var(--border);font-size:10px;color:var(--text-muted)}
-        .truck-column{border-right:1px solid var(--border)}.truck-header-cell{height:44px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;position:sticky;top:0;z-index:5}.truck-header-cell .cap{font-size:10px;color:var(--text-muted);margin-left:6px}
-        .schedule-cell{height:40px;border-bottom:1px solid var(--border);padding:2px;position:relative}.schedule-cell.half{border-bottom:1px dashed var(--border)}.schedule-cell:hover{background:rgba(198,93,42,.05)}
-        .schedule-cell.blocked{background:rgba(255,107,107,.08)}.schedule-cell.blocked::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,107,107,.1) 5px,rgba(255,107,107,.1) 10px)}
-        .delivery-card{background:var(--bg-hover);border-radius:5px;padding:4px 6px;height:100%;cursor:pointer;border-left:3px solid var(--tc-color);overflow:hidden;position:relative}.delivery-card.tc{border-left-color:var(--tc-color)}.delivery-card.yard{border-left-color:var(--yard-color)}.delivery-card.tgr{border-left-color:var(--tgr-color)}
-        .delivery-card:hover{background:var(--bg-card)}.delivery-customer{font-weight:600;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:40px}.delivery-details{font-size:9px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.delivery-tons{font-size:9px;font-weight:600;color:var(--accent)}
-        .delivery-source{position:absolute;top:3px;right:3px;font-size:7px;padding:2px 4px;border-radius:3px;font-weight:600;text-transform:uppercase}
-        .delivery-card.tc .delivery-source{background:rgba(107,184,209,.2);color:var(--tc-color)}
-        .delivery-card.yard .delivery-source{background:rgba(255,200,87,.2);color:var(--yard-color)}
-        .delivery-card.tgr .delivery-source{background:rgba(76,175,80,.2);color:var(--tgr-color)}
-        .empty-slot{height:100%;border:1px dashed var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:14px;cursor:pointer;opacity:0}.schedule-cell:hover .empty-slot{opacity:1}
-        .week-header{display:flex;border-bottom:1px solid var(--border)}.week-day-header{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;border-right:1px solid var(--border)}.week-day-header.today{background:rgba(198,93,42,.15)}
-        .week-grid{display:flex;flex:1}.week-day-column{flex:1;border-right:1px solid var(--border);min-height:200px}.week-delivery{margin:4px;padding:6px 8px;border-radius:6px;font-size:11px;cursor:pointer;border-left:3px solid var(--tc-color);background:var(--bg-hover)}
-        .week-delivery.tc{border-left-color:var(--tc-color)}.week-delivery.yard{border-left-color:var(--yard-color)}.week-delivery.tgr{border-left-color:var(--tgr-color)}
-        .week-delivery-time{font-weight:600;color:var(--accent)}.week-delivery-customer{font-weight:500;margin-top:2px}.week-delivery-source{font-size:9px;color:var(--text-muted);margin-top:2px}
-        .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);margin:16px;border-radius:12px;overflow:hidden}
-        .month-header-cell{background:var(--bg-card);padding:10px;text-align:center;font-weight:600;font-size:12px;color:var(--text-secondary)}
-        .month-day{background:var(--bg-dark);min-height:80px;padding:8px;cursor:pointer}.month-day:hover{background:var(--bg-card)}.month-day.other-month{opacity:.3}.month-day.today{background:rgba(198,93,42,.15)}
-        .month-day-number{font-weight:600;font-size:13px;margin-bottom:4px}.month-day.today .month-day-number{background:var(--primary);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
-        .month-summary{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
-        .month-badge{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
-        .month-badge.tc{background:rgba(107,184,209,.2);color:var(--tc-color)}
-        .month-badge.yard{background:rgba(255,200,87,.2);color:var(--yard-color)}
-        .month-badge.tgr{background:rgba(76,175,80,.2);color:var(--tgr-color)}
-        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000}.modal-overlay.active{display:flex}
-        .modal{background:var(--bg-card);border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
-        .modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.modal-header h3{font-size:17px}.modal-close{width:32px;height:32px;border-radius:8px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;font-size:20px}.modal-close:hover{background:var(--bg-hover)}
-        .modal-body{padding:20px}.form-group{margin-bottom:16px}.form-label{display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
-        .form-input,.form-select{width:100%;padding:10px 14px;background:var(--bg-dark);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:inherit}.form-input:focus,.form-select:focus{outline:none;border-color:var(--primary)}
-        .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px}
-        .source-options{display:flex;gap:8px}.source-option{flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;cursor:pointer;text-align:center}.source-option:hover{border-color:var(--text-muted)}.source-option.selected{border-color:var(--primary);background:rgba(198,93,42,.1)}.source-option.tc.selected{border-color:var(--tc-color);background:rgba(107,184,209,.1)}.source-option.yard.selected{border-color:var(--yard-color);background:rgba(255,200,87,.1)}.source-option.tgr.selected{border-color:var(--tgr-color);background:rgba(76,175,80,.1)}
-        .source-label{font-size:11px;font-weight:600;display:block;margin-top:4px;color:var(--text-primary)}.source-dot{width:14px;height:14px;border-radius:50%;margin:0 auto}
-        .modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}.btn-danger{background:var(--danger);color:#fff}
-        .return-time-group{background:var(--bg-dark);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px}
-        .return-time-group.required{border-color:var(--warning)}
-        .return-time-label{font-size:11px;color:var(--warning);margin-bottom:8px;display:flex;align-items:center;gap:6px}
-        .conflict-warning{background:rgba(255,107,107,.1);border:1px solid var(--danger);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--danger)}
-        .auto-calc-note{font-size:11px;color:var(--tgr-color);margin-top:8px;padding:8px;background:rgba(76,175,80,.1);border-radius:6px}
-        .toast{position:fixed;bottom:24px;right:24px;padding:14px 20px;background:var(--bg-card);border-radius:10px;border-left:4px solid var(--success);box-shadow:0 8px 32px rgba(0,0,0,.3);transform:translateY(100px);opacity:0;transition:all .3s;z-index:2000}.toast.show{transform:translateY(0);opacity:1}.toast.error{border-left-color:var(--danger)}.toast.warning{border-left-color:var(--warning)}
-        .flatpickr-calendar{background:var(--bg-card)!important;border:1px solid var(--border)!important;box-shadow:0 8px 32px rgba(0,0,0,.4)!important;font-family:'DM Sans',sans-serif!important}
-        .flatpickr-day{color:var(--text-primary)!important;border-radius:6px!important}.flatpickr-day:hover{background:var(--bg-hover)!important;border-color:var(--bg-hover)!important}
-        .flatpickr-day.selected{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important}
-        .flatpickr-day.today{border-color:var(--accent)!important}.flatpickr-day.today:hover{background:var(--accent)!important}
-        .flatpickr-months .flatpickr-month{color:var(--text-primary)!important;background:var(--bg-card)!important}
-        .flatpickr-current-month .flatpickr-monthDropdown-months{background:var(--bg-card)!important;color:var(--text-primary)!important}
-        .flatpickr-current-month input.cur-year{color:var(--text-primary)!important}
-        span.flatpickr-weekday{color:var(--text-secondary)!important}
-        .flatpickr-months .flatpickr-prev-month,.flatpickr-months .flatpickr-next-month{color:var(--text-primary)!important;fill:var(--text-primary)!important}
-        .flatpickr-months .flatpickr-prev-month:hover,.flatpickr-months .flatpickr-next-month:hover{color:var(--primary)!important;fill:var(--primary)!important}
-        .flatpickr-day.flatpickr-disabled{color:var(--text-muted)!important}
-        input.flatpickr-input[readonly]{background:var(--bg-dark);color:var(--text-primary);cursor:pointer}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RockRunner — Dispatch Board</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --navy: #001F3F;
+  --navy-light: #0a2d52;
+  --navy-dark: #001530;
+  --orange: #C65D2A;
+  --orange-dim: rgba(198,93,42,0.15);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --yellow: #eab308;
+  --yellow-dim: rgba(234,179,8,0.12);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.12);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --purple: #a855f7;
+  --purple-dim: rgba(168,85,247,0.12);
+  --surface: #0f1923;
+  --surface2: #162230;
+  --border: #1e3347;
+  --text: #e4e8ef;
+  --text-dim: #7a8da0;
+  --text-muted: #4a5d73;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--navy-dark);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ─── TOP BAR ────────────────────────────────────── */
+.topbar {
+  background: var(--navy);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.topbar-logo {
+  height: 36px;
+  border-radius: 6px;
+}
+.topbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: -0.3px;
+}
+.topbar-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ─── DATE NAV ───────────────────────────────────── */
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.date-nav button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.date-nav button:hover { background: var(--navy-light); }
+.date-label {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 180px;
+  text-align: center;
+  cursor: pointer;
+}
+.date-label:hover { color: var(--orange); }
+.today-btn {
+  background: var(--orange) !important;
+  border-color: var(--orange) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 600;
+  width: auto !important;
+  padding: 0 12px;
+}
+
+/* ─── ACTION BUTTONS ─────────────────────────────── */
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover { background: var(--navy-light); border-color: var(--text-muted); }
+.btn-primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+.btn-primary:hover { background: #d4693a; }
+.btn-success { background: var(--green); border-color: var(--green); color: #fff; }
+.btn-success:hover { background: #1aaf52; }
+.btn-danger { background: var(--red); border-color: var(--red); color: #fff; }
+
+/* ─── LAYOUT ─────────────────────────────────────── */
+.main-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: calc(100vh - 61px);
+}
+
+/* ─── LEFT PANEL — UNASSIGNED QUEUE ──────────────── */
+.queue-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.queue-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.queue-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+}
+.queue-count {
+  background: var(--orange);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 24px;
+  text-align: center;
+}
+.queue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.queue-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ─── DELIVERY CARD ──────────────────────────────── */
+.delivery-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: grab;
+  transition: all 0.15s;
+  position: relative;
+}
+.delivery-card:active { cursor: grabbing; }
+.delivery-card:hover { border-color: var(--orange); }
+.delivery-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.96);
+}
+.delivery-card .source-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+.source-tgr { background: var(--green); }
+.source-yard { background: var(--yellow); }
+.source-tc { background: var(--blue); }
+.delivery-card .card-customer {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+}
+.delivery-card .card-material {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.delivery-card .card-address {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.delivery-card .card-tons {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange);
+}
+
+/* Scheduled card (inside truck lane) */
+.delivery-card.scheduled {
+  border-left: 3px solid var(--blue);
+}
+.delivery-card.en-route {
+  border-left: 3px solid var(--purple);
+}
+.delivery-card.delivered {
+  border-left: 3px solid var(--green);
+  opacity: 0.7;
+}
+
+/* ─── RIGHT PANEL — TRUCK LANES ──────────────────── */
+.board-panel {
+  overflow-x: auto;
+  overflow-y: auto;
+  padding: 16px;
+}
+.board-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.board-panel-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+}
+
+.truck-lanes {
+  display: flex;
+  gap: 14px;
+  min-height: calc(100vh - 160px);
+}
+
+.truck-lane {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-width: 280px;
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lane-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lane-truck-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lane-truck-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--orange-dim);
+  color: var(--orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.lane-truck-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+.lane-truck-cap {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.lane-truck-load {
+  font-size: 12px;
+  font-weight: 600;
+}
+.lane-load-ok { color: var(--green); }
+.lane-load-warn { color: var(--yellow); }
+.lane-load-over { color: var(--red); }
+
+.lane-body {
+  flex: 1;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 200px;
+  transition: background 0.15s;
+}
+.lane-body.drag-over {
+  background: rgba(198,93,42,0.06);
+  border-radius: 0 0 12px 12px;
+}
+.lane-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+}
+
+/* ─── ADD TRUCK LANE ─────────────────────────────── */
+.add-truck-lane {
+  min-width: 200px;
+  width: 200px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.add-truck-lane:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+/* ─── MODAL ──────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-header h3 { font-size: 17px; font-weight: 700; }
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 22px;
+  cursor: pointer;
+}
+.modal-body { padding: 20px 22px; }
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ─── FORM ───────────────────────────────────────── */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-select:focus {
+  outline: none;
+  border-color: var(--orange);
+}
+.form-select { cursor: pointer; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ─── STATS BAR ──────────────────────────────────── */
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.stat-num {
+  font-weight: 700;
+  color: var(--text);
+}
+.stat-label { color: var(--text-dim); }
+
+/* ─── TOAST ──────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--green);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 2000;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { background: var(--red); }
+
+/* ─── SCROLLBAR ──────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+@media (max-width: 768px) {
+  .main-layout { grid-template-columns: 1fr; }
+  .queue-panel { max-height: 40vh; }
+  .stats-bar { flex-wrap: wrap; gap: 10px; }
+}
+</style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo-section"><div class="logo"><img src="logo.jpg" alt="RockRunner"></div><div class="brand"><h1>RockRunner Logistics</h1><span>Dispatch Management</span></div></div>
-        <div class="header-actions"><button class="btn btn-secondary" onclick="window.open('/tv.html','_blank')">📺 TV Mode</button><button class="btn btn-primary" onclick="openDeliveryModal()">+ Add Delivery</button></div>
-    </header>
-    <div class="main-layout">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header"><button class="collapse-btn" onclick="toggleSidebar()">☰</button><h2>🚛 Truck Roster</h2><button class="add-truck-btn" onclick="openTruckModal()">+</button></div>
-            <div class="sidebar-content"><div class="truck-list" id="truckList"></div></div>
-        </aside>
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <div class="date-nav"><button class="date-nav-btn" onclick="prevPeriod()">←</button><span class="current-date" id="currentDate">Loading...</span><button class="date-nav-btn" onclick="nextPeriod()">→</button><button class="today-btn" onclick="goToday()">Today</button></div>
-                <div class="view-toggle"><button class="view-btn active" id="viewDay" onclick="setView('day')">Day</button><button class="view-btn" id="viewWeek" onclick="setView('week')">Week</button><button class="view-btn" id="viewMonth" onclick="setView('month')">Month</button></div>
-            </div>
-            <div class="legend"><div class="legend-item"><div class="legend-dot tc"></div>T&C Materials</div><div class="legend-item"><div class="legend-dot yard"></div>Yard Sale</div><div class="legend-item"><div class="legend-dot tgr"></div>Texas Got Rocks</div></div>
-            <div class="calendar-scroll" id="calendarScroll"></div>
-        </div>
+
+<!-- ═══ TOP BAR ════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <img src="logo.jpg" alt="RockRunner" class="topbar-logo">
+    <div>
+      <div class="topbar-title">RockRunner Logistics</div>
+      <div class="topbar-sub">Dispatch Board</div>
     </div>
-    <div class="modal-overlay" id="deliveryModal">
-        <div class="modal">
-            <div class="modal-header"><h3 id="deliveryModalTitle">Add Delivery</h3><button class="modal-close" onclick="closeDeliveryModal()">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="deliveryId">
-                <div class="form-group"><label class="form-label">Source</label><div class="source-options"><button type="button" class="source-option tc selected" onclick="selectSource('T&C Materials')"><div class="source-dot" style="background:var(--tc-color)"></div><span class="source-label">T&C Materials</span></button><button type="button" class="source-option yard" onclick="selectSource('Yard Sale')"><div class="source-dot" style="background:var(--yard-color)"></div><span class="source-label">Yard Sale</span></button><button type="button" class="source-option tgr" onclick="selectSource('Texas Got Rocks')"><div class="source-dot" style="background:var(--tgr-color)"></div><span class="source-label">Texas Got Rocks</span></button></div><input type="hidden" id="deliverySource" value="T&C Materials"></div>
-                <div class="form-group"><label class="form-label">Truck</label><select class="form-select" id="deliveryTruck" onchange="checkConflicts()"></select></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="text" class="form-input" id="deliveryDate" placeholder="Select date..." readonly style="cursor:pointer"></div><div class="form-group"><label class="form-label">Departure Time</label><select class="form-select" id="deliveryTime" onchange="checkConflicts()"></select></div></div>
-                <div class="return-time-group" id="returnTimeGroup">
-                    <div class="return-time-label" id="returnTimeLabel">⚠️ Return time required for scheduling</div>
-                    <div class="form-group" style="margin-bottom:0"><label class="form-label">Return Time</label><select class="form-select" id="deliveryReturnTime" onchange="checkConflicts()"></select></div>
-                    <div class="auto-calc-note" id="autoCalcNote" style="display:none">🚚 Return time auto-calculated based on delivery distance</div>
-                </div>
-                <div id="conflictWarning" class="conflict-warning" style="display:none"></div>
-                <div class="form-group" style="margin-top:16px"><label class="form-label">Customer</label><input type="text" class="form-input" id="deliveryCustomer" placeholder="Customer name"></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Address</label><input type="text" class="form-input" id="deliveryAddress" placeholder="Street address" onchange="calcReturnTime()"></div><div class="form-group"><label class="form-label">City</label><input type="text" class="form-input" id="deliveryCity" placeholder="City" onchange="calcReturnTime()"></div></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Material</label><select class="form-select" id="deliveryMaterial"><option value="">Select material...</option></select></div><div class="form-group"><label class="form-label">Quantity</label><input type="number" class="form-input" id="deliveryTons" placeholder="0" step="0.5"></div><div class="form-group"><label class="form-label">Units</label><select class="form-select" id="deliveryUnits"><option value="tons">Tons</option><option value="cubic_yards">Cubic Yards</option></select></div></div>
-                <div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" id="deliveryNotes" placeholder="Special instructions"></div>
-            </div>
-            <div class="modal-footer"><button class="btn btn-danger" id="deleteDeliveryBtn" style="display:none" onclick="deleteDelivery()">Delete</button><button class="btn btn-secondary" onclick="closeDeliveryModal()">Cancel</button><button class="btn btn-primary" id="saveDeliveryBtn" onclick="saveDelivery()">Save</button></div>
-        </div>
+  </div>
+  <div class="topbar-right">
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">‹</button>
+      <button class="today-btn" onclick="goToday()">Today</button>
+      <span class="date-label" id="dateLabel" onclick="pickDate()"></span>
+      <button onclick="changeDate(1)">›</button>
     </div>
-    <div class="modal-overlay" id="truckModal">
-        <div class="modal">
-            <div class="modal-header"><h3 id="truckModalTitle">Add Truck</h3><button class="modal-close" onclick="closeTruckModal()">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="truckId">
-                <div class="form-group"><label class="form-label">Truck Number/Name</label><input type="text" class="form-input" id="truckNumber" placeholder="e.g. TC-001"></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Capacity (tons)</label><input type="number" class="form-input" id="truckCapacity" placeholder="24"></div><div class="form-group"><label class="form-label">Type</label><select class="form-select" id="truckType"><option value="semi">Semi</option><option value="tandem">Tandem</option><option value="broker">Broker</option></select></div></div>
-                <div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" id="truckNotes" placeholder="Optional"></div>
-            </div>
-            <div class="modal-footer"><button class="btn btn-danger" id="deleteTruckBtn" style="display:none" onclick="deleteTruck()">Delete</button><button class="btn btn-secondary" onclick="closeTruckModal()">Cancel</button><button class="btn btn-primary" onclick="saveTruck()">Save</button></div>
-        </div>
+    <button class="btn btn-primary" onclick="openAddDelivery()">+ Delivery</button>
+    <button class="btn btn-success" id="finalizeBtn" onclick="finalizeSchedule()">📤 Finalize &amp; Notify</button>
+  </div>
+</div>
+
+<!-- ═══ STATS BAR ══════════════════════════════════════ -->
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-dot" style="background:var(--orange)"></div><span class="stat-num" id="statUnassigned">0</span><span class="stat-label">Unassigned</span></div>
+  <div class="stat-item"><div class="stat-dot" style="background:var(--blue)"></div><span class="stat-num" id="statScheduled">0</span><span class="stat-label">Scheduled</span></div>
+  <div class="stat-item"><div class="stat-dot" style="background:var(--purple)"></div><span class="stat-num" id="statEnRoute">0</span><span class="stat-label">En Route</span></div>
+  <div class="stat-item"><div class="stat-dot" style="background:var(--green)"></div><span class="stat-num" id="statDelivered">0</span><span class="stat-label">Delivered</span></div>
+  <div class="stat-item" style="margin-left:auto;"><span class="stat-num" id="statTons">0</span><span class="stat-label">Total Tons</span></div>
+</div>
+
+<!-- ═══ MAIN LAYOUT ════════════════════════════════════ -->
+<div class="main-layout">
+
+  <!-- LEFT: Unassigned Queue -->
+  <div class="queue-panel">
+    <div class="queue-header">
+      <h2>Unassigned</h2>
+      <span class="queue-count" id="queueCount">0</span>
     </div>
-    <div class="toast" id="toast">Saved!</div>
+    <div class="queue-list" id="queueList">
+      <div class="queue-empty">No unassigned deliveries<br><small>Add one with + Delivery</small></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Truck Lanes -->
+  <div class="board-panel">
+    <div id="truckLanes" class="truck-lanes">
+      <!-- Truck lanes render here -->
+      <div class="add-truck-lane" onclick="openAddTruck()">
+        + Add Truck
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ ADD DELIVERY MODAL ═════════════════════════════ -->
+<div class="modal-overlay" id="deliveryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>New Delivery</h3>
+      <button class="modal-close" onclick="closeModal('deliveryModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Source</label>
+        <select class="form-select" id="delSource">
+          <option value="Yard Sale">Yard Sale</option>
+          <option value="Texas Got Rocks">Texas Got Rocks</option>
+          <option value="T&C Materials">T&C Materials</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Customer Name *</label>
+        <input class="form-input" id="delCustomer" placeholder="John Smith">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" id="delPhone" placeholder="(936) 555-0123" type="tel">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="delEmail" placeholder="customer@email.com" type="email">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Delivery Address *</label>
+        <input class="form-input" id="delAddress" placeholder="123 Main St">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input class="form-input" id="delCity" placeholder="Conroe">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ZIP</label>
+          <input class="form-input" id="delZip" placeholder="77301">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Material *</label>
+          <select class="form-select" id="delMaterial">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity (tons) *</label>
+          <input class="form-input" id="delQty" type="number" step="0.5" min="0.5" placeholder="8">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Delivery Date *</label>
+          <input class="form-input" id="delDate" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time Window</label>
+          <select class="form-select" id="delTime">
+            <option value="">Assign later</option>
+            <option value="6:00 AM - 8:00 AM">6:00 AM - 8:00 AM</option>
+            <option value="8:00 AM - 10:00 AM">8:00 AM - 10:00 AM</option>
+            <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
+            <option value="12:00 PM - 2:00 PM">12:00 PM - 2:00 PM</option>
+            <option value="2:00 PM - 4:00 PM">2:00 PM - 4:00 PM</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="delNotes" placeholder="Gate code, special instructions...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('deliveryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDelivery()">Add Delivery</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD TRUCK MODAL ════════════════════════════════ -->
+<div class="modal-overlay" id="truckModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="truckModalTitle">Add Truck</h3>
+      <button class="modal-close" onclick="closeModal('truckModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Truck Number *</label>
+        <input class="form-input" id="truckNumber" placeholder="TC-001">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="truckType">
+            <option value="End Dump">End Dump</option>
+            <option value="Tandem">Tandem</option>
+            <option value="Semi">Semi</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Capacity (tons)</label>
+          <input class="form-input" id="truckCap" type="number" value="24">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Default Driver Name</label>
+          <input class="form-input" id="truckDriver" placeholder="Driver name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Driver Phone</label>
+          <input class="form-input" id="truckDriverPhone" placeholder="(936) 555-0123" type="tel">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('truckModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTruck()">Save Truck</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DELIVERY DETAIL MODAL ══════════════════════════ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Delivery Details</h3>
+      <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer" id="detailFooter"></div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ══════════════════════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden date picker -->
+<input type="date" id="hiddenDatePicker" style="position:fixed;top:-100px;left:-100px;opacity:0;">
+
 <script>
-let trucks=[],deliveries=[],materials=[],currentDate=new Date(),currentView='day';
-const API='/.netlify/functions';
+// ─── CONFIG ──────────────────────────────────────────
+const API = '/.netlify/functions';
+let currentDate = new Date();
+let trucks = [];
+let deliveries = [];
+let products = [];
+let dragData = null;
 
-// Time slots: 5:00 AM to 6:00 PM in 30-min intervals
-const TIME_SLOTS=[];
-for(let h=5;h<=18;h++){
-    TIME_SLOTS.push({value:h,label:formatTime(h,0)});
-    if(h<18)TIME_SLOTS.push({value:h+0.5,label:formatTime(h,30)});
-}
-
-function formatTime(h,m){
-    const hr=h>12?h-12:(h===0?12:h);
-    const ampm=h>=12?'PM':'AM';
-    return hr+':'+(m===0?'00':'30')+' '+ampm;
-}
-
-function formatTimeVal(v){
-    const h=Math.floor(v);
-    const m=(v%1)*60;
-    return formatTime(h,m);
-}
-
-document.addEventListener('DOMContentLoaded',()=>{
-    loadTrucks();loadMaterials();updateDisplay();populateTimeSelects();
-    window.datePicker=flatpickr('#deliveryDate',{dateFormat:'Y-m-d',altInput:true,altFormat:'m/d/Y',theme:'dark',allowInput:false,onChange:function(){checkConflicts()}});
-    if(localStorage.getItem('sbCol')==='1')document.getElementById('sidebar').classList.add('collapsed');
+// ─── INIT ────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderDateLabel();
+  loadAll();
 });
 
-function populateTimeSelects(){
-    const depSel=document.getElementById('deliveryTime');
-    const retSel=document.getElementById('deliveryReturnTime');
-    depSel.innerHTML=TIME_SLOTS.map(t=>'<option value="'+t.value+'">'+t.label+'</option>').join('');
-    retSel.innerHTML='<option value="">Select return...</option>'+TIME_SLOTS.map(t=>'<option value="'+t.value+'">'+t.label+'</option>').join('');
+async function loadAll() {
+  await Promise.all([loadTrucks(), loadProducts()]);
+  await loadDeliveries();
+  render();
 }
 
-function toggleSidebar(){const s=document.getElementById('sidebar');s.classList.toggle('collapsed');localStorage.setItem('sbCol',s.classList.contains('collapsed')?'1':'0')}
-function toDS(d){return d.toISOString().split('T')[0]}
-function formatWeekRange(d){const s=new Date(d);s.setDate(s.getDate()-s.getDay());const e=new Date(s);e.setDate(e.getDate()+6);return s.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' - '+e.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
-
-function updateDisplay(){
-    if(currentView==='month')document.getElementById('currentDate').textContent=currentDate.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-    else if(currentView==='week')document.getElementById('currentDate').textContent=formatWeekRange(currentDate);
-    else document.getElementById('currentDate').textContent=currentDate.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
-    loadDeliveries();
+// ─── DATA LOADING ────────────────────────────────────
+async function loadTrucks() {
+  try {
+    const r = await fetch(`${API}/trucks`);
+    const d = await r.json();
+    trucks = d.success ? (d.trucks || []) : [];
+  } catch(e) { trucks = []; console.error('Truck load error:', e); }
 }
 
-function prevPeriod(){if(currentView==='month')currentDate.setMonth(currentDate.getMonth()-1);else if(currentView==='week')currentDate.setDate(currentDate.getDate()-7);else currentDate.setDate(currentDate.getDate()-1);updateDisplay()}
-function nextPeriod(){if(currentView==='month')currentDate.setMonth(currentDate.getMonth()+1);else if(currentView==='week')currentDate.setDate(currentDate.getDate()+7);else currentDate.setDate(currentDate.getDate()+1);updateDisplay()}
-function goToday(){currentDate=new Date();updateDisplay()}
-function setView(v){currentView=v;document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1)).classList.add('active');updateDisplay()}
+async function loadDeliveries() {
+  try {
+    const dateStr = formatDateISO(currentDate);
+    // Load both the specific date AND all unassigned for any date
+    const [dateRes, unassRes] = await Promise.all([
+      fetch(`${API}/dispatch?date=${dateStr}`),
+      fetch(`${API}/dispatch?status=UNASSIGNED`)
+    ]);
+    const dateData = await dateRes.json();
+    const unassData = await unassRes.json();
 
-async function loadTrucks(){try{const r=await fetch(API+'/trucks');const d=await r.json();trucks=d.success?d.trucks||[]:[];}catch(e){trucks=[];console.error(e)}renderTrucks();renderCal();popTruckSel()}
-async function loadMaterials(){try{const r=await fetch(API+'/products');const d=await r.json();materials=d.success?d.materials||[]:[];popMaterialSel()}catch(e){materials=[];console.error(e)}}
-
-function renderTrucks(){
-    const l=document.getElementById('truckList');
-    if(!trucks.length){l.innerHTML='<div style="text-align:center;padding:30px;color:var(--text-muted)">No trucks yet<br><small>Click + to add</small></div>';return}
-    const tp={semi:'Semi',tandem:'Tandem',broker:'Broker'};
-    l.innerHTML=trucks.map(t=>'<div class="truck-item"><div class="truck-header"><span class="truck-number">'+t.truckNumber+'</span><span class="truck-capacity">'+t.capacity+'T</span></div><div class="truck-type">'+(tp[t.type]||t.type||'Semi')+'</div><div class="truck-actions"><button class="truck-action-btn" onclick="event.stopPropagation();editTruck(\''+t._id+'\')">Edit</button><button class="truck-action-btn delete" onclick="event.stopPropagation();delTruck(\''+t._id+'\')">Remove</button></div></div>').join('');
+    // Merge: all unassigned + all for current date (deduplicated)
+    const dateDeliveries = dateData.deliveries || [];
+    const unassDeliveries = unassData.deliveries || [];
+    const all = [...dateDeliveries];
+    const dateIds = new Set(dateDeliveries.map(d => d._id));
+    for (const u of unassDeliveries) {
+      if (!dateIds.has(u._id)) all.push(u);
+    }
+    deliveries = all;
+  } catch(e) { deliveries = []; console.error('Delivery load error:', e); }
 }
 
-function popTruckSel(){const s=document.getElementById('deliveryTruck');s.innerHTML=trucks.length?trucks.map(t=>'<option value="'+t._id+'" data-num="'+t.truckNumber+'">'+t.truckNumber+' ('+t.capacity+'T)</option>').join(''):'<option value="">Add truck first</option>'}
-function popMaterialSel(){const s=document.getElementById('deliveryMaterial');s.innerHTML='<option value="">Select material...</option>'+materials.map(m=>'<option value="'+m.name+'">'+m.name+'</option>').join('')}
-
-async function loadDeliveries(){
-    try{
-        let st,en;
-        if(currentView==='month'){st=toDS(new Date(currentDate.getFullYear(),currentDate.getMonth(),1));en=toDS(new Date(currentDate.getFullYear(),currentDate.getMonth()+1,0))}
-        else if(currentView==='week'){const s=new Date(currentDate);s.setDate(s.getDate()-s.getDay());const e=new Date(s);e.setDate(e.getDate()+6);st=toDS(s);en=toDS(e)}
-        else{st=en=toDS(currentDate)}
-        const r=await fetch(API+'/dispatch?startDate='+st+'&endDate='+en);const d=await r.json();deliveries=d.deliveries||[]
-    }catch(e){deliveries=[];console.error(e)}renderCal()
+async function loadProducts() {
+  try {
+    const r = await fetch(`${API}/products`);
+    const d = await r.json();
+    products = d.products || d || [];
+    populateMaterialDropdown();
+  } catch(e) { products = []; console.error('Products load error:', e); }
 }
 
-function renderCal(){if(currentView==='month')renderMonth();else if(currentView==='week')renderWeek();else renderDay()}
+function populateMaterialDropdown() {
+  const sel = document.getElementById('delMaterial');
+  sel.innerHTML = '<option value="">Select material</option>';
+  const items = Array.isArray(products) ? products : [];
+  items.filter(p => p.active !== false).forEach(p => {
+    sel.innerHTML += `<option value="${p._id}" data-name="${p.name}">${p.name}</option>`;
+  });
+}
 
-function getBlockedSlots(truckId,date){
-    const slots=[];
-    deliveries.filter(d=>d.truckId===truckId&&d.date===date&&d.status!=='cancelled').forEach(d=>{
-        const start=d.time||d.hour;const end=d.returnTime||d.returnHour||(start+2);
-        for(let t=start;t<end;t+=0.5)slots.push(t);
+// ─── RENDERING ───────────────────────────────────────
+function render() {
+  renderQueue();
+  renderTruckLanes();
+  renderStats();
+}
+
+function renderQueue() {
+  const list = document.getElementById('queueList');
+  const unassigned = deliveries.filter(d => d.status === 'UNASSIGNED');
+  document.getElementById('queueCount').textContent = unassigned.length;
+
+  if (!unassigned.length) {
+    list.innerHTML = '<div class="queue-empty">No unassigned deliveries<br><small>Add one with + Delivery</small></div>';
+    return;
+  }
+
+  list.innerHTML = unassigned.map(d => renderDeliveryCard(d, true)).join('');
+}
+
+function renderDeliveryCard(d, draggable = true) {
+  const sourceClass = d.source === 'Texas Got Rocks' ? 'source-tgr' : d.source === 'Yard Sale' ? 'source-yard' : 'source-tc';
+  const statusClass = d.status === 'SCHEDULED' ? 'scheduled' : d.status === 'EN_ROUTE' ? 'en-route' : d.status === 'DELIVERED' ? 'delivered' : '';
+
+  return `<div class="delivery-card ${statusClass}" 
+    ${draggable ? `draggable="true" ondragstart="onDragStart(event,'${d._id}')" ondragend="onDragEnd(event)"` : ''}
+    onclick="showDetail('${d._id}')">
+    <div class="card-customer"><span class="source-dot ${sourceClass}"></span>${d.customerName || 'Unknown'}</div>
+    <div class="card-material">${d.materialName || 'Material TBD'} — ${d.quantity || '?'} tons</div>
+    <div class="card-address">${d.deliveryCity || d.deliveryAddress || 'No address'}${d.timeWindow ? ' · ' + d.timeWindow : ''}</div>
+    <div class="card-tons">${d.quantity || '?'}T</div>
+  </div>`;
+}
+
+function renderTruckLanes() {
+  const container = document.getElementById('truckLanes');
+  const dateStr = formatDateISO(currentDate);
+
+  const lanesHTML = trucks.map(truck => {
+    const truckDeliveries = deliveries.filter(d =>
+      d.truckId === truck._id && d.deliveryDate === dateStr && d.status !== 'CANCELLED'
+    ).sort((a,b) => (a.stopOrder || 99) - (b.stopOrder || 99));
+
+    const totalTons = truckDeliveries.reduce((s, d) => s + (d.quantity || 0), 0);
+    const loadClass = totalTons > truck.capacity ? 'lane-load-over' : totalTons > truck.capacity * 0.8 ? 'lane-load-warn' : 'lane-load-ok';
+    const driverName = truck.defaultDriver ? truck.defaultDriver.name : 'No driver';
+
+    const cardsHTML = truckDeliveries.length
+      ? truckDeliveries.map(d => renderDeliveryCard(d, d.status === 'SCHEDULED')).join('')
+      : `<div class="lane-empty">Drop deliveries here</div>`;
+
+    return `<div class="truck-lane">
+      <div class="lane-header">
+        <div class="lane-truck-info">
+          <div class="lane-truck-icon">🚛</div>
+          <div>
+            <div class="lane-truck-name">${truck.truckNumber}</div>
+            <div class="lane-truck-cap">${truck.type} · ${truck.capacity}T · ${driverName}</div>
+          </div>
+        </div>
+        <div class="lane-truck-load ${loadClass}">${totalTons}/${truck.capacity}T</div>
+      </div>
+      <div class="lane-body" 
+        ondragover="onDragOver(event)" 
+        ondragleave="onDragLeave(event)" 
+        ondrop="onDrop(event,'${truck._id}','${truck.truckNumber}')">
+        ${cardsHTML}
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = lanesHTML + '<div class="add-truck-lane" onclick="openAddTruck()">+ Add Truck</div>';
+}
+
+function renderStats() {
+  const dateStr = formatDateISO(currentDate);
+  const dayDeliveries = deliveries.filter(d => d.deliveryDate === dateStr && d.status !== 'CANCELLED');
+  const unassigned = deliveries.filter(d => d.status === 'UNASSIGNED');
+
+  document.getElementById('statUnassigned').textContent = unassigned.length;
+  document.getElementById('statScheduled').textContent = dayDeliveries.filter(d => d.status === 'SCHEDULED').length;
+  document.getElementById('statEnRoute').textContent = dayDeliveries.filter(d => d.status === 'EN_ROUTE').length;
+  document.getElementById('statDelivered').textContent = dayDeliveries.filter(d => d.status === 'DELIVERED').length;
+  document.getElementById('statTons').textContent = dayDeliveries.reduce((s, d) => s + (d.quantity || 0), 0).toFixed(1);
+}
+
+// ─── DRAG & DROP ─────────────────────────────────────
+function onDragStart(e, deliveryId) {
+  dragData = deliveryId;
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragEnd(e) {
+  e.target.classList.remove('dragging');
+  dragData = null;
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+async function onDrop(e, truckId, truckNumber) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragData) return;
+
+  const deliveryId = dragData;
+  dragData = null;
+
+  // Find truck's driver info
+  const truck = trucks.find(t => t._id === truckId);
+  const driverName = truck?.defaultDriver?.name || null;
+  const driverId = truck?.defaultDriver?.id || null;
+
+  // Count existing stops for this truck on this date to set stop order
+  const dateStr = formatDateISO(currentDate);
+  const existingStops = deliveries.filter(d => d.truckId === truckId && d.deliveryDate === dateStr && d.status !== 'CANCELLED');
+
+  try {
+    const r = await fetch(`${API}/dispatch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: deliveryId,
+        truckId,
+        truckNumber,
+        driverId,
+        driverName,
+        deliveryDate: dateStr,
+        stopOrder: existingStops.length + 1,
+        status: 'SCHEDULED',
+        updatedBy: 'dispatcher'
+      })
     });
-    return slots;
+    const data = await r.json();
+    if (data.success) {
+      toast('Delivery assigned to ' + truckNumber);
+      await loadDeliveries();
+      render();
+    }
+  } catch(e) { toast('Error assigning delivery', true); console.error(e); }
 }
 
-function renderDay(){
-    const c=document.getElementById('calendarScroll');
-    let h='<div class="calendar-grid" style="--truck-count:'+(trucks.length||1)+'"><div class="time-column"><div class="time-header">Time</div>';
-    TIME_SLOTS.forEach(t=>{
-        const isHalf=t.value%1!==0;
-        h+='<div class="time-slot'+(isHalf?' half':'')+'">'+t.label+'</div>';
+// ─── DATE NAVIGATION ─────────────────────────────────
+function formatDateISO(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function renderDateLabel() {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const label = `${days[currentDate.getDay()]}, ${months[currentDate.getMonth()]} ${currentDate.getDate()}, ${currentDate.getFullYear()}`;
+  document.getElementById('dateLabel').textContent = label;
+}
+
+function changeDate(delta) {
+  currentDate.setDate(currentDate.getDate() + delta);
+  renderDateLabel();
+  loadDeliveries().then(render);
+}
+
+function goToday() {
+  currentDate = new Date();
+  renderDateLabel();
+  loadDeliveries().then(render);
+}
+
+function pickDate() {
+  const picker = document.getElementById('hiddenDatePicker');
+  picker.value = formatDateISO(currentDate);
+  picker.showPicker();
+  picker.onchange = () => {
+    currentDate = new Date(picker.value + 'T12:00:00');
+    renderDateLabel();
+    loadDeliveries().then(render);
+  };
+}
+
+// ─── MODALS ──────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function openAddDelivery() {
+  document.getElementById('delDate').value = formatDateISO(currentDate);
+  openModal('deliveryModal');
+}
+
+function openAddTruck() {
+  document.getElementById('truckNumber').value = '';
+  document.getElementById('truckCap').value = '24';
+  document.getElementById('truckDriver').value = '';
+  document.getElementById('truckDriverPhone').value = '';
+  document.getElementById('truckModalTitle').textContent = 'Add Truck';
+  openModal('truckModal');
+}
+
+// ─── SAVE DELIVERY ───────────────────────────────────
+async function saveDelivery() {
+  const customer = document.getElementById('delCustomer').value.trim();
+  const materialSel = document.getElementById('delMaterial');
+  const qty = document.getElementById('delQty').value;
+  const date = document.getElementById('delDate').value;
+
+  if (!customer || !materialSel.value || !qty || !date) {
+    toast('Please fill required fields', true);
+    return;
+  }
+
+  const materialName = materialSel.options[materialSel.selectedIndex].dataset.name || materialSel.options[materialSel.selectedIndex].text;
+
+  const body = {
+    source: document.getElementById('delSource').value,
+    customerName: customer,
+    customerPhone: document.getElementById('delPhone').value.trim(),
+    customerEmail: document.getElementById('delEmail').value.trim(),
+    deliveryAddress: document.getElementById('delAddress').value.trim(),
+    deliveryCity: document.getElementById('delCity').value.trim(),
+    deliveryZip: document.getElementById('delZip').value.trim(),
+    productId: materialSel.value,
+    materialName: materialName,
+    quantity: parseFloat(qty),
+    deliveryDate: date,
+    timeWindow: document.getElementById('delTime').value || null,
+    deliveryNotes: document.getElementById('delNotes').value.trim(),
+    createdBy: 'dispatcher'
+  };
+
+  try {
+    const r = await fetch(`${API}/dispatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
-    h+='</div>';
-    if(!trucks.length){h+='<div class="truck-column"><div class="truck-header-cell">Add trucks →</div>';TIME_SLOTS.forEach(()=>h+='<div class="schedule-cell"></div>');h+='</div>'}
-    else{
-        const ds=toDS(currentDate);
-        trucks.forEach(tr=>{
-            const blocked=getBlockedSlots(tr._id,ds);
-            h+='<div class="truck-column"><div class="truck-header-cell">'+tr.truckNumber+'<span class="cap">'+tr.capacity+'T</span></div>';
-            TIME_SLOTS.forEach(t=>{
-                const del=deliveries.find(d=>d.truckId===tr._id&&d.date===ds&&(d.time===t.value||(d.hour===t.value&&!d.time))&&d.status!=='cancelled');
-                const isBlocked=!del&&blocked.includes(t.value);
-                const isHalf=t.value%1!==0;
-                h+='<div class="schedule-cell'+(isHalf?' half':'')+(isBlocked?' blocked':'')+'" onclick="cellClick(\''+tr._id+'\','+t.value+',\''+ds+'\','+isBlocked+')">';
-                if(del){
-                    const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
-                    const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
-                    h+='<div class="delivery-card '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><span class="delivery-source">'+srcLabel+'</span><div class="delivery-customer">'+(del.customer||'Delivery')+'</div><div class="delivery-details">'+(del.tons||0)+(del.units==='cubic_yards'?' CY':' T')+' • '+(del.city||'')+'</div></div>';
-                }else if(!isBlocked){h+='<div class="empty-slot">+</div>'}
-                h+='</div>';
-            });
-            h+='</div>';
-        });
+    const data = await r.json();
+    if (data.success) {
+      toast('Delivery added');
+      closeModal('deliveryModal');
+      // Clear form
+      ['delCustomer','delPhone','delEmail','delAddress','delCity','delZip','delQty','delNotes'].forEach(id => document.getElementById(id).value = '');
+      await loadDeliveries();
+      render();
     }
-    h+='</div>';c.innerHTML=h;
+  } catch(e) { toast('Error saving delivery', true); console.error(e); }
 }
 
-function renderWeek(){
-    const c=document.getElementById('calendarScroll');
-    const startOfWeek=new Date(currentDate);startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
-    const today=toDS(new Date());
-    let h='<div class="week-header">';
-    for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(d.getDate()+i);const ds=toDS(d);const isToday=ds===today;h+='<div class="week-day-header'+(isToday?' today':'')+'">'+d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+'</div>'}
-    h+='</div><div class="week-grid">';
-    for(let i=0;i<7;i++){
-        const d=new Date(startOfWeek);d.setDate(d.getDate()+i);const ds=toDS(d);
-        const dayDels=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled').sort((a,b)=>(a.time||a.hour)-(b.time||b.hour));
-        h+='<div class="week-day-column" onclick="goToDateView(\''+ds+'\')">';
-        dayDels.forEach(del=>{
-            const sc=del.source==='T&C Materials'?'tc':del.source==='Yard Sale'?'yard':'tgr';
-            const srcLabel=del.source==='T&C Materials'?'T&C':del.source==='Yard Sale'?'Yard':'TGR';
-            const timeVal=del.time||del.hour;
-            h+='<div class="week-delivery '+sc+'" onclick="event.stopPropagation();editDel(\''+del._id+'\')"><div class="week-delivery-time">'+formatTimeVal(timeVal)+'</div><div class="week-delivery-customer">'+(del.customer||'Delivery')+'</div><div class="week-delivery-source">'+srcLabel+' • '+(del.tons||0)+(del.units==='cubic_yards'?' CY':' T')+'</div></div>';
-        });
-        if(!dayDels.length)h+='<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px">No deliveries</div>';
-        h+='</div>';
-    }
-    h+='</div>';c.innerHTML=h;
-}
+// ─── SAVE TRUCK ──────────────────────────────────────
+async function saveTruck() {
+  const num = document.getElementById('truckNumber').value.trim();
+  const cap = document.getElementById('truckCap').value;
+  if (!num) { toast('Truck number required', true); return; }
 
-function goToDateView(ds){currentDate=new Date(ds+'T12:00:00');setView('day')}
+  const body = {
+    truckNumber: num,
+    type: document.getElementById('truckType').value,
+    capacity: parseFloat(cap) || 24,
+    defaultDriver: null
+  };
 
-function renderMonth(){
-    const c=document.getElementById('calendarScroll');
-    const y=currentDate.getFullYear(),m=currentDate.getMonth();
-    const fd=new Date(y,m,1),ld=new Date(y,m+1,0);
-    const sd=fd.getDay(),dm=ld.getDate();const tds=toDS(new Date());
-    let h='<div class="month-grid">';
-    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>h+='<div class="month-header-cell">'+d+'</div>');
-    const pm=new Date(y,m,0).getDate();
-    for(let i=sd-1;i>=0;i--)h+='<div class="month-day other-month"><div class="month-day-number">'+(pm-i)+'</div></div>';
-    for(let d=1;d<=dm;d++){
-        const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-        const it=ds===tds;const dd=deliveries.filter(x=>x.date===ds&&x.status!=='cancelled');
-        const tc=dd.filter(x=>x.source==='T&C Materials').length,yd=dd.filter(x=>x.source==='Yard Sale').length,tg=dd.filter(x=>x.source==='Texas Got Rocks').length;
-        h+='<div class="month-day'+(it?' today':'')+'" onclick="goToDateView(\''+ds+'\')"><div class="month-day-number">'+d+'</div><div class="month-summary">';
-        if(tc)h+='<span class="month-badge tc">'+tc+' T&C</span>';
-        if(yd)h+='<span class="month-badge yard">'+yd+' Yard</span>';
-        if(tg)h+='<span class="month-badge tgr">'+tg+' TGR</span>';
-        h+='</div></div>';
-    }
-    const rem=(sd+dm)%7;if(rem)for(let i=1;i<=7-rem;i++)h+='<div class="month-day other-month"><div class="month-day-number">'+i+'</div></div>';
-    h+='</div>';c.innerHTML=h;
-}
-
-function cellClick(tid,time,ds,isBlocked){
-    if(isBlocked){showToast('Truck unavailable - still on delivery',1);return}
-    if(!trucks.length){showToast('Add a truck first',1);return}
-    openDeliveryModal(tid,time,ds);
-}
-
-function openDeliveryModal(tid,time,ds){
-    document.getElementById('deliveryModalTitle').textContent='Add Delivery';
-    document.getElementById('deliveryId').value='';
-    document.getElementById('deliveryDate').value=ds||toDS(currentDate);
-    if(window.datePicker)window.datePicker.setDate(ds||toDS(currentDate),true);
-    document.getElementById('deliveryTime').value=time||8;
-    document.getElementById('deliveryReturnTime').value='';
-    document.getElementById('deliveryTruck').value=tid||(trucks[0]?._id||'');
-    document.getElementById('deliveryCustomer').value='';
-    document.getElementById('deliveryAddress').value='';
-    document.getElementById('deliveryCity').value='';
-    document.getElementById('deliveryMaterial').value='';
-    document.getElementById('deliveryTons').value='';
-    document.getElementById('deliveryUnits').value='tons';
-    document.getElementById('deliveryNotes').value='';
-    document.getElementById('deliverySource').value='T&C Materials';
-    selectSource('T&C Materials');
-    document.getElementById('deleteDeliveryBtn').style.display='none';
-    document.getElementById('conflictWarning').style.display='none';
-    document.getElementById('deliveryModal').classList.add('active');
-    updateReturnTimeUI();
-}
-
-function editDel(id){
-    const d=deliveries.find(x=>x._id===id);if(!d)return;
-    document.getElementById('deliveryModalTitle').textContent='Edit Delivery';
-    document.getElementById('deliveryId').value=id;
-    document.getElementById('deliveryDate').value=d.date;
-    if(window.datePicker)window.datePicker.setDate(d.date,true);
-    document.getElementById('deliveryTime').value=d.time||d.hour||8;
-    document.getElementById('deliveryReturnTime').value=d.returnTime||d.returnHour||'';
-    document.getElementById('deliveryTruck').value=d.truckId;
-    document.getElementById('deliveryCustomer').value=d.customer||'';
-    document.getElementById('deliveryAddress').value=d.address||'';
-    document.getElementById('deliveryCity').value=d.city||'';
-    document.getElementById('deliveryMaterial').value=d.material||'';
-    document.getElementById('deliveryTons').value=d.tons||d.quantity||'';
-    document.getElementById('deliveryUnits').value=d.units||'tons';
-    document.getElementById('deliveryNotes').value=d.notes||'';
-    selectSource(d.source);
-    document.getElementById('deleteDeliveryBtn').style.display='block';
-    document.getElementById('conflictWarning').style.display='none';
-    document.getElementById('deliveryModal').classList.add('active');
-    updateReturnTimeUI();
-}
-
-function closeDeliveryModal(){document.getElementById('deliveryModal').classList.remove('active')}
-
-function selectSource(s){
-    document.getElementById('deliverySource').value=s;
-    document.querySelectorAll('.source-option').forEach(b=>{
-        b.classList.remove('selected');
-        if((s==='T&C Materials'&&b.classList.contains('tc'))||(s==='Yard Sale'&&b.classList.contains('yard'))||(s==='Texas Got Rocks'&&b.classList.contains('tgr')))b.classList.add('selected');
-    });
-    updateReturnTimeUI();
-}
-
-function updateReturnTimeUI(){
-    const source=document.getElementById('deliverySource').value;
-    const isTGR=source==='Texas Got Rocks';
-    const rtg=document.getElementById('returnTimeGroup');
-    const acn=document.getElementById('autoCalcNote');
-    const rtl=document.getElementById('returnTimeLabel');
-    if(isTGR){rtl.innerHTML='🚚 Return time (auto-calculated for TGR)';rtg.classList.remove('required');acn.style.display='block'}
-    else{rtl.innerHTML='⚠️ Return time required for scheduling';rtg.classList.add('required');acn.style.display='none'}
-}
-
-function calcReturnTime(){
-    const source=document.getElementById('deliverySource').value;
-    if(source!=='Texas Got Rocks')return;
-    const city=document.getElementById('deliveryCity').value;
-    const depTime=parseFloat(document.getElementById('deliveryTime').value);
-    if(!city||!depTime)return;
-    let estimate=depTime+2;
-    const farCities=['houston','katy','sugar land','pearland','league city','baytown','galveston','bryan','college station'];
-    if(farCities.some(c=>city.toLowerCase().includes(c)))estimate=depTime+4;
-    else if(['spring','tomball','magnolia','willis','huntsville','montgomery'].some(c=>city.toLowerCase().includes(c)))estimate=depTime+2;
-    else estimate=depTime+3;
-    if(estimate>18)estimate=18;
-    document.getElementById('deliveryReturnTime').value=estimate;
-    checkConflicts();
-}
-
-function checkConflicts(){
-    const truckId=document.getElementById('deliveryTruck').value;
-    const date=document.getElementById('deliveryDate').value;
-    const depTime=parseFloat(document.getElementById('deliveryTime').value);
-    const retTime=parseFloat(document.getElementById('deliveryReturnTime').value)||(depTime+2);
-    const editId=document.getElementById('deliveryId').value;
-    if(!truckId||!date)return;
-    const truckDels=deliveries.filter(d=>d.truckId===truckId&&d.date===date&&d.status!=='cancelled'&&d._id!==editId);
-    let conflict=null;
-    for(const d of truckDels){
-        const dStart=d.time||d.hour;const dEnd=d.returnTime||d.returnHour||(dStart+2);
-        if((depTime>=dStart&&depTime<dEnd)||(retTime>dStart&&retTime<=dEnd)||(depTime<=dStart&&retTime>=dEnd)){conflict=d;break}
-    }
-    const cw=document.getElementById('conflictWarning');
-    if(conflict){
-        const timeStr=formatTimeVal(conflict.time||conflict.hour);
-        cw.innerHTML='⚠️ <strong>Conflict:</strong> This truck has a delivery at '+timeStr+' for '+(conflict.customer||'customer')+'.';
-        cw.style.display='block';
-    }else{cw.style.display='none'}
-}
-
-async function saveDelivery(){
-    const source=document.getElementById('deliverySource').value;
-    const retTime=document.getElementById('deliveryReturnTime').value;
-    if(source!=='Texas Got Rocks'&&!retTime){showToast('Return time is required',1);return}
-    const id=document.getElementById('deliveryId').value;
-    const ts=document.getElementById('deliveryTruck');
-    const data={
-        date:document.getElementById('deliveryDate').value,
-        time:parseFloat(document.getElementById('deliveryTime').value),
-        returnTime:parseFloat(retTime)||null,
-        truckId:ts.value,
-        truckNumber:ts.options[ts.selectedIndex]?.dataset.num||'',
-        customer:document.getElementById('deliveryCustomer').value,
-        address:document.getElementById('deliveryAddress').value,
-        city:document.getElementById('deliveryCity').value,
-        material:document.getElementById('deliveryMaterial').value,
-        tons:parseFloat(document.getElementById('deliveryTons').value)||0,
-        units:document.getElementById('deliveryUnits').value,
-        source:source,
-        notes:document.getElementById('deliveryNotes').value
+  const driverName = document.getElementById('truckDriver').value.trim();
+  if (driverName) {
+    body.defaultDriver = {
+      name: driverName,
+      phone: document.getElementById('truckDriverPhone').value.trim(),
+      id: driverName.toLowerCase().replace(/\s+/g, '-')
     };
-    const cw=document.getElementById('conflictWarning');
-    if(cw.style.display!=='none'){if(!confirm('There is a scheduling conflict. Save anyway?'))return}
-    try{
-        const r=await fetch(API+'/dispatch',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id,...data}:data)});
-        const res=await r.json();
-        if(res.success){showToast(id?'Updated':'Added');closeDeliveryModal();loadDeliveries()}
-        else showToast(res.error||'Failed',1);
-    }catch(e){showToast('Error saving',1)}
+  }
+
+  try {
+    const r = await fetch(`${API}/trucks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (data.success) {
+      toast('Truck added: ' + num);
+      closeModal('truckModal');
+      await loadTrucks();
+      render();
+    } else {
+      toast(data.error || 'Error adding truck', true);
+    }
+  } catch(e) { toast('Error saving truck', true); console.error(e); }
 }
 
-async function deleteDelivery(){
-    const id=document.getElementById('deliveryId').value;
-    if(!id||!confirm('Delete this delivery?'))return;
-    try{
-        const r=await fetch(API+'/dispatch',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
-        const res=await r.json();
-        if(res.success){showToast('Deleted');closeDeliveryModal();loadDeliveries()}
-        else showToast(res.error||'Failed',1);
-    }catch(e){showToast('Error',1)}
+// ─── DELIVERY DETAIL ─────────────────────────────────
+function showDetail(deliveryId) {
+  const d = deliveries.find(del => del._id === deliveryId);
+  if (!d) return;
+
+  const sourceColor = d.source === 'Texas Got Rocks' ? 'var(--green)' : d.source === 'Yard Sale' ? 'var(--yellow)' : 'var(--blue)';
+
+  document.getElementById('detailBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span class="source-dot" style="background:${sourceColor};width:10px;height:10px;"></span>
+      <span style="font-size:13px;color:var(--text-dim)">${d.source}</span>
+      <span style="margin-left:auto;font-size:12px;font-weight:600;padding:3px 10px;border-radius:6px;
+        background:${d.status==='UNASSIGNED'?'var(--orange-dim)':d.status==='SCHEDULED'?'var(--blue-dim)':d.status==='EN_ROUTE'?'var(--purple-dim)':'var(--green-dim)'};
+        color:${d.status==='UNASSIGNED'?'var(--orange)':d.status==='SCHEDULED'?'var(--blue)':d.status==='EN_ROUTE'?'var(--purple)':'var(--green)'};">
+        ${d.status}
+      </span>
+    </div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:12px;">${d.customerName || 'Unknown'}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Phone</div>${d.customerPhone || '—'}</div>
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Email</div>${d.customerEmail || '—'}</div>
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Date</div>${d.deliveryDate || '—'}</div>
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Material</div>${d.materialName || '—'}</div>
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Quantity</div>${d.quantity || '—'} tons</div>
+      <div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Address</div>${d.deliveryAddress || ''}${d.deliveryCity ? ', '+d.deliveryCity : ''} ${d.deliveryState || ''} ${d.deliveryZip || ''}</div>
+      ${d.timeWindow ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Time Window</div>${d.timeWindow}</div>` : ''}
+      ${d.truckNumber ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Truck</div>${d.truckNumber}</div>` : ''}
+      ${d.driverName ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Driver</div>${d.driverName}</div>` : ''}
+      ${d.deliveryNotes ? `<div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Notes</div>${d.deliveryNotes}</div>` : ''}
+    </div>
+    ${d.deliveryPhoto ? `<div style="margin-top:16px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Delivery Photo</div><img src="${d.deliveryPhoto}" style="width:100%;border-radius:8px;"></div>` : ''}
+  `;
+
+  let footerHTML = '';
+  if (d.status === 'SCHEDULED') {
+    footerHTML += `<button class="btn btn-danger" onclick="cancelDelivery('${d._id}')">Cancel</button>`;
+    footerHTML += `<button class="btn" onclick="unassignDelivery('${d._id}')">Unassign</button>`;
+  }
+  if (d.status === 'UNASSIGNED') {
+    footerHTML += `<button class="btn btn-danger" onclick="cancelDelivery('${d._id}')">Cancel</button>`;
+  }
+  footerHTML += `<button class="btn" onclick="closeModal('detailModal')">Close</button>`;
+  document.getElementById('detailFooter').innerHTML = footerHTML;
+
+  openModal('detailModal');
 }
 
-function openTruckModal(){
-    document.getElementById('truckModalTitle').textContent='Add Truck';
-    document.getElementById('truckId').value='';
-    document.getElementById('truckNumber').value='';
-    document.getElementById('truckCapacity').value='';
-    document.getElementById('truckType').value='semi';
-    document.getElementById('truckNotes').value='';
-    document.getElementById('deleteTruckBtn').style.display='none';
-    document.getElementById('truckModal').classList.add('active');
+async function cancelDelivery(id) {
+  if (!confirm('Cancel this delivery?')) return;
+  try {
+    const r = await fetch(`${API}/dispatch?id=${id}&by=dispatcher`, { method: 'DELETE' });
+    const data = await r.json();
+    if (data.success) {
+      toast('Delivery cancelled');
+      closeModal('detailModal');
+      await loadDeliveries();
+      render();
+    }
+  } catch(e) { toast('Error cancelling', true); }
 }
 
-function editTruck(id){
-    const t=trucks.find(x=>x._id===id);if(!t)return;
-    document.getElementById('truckModalTitle').textContent='Edit Truck';
-    document.getElementById('truckId').value=id;
-    document.getElementById('truckNumber').value=t.truckNumber;
-    document.getElementById('truckCapacity').value=t.capacity;
-    document.getElementById('truckType').value=t.type||'semi';
-    document.getElementById('truckNotes').value=t.notes||'';
-    document.getElementById('deleteTruckBtn').style.display='block';
-    document.getElementById('truckModal').classList.add('active');
+async function unassignDelivery(id) {
+  try {
+    const r = await fetch(`${API}/dispatch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, truckId: null, truckNumber: null, driverId: null, driverName: null, status: 'UNASSIGNED', updatedBy: 'dispatcher' })
+    });
+    const data = await r.json();
+    if (data.success) {
+      toast('Delivery unassigned');
+      closeModal('detailModal');
+      await loadDeliveries();
+      render();
+    }
+  } catch(e) { toast('Error unassigning', true); }
 }
 
-function closeTruckModal(){document.getElementById('truckModal').classList.remove('active')}
+// ─── FINALIZE SCHEDULE ───────────────────────────────
+async function finalizeSchedule() {
+  const dateStr = formatDateISO(currentDate);
+  const scheduled = deliveries.filter(d => d.deliveryDate === dateStr && d.status === 'SCHEDULED' && !d.scheduleSmsSent);
+  
+  if (!scheduled.length) {
+    toast('No new deliveries to finalize for this date', true);
+    return;
+  }
 
-async function saveTruck(){
-    const id=document.getElementById('truckId').value;
-    const data={truckNumber:document.getElementById('truckNumber').value,capacity:parseFloat(document.getElementById('truckCapacity').value),type:document.getElementById('truckType').value,notes:document.getElementById('truckNotes').value};
-    if(!data.truckNumber||!data.capacity){showToast('Name and capacity required',1);return}
-    try{
-        const r=await fetch(API+'/trucks',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id,...data}:data)});
-        const res=await r.json();
-        if(res.success){showToast(id?'Updated':'Added');closeTruckModal();loadTrucks()}
-        else showToast(res.error||'Failed to save',1);
-    }catch(e){console.error(e);showToast('Error saving truck',1)}
+  if (!confirm(`Finalize ${scheduled.length} delivery(s) for ${dateStr}?\nThis will send SMS confirmations to customers.`)) return;
+
+  try {
+    // Step 1: Mark as finalized in DB
+    const finalRes = await fetch(`${API}/dispatch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'finalize', date: dateStr, updatedBy: 'dispatcher' })
+    });
+    const finalData = await finalRes.json();
+
+    // Step 2: Send SMS notifications
+    if (finalData.toNotify && finalData.toNotify.length) {
+      await fetch(`${API}/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'schedule_confirmation',
+          deliveries: finalData.toNotify
+        })
+      });
+    }
+
+    toast(`Schedule finalized — ${finalData.finalized || 0} customer(s) notified`);
+    await loadDeliveries();
+    render();
+  } catch(e) { toast('Error finalizing schedule', true); console.error(e); }
 }
 
-async function delTruck(id){
-    if(!confirm('Remove this truck?'))return;
-    try{const r=await fetch(API+'/trucks',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const res=await r.json();if(res.success){showToast('Removed');loadTrucks()}else showToast(res.error||'Failed',1)}catch(e){showToast('Error',1)}
+// ─── TOAST ───────────────────────────────────────────
+function toast(msg, error = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (error ? ' error' : '');
+  setTimeout(() => el.className = 'toast', 3000);
 }
-
-async function deleteTruck(){const id=document.getElementById('truckId').value;if(id)delTruck(id);closeTruckModal()}
-
-function showToast(m,e){const t=document.getElementById('toast');t.textContent=m;t.classList.remove('error','warning');if(e===1)t.classList.add('error');if(e===2)t.classList.add('warning');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
 </script>
 </body>
 </html>

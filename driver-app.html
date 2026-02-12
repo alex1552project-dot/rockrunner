@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>RockRunner Driver</title>
+<style>
+:root {
+  --navy: #001F3F;
+  --navy-light: #0a2d52;
+  --orange: #C65D2A;
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.15);
+  --yellow: #eab308;
+  --blue: #3b82f6;
+  --red: #ef4444;
+  --purple: #a855f7;
+  --surface: #0f1923;
+  --surface2: #162230;
+  --border: #1e3347;
+  --text: #e4e8ef;
+  --text-dim: #7a8da0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--navy);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ─── HEADER ─────────────────────────────────── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--orange);
+}
+.header-date {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.driver-badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ─── LOGIN ──────────────────────────────────── */
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+.login-logo { font-size: 48px; margin-bottom: 16px; }
+.login-title { font-size: 24px; font-weight: 700; color: var(--orange); margin-bottom: 8px; }
+.login-sub { color: var(--text-dim); margin-bottom: 32px; font-size: 14px; }
+.login-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 14px 18px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 8px;
+  font-family: inherit;
+  margin-bottom: 16px;
+}
+.login-input:focus { outline: none; border-color: var(--orange); }
+.login-btn {
+  width: 100%;
+  max-width: 300px;
+  padding: 14px;
+  background: var(--orange);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ─── ROUTE LIST ─────────────────────────────── */
+.route-list { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.empty-route {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+/* ─── STOP CARD ──────────────────────────────── */
+.stop-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.stop-header {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.stop-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--orange);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.stop-number.completed { background: var(--green); }
+.stop-number.active { background: var(--purple); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0.4)} 50%{box-shadow:0 0 0 8px rgba(168,85,247,0)} }
+.stop-info { flex: 1; }
+.stop-customer { font-size: 16px; font-weight: 600; }
+.stop-material { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.stop-tons { font-size: 15px; font-weight: 700; color: var(--orange); }
+
+.stop-body {
+  padding: 0 16px 14px;
+}
+.stop-address {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.stop-time {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+.stop-notes {
+  font-size: 13px;
+  color: var(--yellow);
+  background: rgba(234,179,8,0.08);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+/* ─── ACTION BUTTONS (BIG — glove-friendly) ──── */
+.stop-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.action-btn {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 56px;
+  transition: transform 0.1s;
+}
+.action-btn:active { transform: scale(0.97); }
+.btn-navigate {
+  background: var(--blue);
+  color: #fff;
+}
+.btn-enroute {
+  background: var(--purple);
+  color: #fff;
+}
+.btn-delivered {
+  background: var(--green);
+  color: #fff;
+}
+.btn-call {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  flex: 0;
+  width: 56px;
+}
+.btn-disabled {
+  background: var(--surface2) !important;
+  color: var(--text-dim) !important;
+  cursor: default;
+  border: 1px solid var(--border);
+}
+
+/* ─── COMPLETED OVERLAY ──────────────────────── */
+.stop-card.completed {
+  opacity: 0.6;
+}
+.stop-card.completed .stop-body { display: none; }
+.stop-card.completed .stop-actions { display: none; }
+.completed-badge {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* ─── PHOTO CAPTURE MODAL ────────────────────── */
+.photo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.photo-modal.active { display: flex; }
+.photo-preview {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 4/3;
+  background: var(--surface2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.photo-placeholder { color: var(--text-dim); font-size: 14px; text-align: center; }
+.photo-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+.photo-actions .action-btn { min-height: 52px; }
+
+/* ─── TOAST ──────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--green);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 300;
+  opacity: 0;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.error { background: var(--red); }
+
+/* ─── SUMMARY ────────────────────────────────── */
+.day-summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  text-align: center;
+}
+.summary-item { }
+.summary-num { font-size: 22px; font-weight: 700; }
+.summary-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN ═══════════════════════════════ -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-logo">🚛</div>
+  <div class="login-title">RockRunner Driver</div>
+  <div class="login-sub">Enter your 4-digit PIN</div>
+  <input class="login-input" id="pinInput" type="password" maxlength="4" inputmode="numeric" placeholder="····">
+  <button class="login-btn" onclick="login()">Sign In</button>
+</div>
+
+<!-- ═══ MAIN APP ═══════════════════════════════════ -->
+<div id="mainApp" style="display:none;">
+  <div class="header">
+    <div class="header-left">
+      <h1>🚛 My Route</h1>
+    </div>
+    <div>
+      <div class="driver-badge" id="driverBadge">Driver</div>
+      <div class="header-date" id="headerDate"></div>
+    </div>
+  </div>
+
+  <div class="day-summary" id="daySummary">
+    <div class="summary-item">
+      <div class="summary-num" id="sumStops">0</div>
+      <div class="summary-label">Stops</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num" id="sumTons">0</div>
+      <div class="summary-label">Tons</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num" id="sumDone">0</div>
+      <div class="summary-label">Delivered</div>
+    </div>
+  </div>
+
+  <div class="route-list" id="routeList">
+    <div class="empty-route">Loading your route...</div>
+  </div>
+</div>
+
+<!-- ═══ PHOTO CAPTURE MODAL ════════════════════════ -->
+<div class="photo-modal" id="photoModal">
+  <div style="color:var(--text);font-size:18px;font-weight:700;margin-bottom:16px;">Delivery Photo</div>
+  <div class="photo-preview" id="photoPreview">
+    <div class="photo-placeholder">Tap below to take photo</div>
+  </div>
+  <div class="photo-actions">
+    <button class="action-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);" onclick="closePhoto()">Cancel</button>
+    <button class="action-btn" style="background:var(--blue);color:#fff;" onclick="takePhoto()">📷 Take Photo</button>
+    <button class="action-btn btn-delivered" id="confirmDeliverBtn" onclick="confirmDelivery()" style="display:none;">✓ Confirm</button>
+  </div>
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/.netlify/functions';
+let currentDriver = null;
+let myDeliveries = [];
+let activeDeliveryId = null;
+let capturedPhoto = null;
+
+// ─── LOGIN ───────────────────────────────────────
+document.getElementById('pinInput').addEventListener('keyup', e => { if (e.key === 'Enter') login(); });
+
+async function login() {
+  const pin = document.getElementById('pinInput').value;
+  if (pin.length !== 4) { toast('Enter 4-digit PIN', true); return; }
+
+  // For MVP: PIN maps to driver. In production, validate against DB.
+  // Hardcoded PINs — replace with auth function call
+  const drivers = {
+    '1234': { id: 'driver-1', name: 'Mike Rodriguez', truck: 'TC-001' },
+    '0000': { id: 'driver-admin', name: 'Corey Pelletier', truck: 'All' },
+    '5678': { id: 'driver-2', name: 'Anthony Adcock', truck: 'TC-002' },
+    '9012': { id: 'driver-3', name: 'Kevin Buck', truck: 'TC-003' }
+  };
+
+  currentDriver = drivers[pin];
+  if (!currentDriver) { toast('Invalid PIN', true); return; }
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  document.getElementById('driverBadge').textContent = currentDriver.name;
+  
+  const d = new Date();
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('headerDate').textContent = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+
+  await loadMyRoute();
+}
+
+// ─── LOAD ROUTE ──────────────────────────────────
+async function loadMyRoute() {
+  const today = new Date();
+  const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  
+  try {
+    const r = await fetch(`${API}/dispatch?date=${dateStr}&driverId=${currentDriver.id}`);
+    const data = await r.json();
+    myDeliveries = (data.deliveries || [])
+      .filter(d => d.status !== 'CANCELLED')
+      .sort((a,b) => (a.stopOrder || 99) - (b.stopOrder || 99));
+  } catch(e) {
+    myDeliveries = [];
+    console.error(e);
+  }
+  renderRoute();
+}
+
+function renderRoute() {
+  const list = document.getElementById('routeList');
+
+  // Summary
+  const total = myDeliveries.length;
+  const tons = myDeliveries.reduce((s,d) => s + (d.quantity || 0), 0);
+  const done = myDeliveries.filter(d => d.status === 'DELIVERED').length;
+  document.getElementById('sumStops').textContent = total;
+  document.getElementById('sumTons').textContent = tons.toFixed(1);
+  document.getElementById('sumDone').textContent = done;
+
+  if (!myDeliveries.length) {
+    list.innerHTML = '<div class="empty-route">No deliveries assigned for today.<br>Check back after dispatch is finalized.</div>';
+    return;
+  }
+
+  list.innerHTML = myDeliveries.map((d, i) => {
+    const isCompleted = d.status === 'DELIVERED';
+    const isEnRoute = d.status === 'EN_ROUTE';
+    const stopNum = i + 1;
+
+    return `<div class="stop-card ${isCompleted ? 'completed' : ''}">
+      <div class="stop-header">
+        <div class="stop-number ${isCompleted ? 'completed' : isEnRoute ? 'active' : ''}">${isCompleted ? '✓' : stopNum}</div>
+        <div class="stop-info">
+          <div class="stop-customer">${d.customerName || 'Customer'}</div>
+          <div class="stop-material">${d.materialName || 'Material'}</div>
+        </div>
+        <div class="stop-tons">${d.quantity || '?'}T</div>
+      </div>
+      ${isCompleted ? `<div class="completed-badge">Delivered ✓</div>` : `
+        <div class="stop-body">
+          <div class="stop-address">📍 ${d.deliveryAddress || ''}${d.deliveryCity ? ', ' + d.deliveryCity : ''} ${d.deliveryZip || ''}</div>
+          ${d.timeWindow ? `<div class="stop-time">🕐 ${d.timeWindow}</div>` : ''}
+          ${d.deliveryNotes ? `<div class="stop-notes">⚠️ ${d.deliveryNotes}</div>` : ''}
+        </div>
+        <div class="stop-actions">
+          ${d.customerPhone ? `<button class="action-btn btn-call" onclick="callCustomer('${d.customerPhone}')">📞</button>` : ''}
+          <button class="action-btn btn-navigate" onclick="navigate('${encodeURIComponent(d.deliveryAddress + ', ' + (d.deliveryCity||'') + ' ' + (d.deliveryState||'TX') + ' ' + (d.deliveryZip||''))}')">🧭 Navigate</button>
+          ${!isEnRoute
+            ? `<button class="action-btn btn-enroute" onclick="markEnRoute('${d._id}')">🚛 En Route</button>`
+            : `<button class="action-btn btn-delivered" onclick="startDeliveryPhoto('${d._id}')">📸 Delivered</button>`
+          }
+        </div>
+      `}
+    </div>`;
+  }).join('');
+}
+
+// ─── ACTIONS ─────────────────────────────────────
+function navigate(address) {
+  // Universal map link — works on iOS (Apple Maps) and Android (Google Maps)
+  const url = `https://maps.google.com/maps?daddr=${address}`;
+  window.open(url, '_blank');
+}
+
+function callCustomer(phone) {
+  window.location.href = `tel:${phone}`;
+}
+
+async function markEnRoute(deliveryId) {
+  if (!confirm('Mark as En Route? Customer will be notified.')) return;
+
+  try {
+    // Update status + send SMS via notify function
+    const [statusRes, notifyRes] = await Promise.all([
+      fetch(`${API}/dispatch`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: deliveryId,
+          status: 'EN_ROUTE',
+          updatedBy: currentDriver.id
+        })
+      }),
+      fetch(`${API}/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'en_route',
+          deliveryId,
+          driverId: currentDriver.id,
+          etaMinutes: 30 // Default — could calculate from GPS
+        })
+      })
+    ]);
+
+    toast('Customer notified — you\'re en route!');
+    await loadMyRoute();
+  } catch(e) { toast('Error updating status', true); console.error(e); }
+}
+
+// ─── PHOTO DELIVERY ──────────────────────────────
+function startDeliveryPhoto(deliveryId) {
+  activeDeliveryId = deliveryId;
+  capturedPhoto = null;
+  document.getElementById('photoPreview').innerHTML = '<div class="photo-placeholder">Tap below to take photo</div>';
+  document.getElementById('confirmDeliverBtn').style.display = 'none';
+  document.getElementById('photoModal').classList.add('active');
+}
+
+function takePhoto() {
+  const input = document.getElementById('cameraInput');
+  input.value = '';
+  input.click();
+}
+
+document.getElementById('cameraInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    capturedPhoto = ev.target.result;
+    document.getElementById('photoPreview').innerHTML = `<img src="${capturedPhoto}" alt="Delivery photo">`;
+    document.getElementById('confirmDeliverBtn').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+});
+
+async function confirmDelivery() {
+  if (!capturedPhoto || !activeDeliveryId) return;
+
+  try {
+    const r = await fetch(`${API}/dispatch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: activeDeliveryId,
+        status: 'DELIVERED',
+        deliveryPhoto: capturedPhoto, // Base64 — in production, upload to Cloudinary first
+        updatedBy: currentDriver.id,
+        notes: 'Delivered with photo confirmation'
+      })
+    });
+    const data = await r.json();
+    if (data.success) {
+      toast('Delivery confirmed!');
+      closePhoto();
+      await loadMyRoute();
+    }
+  } catch(e) { toast('Error confirming delivery', true); console.error(e); }
+}
+
+function closePhoto() {
+  document.getElementById('photoModal').classList.remove('active');
+  activeDeliveryId = null;
+  capturedPhoto = null;
+}
+
+// ─── TOAST ───────────────────────────────────────
+function toast(msg, error = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (error ? ' error' : '');
+  setTimeout(() => el.className = 'toast', 3000);
+}
+</script>
+</body>
+</html>
