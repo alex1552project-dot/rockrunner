@@ -163,17 +163,19 @@ body {
 .week-panel {
   grid-column: 1;
   grid-row: 2;
-  padding: 10px 24px 12px;
+  padding: 8px 24px 10px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
+.week-panel .panel-title { margin-bottom: 8px; }
 .week-grid {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
   overflow: hidden;
+  max-height: 180px;
 }
 .week-day {
   background: var(--surface);
@@ -185,7 +187,7 @@ body {
 }
 .week-day.today { border-color: var(--orange); }
 .week-day-header {
-  padding: 8px 10px;
+  padding: 5px 8px;
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -236,7 +238,7 @@ body {
   justify-content: space-between;
 }
 .week-day-empty {
-  flex: 1;
+  padding: 12px 0;
   display: flex;
   align-items: center;
   justify-content: center;
