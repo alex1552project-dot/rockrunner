@@ -319,6 +319,18 @@ let todayDeliveries = [];
 let unassignedDeliveries = [];
 let weekDeliveries = [];
 
+// Source classification helper
+function getSourceClass(source) {
+  if (source === 'Texas Got Rocks' || source === 'texasgotrocks') return 'src-tgr';
+  if (source === 'Yard Sale' || source === 'YardTrackPro') return 'src-yard';
+  return 'src-tc';
+}
+function getSourceBorderClass(source) {
+  if (source === 'Texas Got Rocks' || source === 'texasgotrocks') return 'src-tgr-border';
+  if (source === 'Yard Sale' || source === 'YardTrackPro') return 'src-yard-border';
+  return 'src-tc-border';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
@@ -420,7 +432,7 @@ function renderToday() {
     return `<div class="truck-row">
       <div class="truck-row-header">
         <div class="truck-row-name">🚛 ${truck.truckNumber} <span class="truck-row-meta">${truck.type} · ${driverName}</span></div>
-        <div class="truck-row-load ${loadClass}">${totalTons}/${truck.capacity}T</div>
+        <div class="truck-row-load ${loadClass}">${totalTons.toFixed(2)}/${truck.capacity}T</div>
       </div>
       <div class="truck-stops">${stopsHTML}</div>
     </div>`;
@@ -433,13 +445,13 @@ function renderToday() {
 }
 
 function renderTile(d) {
-  const srcClass = d.source === 'Texas Got Rocks' ? 'src-tgr' : d.source === 'Yard Sale' ? 'src-yard' : 'src-tc';
+  const srcClass = getSourceClass(d.source);
   return `<div class="del-tile status-${d.status}">
     <div class="del-tile-header">
       <div class="del-tile-customer"><span class="source-dot ${srcClass}"></span>${d.customerName || 'Customer'}</div>
       <span class="del-tile-status status-badge-${d.status}">${formatStatus(d.status)}</span>
     </div>
-    <div class="del-tile-material">${d.materialName || 'Material'} — ${d.quantity || '?'} tons</div>
+    <div class="del-tile-material">${d.materialName || 'Material'} — ${d.quantity ? d.quantity.toFixed(2) : '?'} tons</div>
     <div class="del-tile-address">${d.deliveryCity || d.deliveryAddress || ''}</div>
     ${d.timeWindow ? `<div class="del-tile-time">${d.timeWindow}</div>` : ''}
   </div>`;
@@ -470,10 +482,10 @@ function renderWeek() {
 
     const delsHTML = dayDels.length
       ? dayDels.slice(0, 5).map(d => {
-          const srcClass = d.source === 'Texas Got Rocks' ? 'src-tgr-border' : d.source === 'Yard Sale' ? 'src-yard-border' : 'src-tc-border';
+          const srcClass = getSourceBorderClass(d.source);
           return `<div class="week-del ${srcClass}">
             <div class="week-del-name">${(d.customerName || 'Customer').split(' ')[0]}</div>
-            <div class="week-del-material">${d.materialName || ''} · ${d.quantity || '?'}T</div>
+            <div class="week-del-material">${d.materialName || ''} · ${d.quantity ? d.quantity.toFixed(2) : '?'}T</div>
           </div>`;
         }).join('') + (dayDels.length > 5 ? `<div style="font-size:9px;color:var(--text-muted);text-align:center;">+${dayDels.length - 5} more</div>` : '')
       : '<div class="week-day-empty">—</div>';
@@ -484,7 +496,7 @@ function renderWeek() {
         <span class="week-day-date">${months[day.getMonth()]} ${day.getDate()}</span>
       </div>
       <div class="week-day-body">${delsHTML}</div>
-      ${dayDels.length ? `<div class="week-day-stats"><span>${dayDels.length} del</span><span>${dayTons}T</span></div>` : ''}
+      ${dayDels.length ? `<div class="week-day-stats"><span>${dayDels.length} del</span><span>${dayTons.toFixed(2)}T</span></div>` : ''}
     </div>`;
   }
   container.innerHTML = html;
@@ -525,15 +537,16 @@ function renderQueue() {
 }
 
 function renderIncomingCard(d) {
-  const srcClass = d.source === 'Texas Got Rocks' ? 'src-tgr' : d.source === 'Yard Sale' ? 'src-yard' : 'src-tc';
+  const srcClass = getSourceClass(d.source);
   return `<div class="incoming-card">
     <div class="incoming-header">
       <div class="incoming-customer"><span class="source-dot ${srcClass}"></span>${d.customerName || 'Customer'}</div>
       <div class="incoming-date">${d.deliveryDate ? formatDateShort(d.deliveryDate) : 'No date'}</div>
     </div>
-    <div class="incoming-material">${d.materialName || 'Material'} — ${d.quantity || '?'} tons</div>
+    <div class="incoming-material">${d.materialName || 'Material'} — ${d.quantity ? d.quantity.toFixed(2) : '?'} tons</div>
     <div class="incoming-address">${d.deliveryCity || d.deliveryAddress || 'No address'}</div>
-    <div class="incoming-tons">${d.quantity || '?'}T</div>
+    ${d.timeWindow ? `<div style="font-size:10px;color:var(--orange);font-weight:600;margin-top:2px;">${d.timeWindow}</div>` : ''}
+    <div class="incoming-tons">${d.quantity ? d.quantity.toFixed(2) : '?'}T</div>
   </div>`;
 }
 
@@ -561,7 +574,7 @@ function renderStats() {
   document.getElementById('tvStatScheduled').textContent = todayDeliveries.filter(d => d.status === 'SCHEDULED').length;
   document.getElementById('tvStatEnRoute').textContent = todayDeliveries.filter(d => d.status === 'EN_ROUTE').length;
   document.getElementById('tvStatDelivered').textContent = todayDeliveries.filter(d => d.status === 'DELIVERED').length;
-  document.getElementById('tvStatTons').textContent = todayDeliveries.reduce((s,d) => s + (d.quantity || 0), 0).toFixed(1);
+  document.getElementById('tvStatTons').textContent = todayDeliveries.reduce((s,d) => s + (d.quantity || 0), 0).toFixed(2);
 }
 </script>
 </body>
