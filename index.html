@@ -1123,7 +1123,18 @@ function showDetail(deliveryId) {
       <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Material</div>${d.materialName || '—'}</div>
       <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Quantity</div>${fmtTons(d.quantity)} tons</div>
       <div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Address</div>${d.deliveryAddress || ''}${d.deliveryCity ? ', '+d.deliveryCity : ''} ${d.deliveryState || ''} ${d.deliveryZip || ''}</div>
-      ${d.timeWindow ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Time Window</div>${d.timeWindow}</div>` : ''}
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Time Window</div>
+        ${d.status === 'UNASSIGNED' || d.status === 'SCHEDULED' 
+          ? `<select class="form-select" style="padding:8px 10px;font-size:13px;" onchange="updateTimeWindow('${d._id}',this.value)">
+              <option value=""${!d.timeWindow?' selected':''}>Assign later</option>
+              <option value="6:00 AM - 8:00 AM"${d.timeWindow==='6:00 AM - 8:00 AM'?' selected':''}>6:00 AM - 8:00 AM</option>
+              <option value="8:00 AM - 10:00 AM"${d.timeWindow==='8:00 AM - 10:00 AM'?' selected':''}>8:00 AM - 10:00 AM</option>
+              <option value="10:00 AM - 12:00 PM"${d.timeWindow==='10:00 AM - 12:00 PM'?' selected':''}>10:00 AM - 12:00 PM</option>
+              <option value="12:00 PM - 2:00 PM"${d.timeWindow==='12:00 PM - 2:00 PM'?' selected':''}>12:00 PM - 2:00 PM</option>
+              <option value="2:00 PM - 4:00 PM"${d.timeWindow==='2:00 PM - 4:00 PM'?' selected':''}>2:00 PM - 4:00 PM</option>
+            </select>`
+          : (d.timeWindow || '—')}
+      </div>
       ${d.truckNumber ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Truck</div>${d.truckNumber}</div>` : ''}
       ${d.driverName ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Driver</div>${d.driverName}</div>` : ''}
       ${d.deliveryNotes ? `<div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Notes</div>${d.deliveryNotes}</div>` : ''}
@@ -1174,6 +1185,22 @@ async function unassignDelivery(id) {
       render();
     }
   } catch(e) { toast('Error unassigning', true); }
+}
+
+async function updateTimeWindow(deliveryId, timeWindow) {
+  try {
+    const r = await fetch(`${API}/dispatch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: deliveryId, timeWindow: timeWindow || null, updatedBy: 'dispatcher' })
+    });
+    const data = await r.json();
+    if (data.success) {
+      toast(timeWindow ? 'Time window set: ' + timeWindow : 'Time window cleared');
+      await loadDeliveries();
+      render();
+    }
+  } catch(e) { toast('Error updating time window', true); }
 }
 
 // ─── FINALIZE SCHEDULE ───────────────────────────────
