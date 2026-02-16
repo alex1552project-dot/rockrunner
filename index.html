@@ -727,6 +727,23 @@ let deliveries = [];
 let products = [];
 let dragData = null;
 
+// ─── SOURCE HELPERS ──────────────────────────────────
+function getSourceClass(source) {
+  if (source === 'Texas Got Rocks' || source === 'texasgotrocks') return 'source-tgr';
+  if (source === 'Yard Sale' || source === 'YardTrackPro') return 'source-yard';
+  return 'source-tc';
+}
+
+function getSourceColor(source) {
+  if (source === 'Texas Got Rocks' || source === 'texasgotrocks') return 'var(--green)';
+  if (source === 'Yard Sale' || source === 'YardTrackPro') return 'var(--yellow)';
+  return 'var(--blue)';
+}
+
+function fmtTons(val) {
+  return val ? parseFloat(val).toFixed(2) : '?';
+}
+
 // ─── INIT ────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   renderDateLabel();
@@ -810,16 +827,16 @@ function renderQueue() {
 }
 
 function renderDeliveryCard(d, draggable = true) {
-  const sourceClass = d.source === 'Texas Got Rocks' ? 'source-tgr' : d.source === 'Yard Sale' ? 'source-yard' : 'source-tc';
+  const sourceClass = getSourceClass(d.source);
   const statusClass = d.status === 'SCHEDULED' ? 'scheduled' : d.status === 'EN_ROUTE' ? 'en-route' : d.status === 'DELIVERED' ? 'delivered' : '';
 
   return `<div class="delivery-card ${statusClass}" 
     ${draggable ? `draggable="true" ondragstart="onDragStart(event,'${d._id}')" ondragend="onDragEnd(event)"` : ''}
     onclick="showDetail('${d._id}')">
     <div class="card-customer"><span class="source-dot ${sourceClass}"></span>${d.customerName || 'Unknown'}</div>
-    <div class="card-material">${d.materialName || 'Material TBD'} — ${d.quantity || '?'} tons</div>
+    <div class="card-material">${d.materialName || 'Material TBD'} — ${fmtTons(d.quantity)} tons</div>
     <div class="card-address">${d.deliveryCity || d.deliveryAddress || 'No address'}${d.timeWindow ? ' · ' + d.timeWindow : ''}</div>
-    <div class="card-tons">${d.quantity || '?'}T</div>
+    <div class="card-tons">${fmtTons(d.quantity)}T</div>
   </div>`;
 }
 
@@ -849,7 +866,7 @@ function renderTruckLanes() {
             <div class="lane-truck-cap">${truck.type} · ${truck.capacity}T · ${driverName}</div>
           </div>
         </div>
-        <div class="lane-truck-load ${loadClass}">${totalTons}/${truck.capacity}T</div>
+        <div class="lane-truck-load ${loadClass}">${totalTons.toFixed(2)}/${truck.capacity}T</div>
       </div>
       <div class="lane-body" 
         ondragover="onDragOver(event)" 
@@ -872,7 +889,7 @@ function renderStats() {
   document.getElementById('statScheduled').textContent = dayDeliveries.filter(d => d.status === 'SCHEDULED').length;
   document.getElementById('statEnRoute').textContent = dayDeliveries.filter(d => d.status === 'EN_ROUTE').length;
   document.getElementById('statDelivered').textContent = dayDeliveries.filter(d => d.status === 'DELIVERED').length;
-  document.getElementById('statTons').textContent = dayDeliveries.reduce((s, d) => s + (d.quantity || 0), 0).toFixed(1);
+  document.getElementById('statTons').textContent = dayDeliveries.reduce((s, d) => s + (d.quantity || 0), 0).toFixed(2);
 }
 
 // ─── DRAG & DROP ─────────────────────────────────────
@@ -1086,7 +1103,7 @@ function showDetail(deliveryId) {
   const d = deliveries.find(del => del._id === deliveryId);
   if (!d) return;
 
-  const sourceColor = d.source === 'Texas Got Rocks' ? 'var(--green)' : d.source === 'Yard Sale' ? 'var(--yellow)' : 'var(--blue)';
+  const sourceColor = getSourceColor(d.source);
 
   document.getElementById('detailBody').innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
@@ -1104,7 +1121,7 @@ function showDetail(deliveryId) {
       <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Email</div>${d.customerEmail || '—'}</div>
       <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Date</div>${d.deliveryDate || '—'}</div>
       <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Material</div>${d.materialName || '—'}</div>
-      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Quantity</div>${d.quantity || '—'} tons</div>
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Quantity</div>${fmtTons(d.quantity)} tons</div>
       <div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Address</div>${d.deliveryAddress || ''}${d.deliveryCity ? ', '+d.deliveryCity : ''} ${d.deliveryState || ''} ${d.deliveryZip || ''}</div>
       ${d.timeWindow ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Time Window</div>${d.timeWindow}</div>` : ''}
       ${d.truckNumber ? `<div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Truck</div>${d.truckNumber}</div>` : ''}
