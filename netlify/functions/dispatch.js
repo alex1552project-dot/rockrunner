@@ -295,7 +295,7 @@ exports.handler = async (event) => {
           const inventory = db.collection('inventory');
           await inventory.updateOne(
             { productId: delivery.productId },
-            { $inc: { currentStock: -(delivery.quantity) } }
+            { $inc: { quantity: -(delivery.quantity) } }
           );
         }
       }
