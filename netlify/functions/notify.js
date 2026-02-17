@@ -146,6 +146,40 @@ function enRouteEmail(delivery, etaMinutes) {
 </body></html>`;
 }
 
+function deliveredEmail(delivery) {
+  const firstName = (delivery.customerName || 'Customer').split(' ')[0];
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;">
+  <div style="max-width:500px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;">
+    <div style="background:#001F3F;padding:24px 28px;text-align:center;">
+      <div style="color:#C65D2A;font-size:22px;font-weight:700;">Texas Got Rocks</div>
+      <div style="color:#22c55e;font-size:14px;font-weight:600;margin-top:4px;">&#x2705; Delivery Complete!</div>
+    </div>
+    <div style="padding:28px;">
+      <p style="font-size:16px;color:#333;margin:0 0 16px;">Hi ${firstName},</p>
+      <p style="font-size:15px;color:#333;margin:0 0 20px;line-height:1.5;">Your delivery has been completed! Here's a summary:</p>
+      <div style="background:#f8f9fa;border-radius:8px;padding:18px;margin-bottom:20px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:6px 0;color:#666;font-size:13px;">Material</td><td style="padding:6px 0;font-weight:600;font-size:14px;text-align:right;">${delivery.materialName || 'Material'}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;font-size:13px;">Quantity</td><td style="padding:6px 0;font-weight:600;font-size:14px;text-align:right;">${delivery.quantity || '?'} tons</td></tr>
+        </table>
+      </div>
+      ${delivery.deliveryPhoto ? `
+      <div style="margin-bottom:20px;">
+        <p style="font-size:13px;color:#666;margin:0 0 8px;">Delivery Photo:</p>
+        <img src="${delivery.deliveryPhoto}" alt="Delivery photo" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0;">
+      </div>` : ''}
+      <p style="font-size:15px;color:#333;margin:0 0 12px;line-height:1.5;">Thank you for choosing Texas Got Rocks! We appreciate your business.</p>
+      <p style="font-size:14px;color:#666;margin:0;line-height:1.5;">If you have any questions or concerns about your delivery, please call us at <strong>(936) 259-2887</strong>.</p>
+    </div>
+    <div style="padding:16px 28px;background:#f8f9fa;border-top:1px solid #e0e0e0;text-align:center;">
+      <p style="margin:0;font-size:12px;color:#999;">Texas Got Rocks &middot; Always FREE Delivery &middot; (936) 259-2887</p>
+    </div>
+  </div>
+</body></html>`;
+}
+
 // ─── Main Handler ────────────────────────────────────
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return handleOptions();
@@ -274,7 +308,63 @@ exports.handler = async (event) => {
       };
     }
 
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid type. Use: schedule_confirmation, en_route' }) };
+    // ─── Delivered / Thank You (single — after photo upload) ──
+    if (body.type === 'delivered') {
+      const deliveryId = body.deliveryId;
+      if (!deliveryId) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'deliveryId required' }) };
+      }
+
+      const delivery = await deliveryCol.findOne({ _id: new ObjectId(deliveryId) });
+      if (!delivery) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Delivery not found' }) };
+      }
+
+      // Duplicate guard
+      if (delivery.deliveredSmsSent && delivery.deliveredEmailSent) {
+        console.log(`[Delivered] Already notified for ${deliveryId}, skipping`);
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, alreadySent: true }) };
+      }
+
+      const smsMessage = `Thank you! Your ${delivery.materialName || 'material'} has been delivered. We appreciate your business! — Texas Got Rocks`;
+
+      let smsResult = null;
+      let emailResult = null;
+
+      if (delivery.customerPhone && !delivery.deliveredSmsSent) {
+        smsResult = await sendSMS(delivery.customerPhone, smsMessage);
+      }
+
+      if (delivery.customerEmail && !delivery.deliveredEmailSent) {
+        emailResult = await sendEmail(
+          delivery.customerEmail,
+          delivery.customerName,
+          'Your Delivery Is Complete!',
+          deliveredEmail(delivery)
+        );
+      }
+
+      await deliveryCol.updateOne(
+        { _id: new ObjectId(deliveryId) },
+        { $set: {
+          deliveredSmsSent: smsResult?.success || delivery.deliveredSmsSent || false,
+          deliveredEmailSent: emailResult?.success || delivery.deliveredEmailSent || false,
+          updatedAt: new Date()
+        }}
+      );
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          smsSent: smsResult?.success || false,
+          emailSent: emailResult?.success || false
+        })
+      };
+    }
+
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid type. Use: schedule_confirmation, en_route, delivered' }) };
 
   } catch (err) {
     console.error('Notify API error:', err);

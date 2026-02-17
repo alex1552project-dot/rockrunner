@@ -136,7 +136,11 @@ exports.handler = async (event) => {
         
         // Notifications
         scheduleSmsSent: false,
+        scheduleEmailSent: false,
         enRouteSmsSent: false,
+        enRouteEmailSent: false,
+        deliveredSmsSent: false,
+        deliveredEmailSent: false,
         
         // Audit trail
         statusHistory: [{
