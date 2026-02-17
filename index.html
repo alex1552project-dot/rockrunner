@@ -592,17 +592,9 @@ async function loadTrucks() {
 async function loadDeliveries() {
   try {
     const dateStr = formatDateISO(currentDate);
-    const [dayRes, unRes] = await Promise.all([
-      fetch(`${API}/dispatch?date=${dateStr}`).then(r => r.json()),
-      fetch(`${API}/dispatch?status=UNASSIGNED`).then(r => r.json())
-    ]);
-    const dayDels = dayRes.deliveries || [];
-    const unDels = unRes.deliveries || [];
-    // Merge and deduplicate
-    const map = new Map();
-    dayDels.forEach(d => map.set(d._id, d));
-    unDels.forEach(d => { if (!map.has(d._id)) map.set(d._id, d); });
-    deliveries = Array.from(map.values());
+    const r = await fetch(`${API}/dispatch?date=${dateStr}`);
+    const data = await r.json();
+    deliveries = data.deliveries || [];
   } catch(e) { console.error('loadDeliveries:', e); deliveries = []; }
 }
 
@@ -640,7 +632,8 @@ function render() {
 
 function renderUnassigned() {
   const list = document.getElementById('unassignedList');
-  const unassigned = deliveries.filter(d => d.status === 'UNASSIGNED');
+  const dateStr = formatDateISO(currentDate);
+  const unassigned = deliveries.filter(d => d.status === 'UNASSIGNED' && d.deliveryDate === dateStr);
   document.getElementById('unassignedCount').textContent = unassigned.length;
 
   if (!unassigned.length) {
@@ -722,18 +715,17 @@ function renderTruckRoutes() {
 function renderStats() {
   const dateStr = formatDateISO(currentDate);
   const dayDels = deliveries.filter(d => d.deliveryDate === dateStr && d.status !== 'CANCELLED');
-  const allUnassigned = deliveries.filter(d => d.status === 'UNASSIGNED');
+  const dayUnassigned = dayDels.filter(d => d.status === 'UNASSIGNED');
 
-  document.getElementById('statUnassigned').textContent = allUnassigned.length;
+  document.getElementById('statUnassigned').textContent = dayUnassigned.length;
   document.getElementById('statScheduled').textContent = dayDels.filter(d => d.status === 'SCHEDULED').length;
   document.getElementById('statEnRoute').textContent = dayDels.filter(d => d.status === 'EN_ROUTE').length;
   document.getElementById('statDelivered').textContent = dayDels.filter(d => d.status === 'DELIVERED').length;
 
-  // Finalize button: enable only when no UNASSIGNED for today AND there are SCHEDULED not yet notified
-  const todayUnassigned = deliveries.filter(d => d.deliveryDate === dateStr && d.status === 'UNASSIGNED');
+  // Finalize button: enable when there are SCHEDULED deliveries not yet notified
   const toFinalize = dayDels.filter(d => d.status === 'SCHEDULED' && !d.scheduleSmsSent);
   const btn = document.getElementById('finalizeBtn');
-  btn.disabled = todayUnassigned.length > 0 || toFinalize.length === 0;
+  btn.disabled = toFinalize.length === 0;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1058,7 +1050,11 @@ async function finalizeSchedule() {
   }
 
   const withContact = scheduled.filter(d => d.customerPhone || d.customerEmail);
-  if (!confirm(`You are about to finalize ${scheduled.length} deliveries and notify ${withContact.length} customers via SMS and email.\n\nProceed?`)) return;
+  const unassignedCount = deliveries.filter(d => d.deliveryDate === dateStr && d.status === 'UNASSIGNED').length;
+  let confirmMsg = `You are about to finalize ${scheduled.length} assigned deliveries and notify ${withContact.length} customers.`;
+  if (unassignedCount > 0) confirmMsg += `\n\n${unassignedCount} deliver${unassignedCount === 1 ? 'y' : 'ies'} will remain unassigned.`;
+  confirmMsg += '\n\nProceed?';
+  if (!confirm(confirmMsg)) return;
 
   try {
     // Step 1: Mark as finalized in DB
