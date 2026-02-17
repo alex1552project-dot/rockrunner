@@ -144,16 +144,16 @@
     .truck-routes { margin-top:28px; }
     .truck-group { margin-bottom:12px; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
     .truck-header {
-      background:var(--bg-card); padding:12px 16px; cursor:pointer;
+      background:linear-gradient(135deg, #1a2d4d 0%, #1e3352 100%); padding:14px 16px; cursor:pointer;
       display:flex; align-items:center; gap:12px; transition:background 0.15s;
-      user-select:none;
+      user-select:none; border-bottom:1px solid rgba(255,255,255,0.06);
     }
-    .truck-header:hover { background:var(--bg-hover); }
+    .truck-header:hover { background:linear-gradient(135deg, #1f3458 0%, #23395c 100%); }
     .truck-chevron { font-size:12px; color:var(--text-muted); transition:transform 0.2s; width:16px; }
     .truck-group.collapsed .truck-chevron { transform:rotate(-90deg); }
     .truck-group.collapsed .truck-body { display:none; }
     .truck-info { flex:1; }
-    .truck-name { font-size:14px; font-weight:600; }
+    .truck-name { font-size:17px; font-weight:700; }
     .truck-name .driver { font-weight:400; color:var(--text-muted); margin-left:6px; }
     .truck-meta { font-size:12px; color:var(--text-muted); margin-top:2px; }
     .truck-load-bar {
@@ -696,7 +696,7 @@ function renderTruckRoutes() {
       <div class="truck-header" onclick="toggleTruck('${tid}')">
         <span class="truck-chevron">▼</span>
         <div class="truck-info">
-          <div class="truck-name">${esc(truck.truckNumber)}<span class="driver">· ${esc(driverName)}</span></div>
+          <div class="truck-name">🚛 ${esc(truck.truckNumber)}<span class="driver">· ${esc(driverName)}</span></div>
           <div class="truck-meta">${esc(truck.type || 'Truck')} · ${truckDels.length} stop${truckDels.length !== 1 ? 's' : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
