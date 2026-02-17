@@ -166,7 +166,11 @@ function deliveredEmail(delivery) {
           <tr><td style="padding:6px 0;color:#666;font-size:13px;">Quantity</td><td style="padding:6px 0;font-weight:600;font-size:14px;text-align:right;">${delivery.quantity || '?'} tons</td></tr>
         </table>
       </div>
-      ${delivery.deliveryPhoto ? `
+      ${delivery.deliveryPhoto && delivery.deliveryPhoto.startsWith('http') ? `
+      <div style="margin-bottom:20px;">
+        <p style="font-size:13px;color:#666;margin:0 0 8px;">Delivery Photo:</p>
+        <img src="${delivery.deliveryPhoto}" alt="Delivery photo" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0;">
+      </div>` : delivery.deliveryPhoto ? `
       <p style="font-size:14px;color:#666;margin:0 0 16px;">&#x1F4F8; A delivery photo has been saved to your order record.</p>` : ''}
       <p style="font-size:15px;color:#333;margin:0 0 12px;line-height:1.5;">Thank you for choosing Texas Got Rocks! We appreciate your business.</p>
       <p style="font-size:14px;color:#666;margin:0;line-height:1.5;">If you have any questions or concerns about your delivery, please call us at <strong>(936) 259-2887</strong>.</p>

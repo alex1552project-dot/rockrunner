@@ -553,21 +553,37 @@ document.getElementById('cameraInput').addEventListener('change', function(e) {
 async function confirmDelivery() {
   if (!capturedPhoto || !activeDeliveryId) return;
 
+  const confirmBtn = document.getElementById('confirmDeliverBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'Uploading photo...';
+
   try {
+    // Step 1: Upload photo to Cloudinary
+    const uploadRes = await fetch(`${API}/upload-photo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: capturedPhoto, deliveryId: activeDeliveryId })
+    });
+    const uploadData = await uploadRes.json();
+    if (!uploadData.success) throw new Error(uploadData.error || 'Photo upload failed');
+
+    confirmBtn.textContent = 'Saving delivery...';
+
+    // Step 2: Save delivery with Cloudinary URL
     const r = await fetch(`${API}/dispatch`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: activeDeliveryId,
         status: 'DELIVERED',
-        deliveryPhoto: capturedPhoto, // Base64 — in production, upload to Cloudinary first
+        deliveryPhoto: uploadData.url,
         updatedBy: currentDriver.id,
         notes: 'Delivered with photo confirmation'
       })
     });
     const data = await r.json();
     if (data.success) {
-      // Send thank-you notification (fire-and-forget so UI isn't blocked)
+      // Step 3: Send thank-you notification (fire-and-forget)
       fetch(`${API}/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -578,7 +594,12 @@ async function confirmDelivery() {
       closePhoto();
       await loadMyRoute();
     }
-  } catch(e) { toast('Error confirming delivery', true); console.error(e); }
+  } catch(e) {
+    toast('Error confirming delivery', true);
+    console.error(e);
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '✓ Confirm';
+  }
 }
 
 function closePhoto() {
