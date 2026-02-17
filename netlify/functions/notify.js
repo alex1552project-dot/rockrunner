@@ -24,6 +24,7 @@ const { ObjectId } = require('mongodb');
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'info@texasgotrocks.com';
 const SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Texas Got Rocks';
+const OWNER_PHONE = '9363635803'; // Corey Pelletier — owner alerts
 
 // ─── SMS via Brevo ───────────────────────────────────
 async function sendSMS(phone, message) {
@@ -361,7 +362,20 @@ exports.handler = async (event) => {
       };
     }
 
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid type. Use: schedule_confirmation, en_route, delivered' }) };
+    // ─── Owner Alert: Board Finalized ─────────────────────────
+    if (body.type === 'owner_finalized') {
+      const { deliveryCount, truckCount, date } = body;
+      const msg = `\u2705 Tomorrow's board is set: ${deliveryCount} deliveries assigned across ${truckCount} trucks. All customers have been notified. \u2014 RockRunner`;
+      const smsResult = await sendSMS(OWNER_PHONE, msg);
+      console.log(`[Owner Alert] Finalized ${date}:`, smsResult);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true, ownerSmsSent: smsResult?.success || false })
+      };
+    }
+
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid type. Use: schedule_confirmation, en_route, delivered, owner_finalized' }) };
 
   } catch (err) {
     console.error('Notify API error:', err);

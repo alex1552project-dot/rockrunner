@@ -1128,6 +1128,19 @@ async function executeFinalizeAndNotify() {
       notified = (notifyData.smsSent || 0) + (notifyData.emailSent || 0);
     }
 
+    // Step 3: Alert owner (fire-and-forget)
+    const truckCount = new Set(finalData.toNotify?.map(d => d.truckNumber || d.truckId).filter(Boolean)).size || 0;
+    fetch(`${API}/notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'owner_finalized',
+        deliveryCount: finalData.toNotify?.length || finalData.finalized || 0,
+        truckCount,
+        date: dateStr
+      })
+    }).catch(err => console.error('Owner alert error:', err));
+
     // Show success state
     document.getElementById('finalizeBody').innerHTML = `
       <div class="finalize-success">
