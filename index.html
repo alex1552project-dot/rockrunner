@@ -258,6 +258,22 @@
     .detail-photo { margin-top:12px; }
     .detail-photo img { max-width:100%; border-radius:8px; border:1px solid var(--border); }
 
+    /* ─── FINALIZE MODAL ─────────────── */
+    .finalize-summary { max-height:220px; overflow-y:auto; margin:12px 0; }
+    .finalize-row {
+      display:flex; align-items:center; gap:10px; padding:8px 10px;
+      background:rgba(0,0,0,0.2); border-radius:6px; margin-bottom:4px; font-size:13px;
+    }
+    .finalize-row .fr-name { font-weight:600; flex:1; }
+    .finalize-row .fr-material { color:var(--text-muted); }
+    .finalize-row .fr-truck { color:var(--orange); font-size:12px; font-weight:500; }
+    .finalize-unassigned-note { color:var(--yellow); font-size:13px; margin-top:10px; }
+    .finalize-spinner { display:inline-block; width:18px; height:18px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:8px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .finalize-success { text-align:center; padding:20px 0; }
+    .finalize-success .check { font-size:40px; margin-bottom:8px; }
+    .finalize-success .msg { font-size:16px; font-weight:600; }
+
     /* ─── TOAST ───────────────────────── */
     .toast {
       position:fixed; bottom:20px; right:20px; background:#16a34a; color:#fff;
@@ -484,6 +500,18 @@
       <button class="btn btn-outline" onclick="closeModal('truckModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveTruck()">Save Truck</button>
     </div>
+  </div>
+</div>
+
+<!-- ─── FINALIZE MODAL ──────────────────────────────── -->
+<div class="modal-overlay" id="finalizeModal">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h3 id="finalizeTitle">📣 Finalize &amp; Notify</h3>
+      <button class="modal-close" onclick="closeModal('finalizeModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="finalizeBody"></div>
+    <div class="modal-footer" id="finalizeFooter"></div>
   </div>
 </div>
 
@@ -1040,7 +1068,7 @@ async function saveTruck() {
 // ═══════════════════════════════════════════════════════
 // FINALIZE & NOTIFY
 // ═══════════════════════════════════════════════════════
-async function finalizeSchedule() {
+function finalizeSchedule() {
   const dateStr = formatDateISO(currentDate);
   const scheduled = deliveries.filter(d => d.deliveryDate === dateStr && d.status === 'SCHEDULED' && !d.scheduleSmsSent);
 
@@ -1051,10 +1079,30 @@ async function finalizeSchedule() {
 
   const withContact = scheduled.filter(d => d.customerPhone || d.customerEmail);
   const unassignedCount = deliveries.filter(d => d.deliveryDate === dateStr && d.status === 'UNASSIGNED').length;
-  let confirmMsg = `You are about to finalize ${scheduled.length} assigned deliveries and notify ${withContact.length} customers.`;
-  if (unassignedCount > 0) confirmMsg += `\n\n${unassignedCount} deliver${unassignedCount === 1 ? 'y' : 'ies'} will remain unassigned.`;
-  confirmMsg += '\n\nProceed?';
-  if (!confirm(confirmMsg)) return;
+
+  // Build summary list
+  const rows = scheduled.map(d =>
+    `<div class="finalize-row"><span class="fr-name">${esc(d.customerName || 'Unknown')}</span><span class="fr-material">${esc(d.materialName || '?')} · ${fmtTons(d.quantity)}t</span><span class="fr-truck">${esc(d.truckNumber || '—')}</span></div>`
+  ).join('');
+
+  let body = `<p style="color:var(--text-muted);font-size:14px;margin-bottom:12px;">You are about to finalize <strong style="color:#fff;">${scheduled.length}</strong> assigned deliver${scheduled.length === 1 ? 'y' : 'ies'} and notify <strong style="color:#fff;">${withContact.length}</strong> customer${withContact.length === 1 ? '' : 's'} via SMS and email.</p>`;
+  body += `<div class="finalize-summary">${rows}</div>`;
+  if (unassignedCount > 0) {
+    body += `<div class="finalize-unassigned-note">⚠ ${unassignedCount} deliver${unassignedCount === 1 ? 'y' : 'ies'} will remain unassigned.</div>`;
+  }
+
+  document.getElementById('finalizeBody').innerHTML = body;
+  document.getElementById('finalizeFooter').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal('finalizeModal')">Cancel</button>
+    <button class="btn btn-success" id="finalizeConfirmBtn" onclick="executeFinalizeAndNotify()">Confirm &amp; Send</button>`;
+  openModal('finalizeModal');
+}
+
+async function executeFinalizeAndNotify() {
+  const dateStr = formatDateISO(currentDate);
+  const btn = document.getElementById('finalizeConfirmBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="finalize-spinner"></span>Sending...';
 
   try {
     // Step 1: Mark as finalized in DB
@@ -1066,8 +1114,9 @@ async function finalizeSchedule() {
     const finalData = await finalRes.json();
 
     // Step 2: Send notifications
+    let notified = 0;
     if (finalData.toNotify && finalData.toNotify.length) {
-      await fetch(`${API}/notify`, {
+      const notifyRes = await fetch(`${API}/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1075,12 +1124,26 @@ async function finalizeSchedule() {
           deliveries: finalData.toNotify
         })
       });
+      const notifyData = await notifyRes.json();
+      notified = (notifyData.smsSent || 0) + (notifyData.emailSent || 0);
     }
 
-    toast(`Schedule finalized — ${finalData.finalized || 0} customer(s) notified`);
+    // Show success state
+    document.getElementById('finalizeBody').innerHTML = `
+      <div class="finalize-success">
+        <div class="check">✅</div>
+        <div class="msg">${notified || finalData.finalized || 0} notification${notified === 1 ? '' : 's'} sent successfully</div>
+      </div>`;
+    document.getElementById('finalizeFooter').innerHTML = `
+      <button class="btn btn-primary" onclick="closeModal('finalizeModal')">Done</button>`;
+
     await loadDeliveries();
     render();
-  } catch(e) { toast('Error finalizing schedule', true); console.error(e); }
+  } catch(e) {
+    toast('Error finalizing schedule', true);
+    console.error(e);
+    closeModal('finalizeModal');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
