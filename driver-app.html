@@ -132,53 +132,55 @@ body {
   overflow: hidden;
 }
 .stop-header {
-  padding: 16px 18px;
+  padding: 18px 18px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 .stop-number {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--orange);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 18px;
+  font-weight: 800;
+  font-size: 24px;
   flex-shrink: 0;
 }
 .stop-number.completed { background: var(--green); }
 .stop-number.active { background: var(--purple); animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0.4)} 50%{box-shadow:0 0 0 8px rgba(168,85,247,0)} }
 .stop-info { flex: 1; }
-.stop-customer { font-size: 18px; font-weight: 700; }
-.stop-material { font-size: 14px; color: var(--text-dim); margin-top: 2px; }
-.stop-tons { font-size: 17px; font-weight: 700; color: var(--orange); }
+.stop-customer { font-size: 22px; font-weight: 800; color: #fff; }
+.stop-material { font-size: 17px; font-weight: 700; color: var(--text-dim); margin-top: 3px; }
+.stop-tons { font-size: 24px; font-weight: 800; color: var(--orange); }
 
 .stop-body {
-  padding: 0 16px 14px;
+  padding: 0 18px 16px;
 }
 .stop-address {
-  font-size: 15px;
-  color: var(--text-dim);
-  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
 }
 .stop-time {
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--text-dim);
   margin-bottom: 12px;
 }
 .stop-notes {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--yellow);
   background: rgba(234,179,8,0.08);
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ─── ACTION BUTTONS (BIG — glove-friendly) ──── */
@@ -189,18 +191,17 @@ body {
 }
 .action-btn {
   flex: 1;
-  padding: 18px;
-  border-radius: 12px;
+  padding: 20px;
+  border-radius: 14px;
   border: none;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 60px;
-  min-height: 56px;
+  gap: 10px;
+  min-height: 72px;
   transition: transform 0.1s;
 }
 .action-btn:active { transform: scale(0.97); }
@@ -221,7 +222,7 @@ body {
   border: 1px solid var(--border);
   color: var(--text);
   flex: 0;
-  width: 56px;
+  width: 72px;
 }
 .btn-disabled {
   background: var(--surface2) !important;
@@ -237,10 +238,10 @@ body {
 .stop-card.completed .stop-body { display: none; }
 .stop-card.completed .stop-actions { display: none; }
 .completed-badge {
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 12px 18px;
+  font-size: 17px;
   color: var(--green);
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* ─── PHOTO CAPTURE MODAL ────────────────────── */
@@ -303,16 +304,30 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 16px;
-  margin: 16px;
+  padding: 20px 16px;
+  margin: 12px 16px 16px;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
   text-align: center;
 }
 .summary-item { }
-.summary-num { font-size: 22px; font-weight: 700; }
-.summary-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.summary-num { font-size: 32px; font-weight: 800; }
+.summary-label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; font-weight: 600; }
+
+/* ─── TRUCK BADGE ───────────────────────────── */
+.truck-badge {
+  background: rgba(198,93,42,0.15);
+  border: 1px solid rgba(198,93,42,0.4);
+  color: var(--orange);
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 26px;
+  font-weight: 800;
+  text-align: center;
+  margin: 0 16px;
+  letter-spacing: 0.5px;
+}
 </style>
 </head>
 <body>
@@ -337,6 +352,8 @@ body {
       <div class="header-date" id="headerDate"></div>
     </div>
   </div>
+
+  <div class="truck-badge" id="truckBadge" style="display:none;"></div>
 
   <div class="day-summary" id="daySummary">
     <div class="summary-item">
@@ -402,7 +419,18 @@ async function login() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
   document.getElementById('driverBadge').textContent = currentDriver.name;
-  
+
+  // Look up assigned truck
+  try {
+    const tr = await fetch(`${API}/trucks`);
+    const td = await tr.json();
+    const myTruck = (td.trucks || []).find(t => t.defaultDriver?.id === currentDriver.id);
+    if (myTruck) {
+      document.getElementById('truckBadge').textContent = '🚛 ' + myTruck.truckNumber;
+      document.getElementById('truckBadge').style.display = '';
+    }
+  } catch(e) { /* truck lookup optional */ }
+
   const d = new Date();
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -457,7 +485,7 @@ function renderRoute() {
           <div class="stop-customer">${d.customerName || 'Customer'}</div>
           <div class="stop-material">${d.materialName || 'Material'}</div>
         </div>
-        <div class="stop-tons">${d.quantity || '?'}T</div>
+        <div class="stop-tons">${d.quantity ? parseFloat(d.quantity).toFixed(1) : '?'}T</div>
       </div>
       ${isCompleted ? `<div class="completed-badge">Delivered ✓</div>` : `
         <div class="stop-body">
