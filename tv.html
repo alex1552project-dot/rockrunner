@@ -194,6 +194,31 @@ body {
 .badge-full       { background: #fee2e2; color: var(--red); }
 .badge-closed     { background: #f1f5f9; color: var(--gray); }
 
+/* ─── LEGEND ────────────────────── */
+.legend {
+  position: fixed;
+  bottom: 10px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  opacity: 0.7;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
 /* ─── WATERMARK ──────────────────── */
 .watermark {
   position: fixed;
@@ -260,6 +285,13 @@ body {
     </div>
   </div>
   <div class="week-grid" id="weekGrid"></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#eab308;"></div>Scheduled</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e;"></div>En Route</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6;"></div>Delivered</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ef4444;"></div>Cancelled</div>
 </div>
 
 <div class="watermark">
