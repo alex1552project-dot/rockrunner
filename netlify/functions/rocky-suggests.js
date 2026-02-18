@@ -84,14 +84,26 @@ ${JSON.stringify(truckList, null, 2)}
 UNASSIGNED DELIVERIES TO ASSIGN:
 ${JSON.stringify(deliveryList, null, 2)}
 
-INSTRUCTIONS:
-- Assign every delivery to exactly one truck
-- Do not exceed any truck's capacityTons (sum of delivery tons per truck must be <= capacityTons)
-- Group deliveries geographically when possible to minimize total drive time
-- Respect time windows — deliveries with the same time window should go on the same truck when possible
-- Assign stop order (1 = first stop) within each truck's route, optimizing for geography
-- If there are more tons than total truck capacity, assign as many as fit and leave the rest unassigned
-- A truck can have multiple stops
+BUSINESS MODEL:
+- Every delivery is a ROUND TRIP: yard → customer site → back to yard → reload → next trip
+- This is NOT a continuous multi-stop route. Each stop is a completely separate round trip.
+- A truck can make multiple round trips per day
+
+ASSIGNMENT RULES:
+- Each delivery is one load — assign each delivery to exactly one truck
+- A delivery's tons must NOT exceed the assigned truck's capacityTons (one load per trip)
+- If a delivery's tons exceed all truck capacities, leave it unassigned
+- If there are more deliveries than trucks can handle in a day, assign as many as possible and leave the rest unassigned
+
+STOP ORDERING (within each truck's day):
+- stopOrder represents the sequence of round trips for that truck (1 = first trip of the day)
+- Time windows take strict priority: morning deliveries (e.g. "6:00 AM - 10:00 AM") must get the lowest stopOrder numbers
+- After respecting time windows, order the remaining stops to minimize total drive time across the day
+- Cluster geographically close deliveries to the same truck to reduce total round-trip miles
+
+OPTIMIZATION GOAL:
+- Minimize total round-trip drive time across all trucks for the full day
+- Assign nearby deliveries to the same truck in sequence when possible
 
 Respond with ONLY a valid JSON object in this exact format, no markdown, no explanation:
 {

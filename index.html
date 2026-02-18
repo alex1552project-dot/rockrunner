@@ -799,7 +799,7 @@ function renderTruckRoutes() {
         ? '<span class="manual-badge">✏️ manual</span>'
         : '<span class="ai-badge">🤖 AI</span>';
       const tw = d._rocky.timeWindow || d.timeWindow;
-      return `<div class="delivery-card rocky-suggested" onclick="openAssignModal('${d._id}')">
+      return `<div class="delivery-card rocky-suggested" onclick="openAssignModal('${d._id}')" title="Click to reassign">
         <span class="truck-stop-num">${dbDels.length + i + 1}</span>
         <div class="card-top">
           <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
@@ -808,7 +808,10 @@ function renderTruckRoutes() {
         <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtTons(d.quantity)} tons</div>
         <div class="card-bottom">
           <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
-          ${tw ? `<span class="card-time">${tw}</span>` : ''}
+          <span style="display:flex;align-items:center;gap:6px;">
+            ${tw ? `<span class="card-time">${tw}</span>` : ''}
+            ${!isManual ? '<span style="font-size:10px;color:#a78bfa;opacity:0.85;">↕ reassign</span>' : ''}
+          </span>
         </div>
       </div>`;
     }).join('');
@@ -1351,16 +1354,16 @@ function toggleMap() {
 let geocodeQueue = [];
 let geocodeRunning = false;
 
-async function geocodeAndPin(delivery) {
+async function geocodeAndPin(delivery, opts = {}) {
   const id = delivery._id;
   // Already have coords cached on the delivery
   if (delivery.lat != null && delivery.lng != null) {
-    addDeliveryMarker(delivery, delivery.lat, delivery.lng);
+    addDeliveryMarker(delivery, delivery.lat, delivery.lng, opts);
     return;
   }
   const addr = [delivery.deliveryAddress, delivery.deliveryCity, delivery.deliveryState || 'TX', delivery.deliveryZip].filter(Boolean).join(', ');
   if (!addr || addr === 'TX') return;
-  geocodeQueue.push({ delivery, addr });
+  geocodeQueue.push({ delivery, addr, opts });
   processGeocodeQueue();
 }
 
@@ -1369,14 +1372,14 @@ async function processGeocodeQueue() {
   geocodeRunning = true;
 
   while (geocodeQueue.length) {
-    const { delivery, addr } = geocodeQueue.shift();
+    const { delivery, addr, opts = {} } = geocodeQueue.shift();
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1`);
       const results = await r.json();
       if (results.length) {
         const lat = parseFloat(results[0].lat);
         const lng = parseFloat(results[0].lon);
-        addDeliveryMarker(delivery, lat, lng);
+        addDeliveryMarker(delivery, lat, lng, opts);
         // Cache coords on delivery doc (fire-and-forget)
         fetch(`${API}/dispatch`, {
           method: 'PUT',
@@ -1391,12 +1394,13 @@ async function processGeocodeQueue() {
   geocodeRunning = false;
 }
 
-function addDeliveryMarker(d, lat, lng) {
+function addDeliveryMarker(d, lat, lng, opts = {}) {
   if (!map) return;
   // Remove old marker if exists
   if (deliveryMarkers[d._id]) { map.removeLayer(deliveryMarkers[d._id]); }
 
-  const color = STATUS_COLORS[d.status] || '#6b7280';
+  const color = opts.color || STATUS_COLORS[d.status] || '#6b7280';
+  const statusLabel = opts.statusLabel || d.status;
   const marker = L.circleMarker([lat, lng], {
     radius: 9,
     fillColor: color,
@@ -1411,7 +1415,7 @@ function addDeliveryMarker(d, lat, lng) {
       <strong>${esc(d.customerName || 'Unknown')}</strong><br>
       ${esc(d.materialName || '?')} &middot; ${fmtTons(d.quantity)}T<br>
       <span style="color:#666;font-size:12px;">${esc(d.deliveryAddress || '')}</span><br>
-      <span style="color:${color};font-weight:600;font-size:12px;">${d.status}</span>
+      <span style="color:${color};font-weight:600;font-size:12px;">${statusLabel}</span>
     </div>
   `);
 
@@ -1426,7 +1430,10 @@ function updateMapPins() {
 
   const dateStr = formatDateISO(currentDate);
   const dayDels = deliveries.filter(d => d.deliveryDate === dateStr && d.status !== 'CANCELLED');
-  dayDels.forEach(d => geocodeAndPin(d));
+  dayDels.forEach(d => {
+    const rockyA = rockyState === 'suggested' ? rockyAssignments[d._id] : null;
+    geocodeAndPin(d, rockyA ? { color: '#8b5cf6', statusLabel: `Suggested: ${rockyA.truckNumber}` } : {});
+  });
 }
 
 function panToDelivery(deliveryId) {
