@@ -196,26 +196,26 @@ body {
 
 /* ─── LEGEND ────────────────────── */
 .legend {
-  position: fixed;
-  bottom: 10px;
-  left: 16px;
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: 14px;
-  opacity: 0.7;
+  gap: 24px;
+  padding: 10px 28px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-muted);
 }
 .legend-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   flex-shrink: 0;
 }
 
@@ -266,6 +266,12 @@ body {
     <div class="stat-box"><div class="stat-num" id="statCompleted" style="color:var(--green);">0</div><div class="stat-label">Completed</div></div>
     <div class="stat-box"><div class="stat-num" id="statTons" style="color:var(--text);">0</div><div class="stat-label">Total Tons</div></div>
   </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#eab308;"></div>Scheduled</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#22c55e;"></div>En Route</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6;"></div>Delivered</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#ef4444;"></div>Cancelled</div>
+  </div>
   <div class="truck-list" id="truckList"></div>
 </div>
 
@@ -285,13 +291,6 @@ body {
     </div>
   </div>
   <div class="week-grid" id="weekGrid"></div>
-</div>
-
-<div class="legend">
-  <div class="legend-item"><div class="legend-swatch" style="background:#eab308;"></div>Scheduled</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e;"></div>En Route</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6;"></div>Delivered</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#ef4444;"></div>Cancelled</div>
 </div>
 
 <div class="watermark">
@@ -355,6 +354,28 @@ async function loadWeekAhead() {
   } catch(e) { console.error('Week ahead load error:', e); }
 }
 
+// ─── DOMINANT ROW COLOR ──────────────────────────
+function dominantRowStyle(dels) {
+  if (!dels.length) return { row: '', num: '', driver: '' };
+  const hasEnRoute   = dels.some(d => d.status === 'EN_ROUTE');
+  const hasScheduled = dels.some(d => d.status === 'SCHEDULED');
+  const allDelivered = dels.every(d => d.status === 'DELIVERED');
+  const allCancelled = dels.every(d => d.status === 'CANCELLED');
+
+  let bg = '';
+  if (hasEnRoute)        bg = '#22c55e';
+  else if (allDelivered) bg = '#3b82f6';
+  else if (hasScheduled) bg = '#eab308';
+  else if (allCancelled) bg = '#ef4444';
+
+  if (!bg) return { row: '', num: '', driver: '' };
+  return {
+    row:    `background:${bg};border-color:${bg};`,
+    num:    'color:#fff;',
+    driver: 'color:rgba(255,255,255,0.85);'
+  };
+}
+
 // ─── RENDER SCOREBOARD ──────────────────────────
 function renderScoreboard() {
   const scheduled = deliveries.filter(d => d.status === 'SCHEDULED').length;
@@ -391,10 +412,11 @@ function renderScoreboard() {
       }).join('');
     }
 
-    return `<div class="truck-row">
+    const style = dominantRowStyle(truckDels);
+    return `<div class="truck-row" style="${style.row}">
       <div class="truck-label">
-        <div class="truck-label-number">\u{1F69B} ${esc(truck.truckNumber)}</div>
-        <div class="truck-label-driver">${esc(driverName)}</div>
+        <div class="truck-label-number" style="${style.num}">\u{1F69B} ${esc(truck.truckNumber)}</div>
+        <div class="truck-label-driver" style="${style.driver}">${esc(driverName)}</div>
       </div>
       <div class="truck-timeline">${stopsHtml}</div>
     </div>`;
