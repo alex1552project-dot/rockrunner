@@ -397,6 +397,38 @@ let currentDriver = null;
 let myDeliveries = [];
 let activeDeliveryId = null;
 let capturedPhoto = null;
+let gpsWatchId = null;
+let lastGpsSend = 0;
+
+// ─── GPS TRACKING ────────────────────────────────
+function startGpsTracking() {
+  if (!navigator.geolocation) return;
+  gpsWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const now = Date.now();
+      if (now - lastGpsSend < 60000) return; // throttle to once per 60s
+      lastGpsSend = now;
+      fetch(`${API}/driver-location`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId: currentDriver.id,
+          driverName: currentDriver.name,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          heading: pos.coords.heading,
+          speed: pos.coords.speed
+        })
+      }).catch(() => {});
+    },
+    () => {}, // silently ignore errors
+    { enableHighAccuracy: true, maximumAge: 30000 }
+  );
+}
+
+window.addEventListener('beforeunload', () => {
+  if (gpsWatchId != null) navigator.geolocation.clearWatch(gpsWatchId);
+});
 
 // ─── LOGIN ───────────────────────────────────────
 document.getElementById('pinInput').addEventListener('keyup', e => { if (e.key === 'Enter') login(); });
@@ -436,6 +468,7 @@ async function login() {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('headerDate').textContent = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
 
+  startGpsTracking();
   await loadMyRoute();
 }
 
