@@ -923,7 +923,11 @@ function openAssignModal(deliveryId) {
   }
 
   openModal('assignModal');
-  panToDelivery(deliveryId);
+  // Skip map pan for Rocky-suggested cards — panToDelivery opens a Leaflet
+  // popup which conflicts with the assignment modal.
+  if (!rockyAssignments[deliveryId]) {
+    panToDelivery(deliveryId);
+  }
 }
 
 function onAssignTruckChange(sel) {
@@ -1424,9 +1428,11 @@ function addDeliveryMarker(d, lat, lng, opts = {}) {
 
 function updateMapPins() {
   if (!map) return;
-  // Clear old markers
+  // Clear old markers and discard any stale geocode queue items so they
+  // don't overwrite fresh Rocky-purple pins when they eventually resolve.
   Object.values(deliveryMarkers).forEach(m => map.removeLayer(m));
   deliveryMarkers = {};
+  geocodeQueue.length = 0;
 
   const dateStr = formatDateISO(currentDate);
   const dayDels = deliveries.filter(d => d.deliveryDate === dateStr && d.status !== 'CANCELLED');

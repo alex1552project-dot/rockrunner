@@ -97,7 +97,9 @@ ASSIGNMENT RULES:
 
 STOP ORDERING (within each truck's day):
 - stopOrder represents the sequence of round trips for that truck (1 = first trip of the day)
-- Time windows take strict priority: morning deliveries (e.g. "6:00 AM - 10:00 AM") must get the lowest stopOrder numbers
+- If a delivery has a timeWindow value, treat it as a hard constraint: it must be scheduled within that window and given the appropriate stopOrder to honor it
+- Deliveries WITH time windows must be sequenced before any flexible deliveries that would conflict
+- Do NOT invent or assign a timeWindow for deliveries that don't already have one — leave that field absent in your response
 - After respecting time windows, order the remaining stops to minimize total drive time across the day
 - Cluster geographically close deliveries to the same truck to reduce total round-trip miles
 
