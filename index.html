@@ -368,10 +368,20 @@
       </div>
       <div class="form-row">
         <label>Select Truck</label>
-        <select id="assignTruckSelect" onchange="assignFromDropdown(this)">
+        <select id="assignTruckSelect" onchange="onAssignTruckChange(this)">
           <option value="">Choose a truck...</option>
         </select>
       </div>
+      <div class="form-row">
+        <label>Driver</label>
+        <select id="assignDriverSelect">
+          <option value="">No driver</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('assignModal')">Cancel</button>
+      <button class="btn btn-primary" id="assignBtn" onclick="confirmAssign()" disabled>Assign</button>
     </div>
   </div>
 </div>
@@ -783,20 +793,55 @@ function openAssignModal(deliveryId) {
     sel.appendChild(opt);
   });
 
+  // Populate driver dropdown with all active drivers, no selection yet
+  const dSel = document.getElementById('assignDriverSelect');
+  dSel.innerHTML = '<option value="">No driver</option>';
+  activeDrivers.forEach(dr => {
+    const opt = document.createElement('option');
+    opt.value = dr.driverId;
+    opt.dataset.name = dr.name;
+    opt.textContent = dr.name;
+    dSel.appendChild(opt);
+  });
+
+  document.getElementById('assignBtn').disabled = true;
   openModal('assignModal');
 }
 
-async function assignFromDropdown(sel) {
+function onAssignTruckChange(sel) {
   const truckId = sel.value;
+  const btn = document.getElementById('assignBtn');
+  btn.disabled = !truckId;
+
+  // Default driver dropdown to this truck's assigned driver
+  const dSel = document.getElementById('assignDriverSelect');
+  if (truckId) {
+    const truck = trucks.find(t => (t._id?.toString() || t._id) === truckId);
+    dSel.value = truck?.defaultDriver?.id || '';
+  } else {
+    dSel.value = '';
+  }
+}
+
+async function confirmAssign() {
+  const truckSel = document.getElementById('assignTruckSelect');
+  const truckId = truckSel.value;
   if (!truckId || !assigningDeliveryId) return;
 
-  const truck = trucks.find(t => (t._id?.toString() || t._id) === truckId);
-  const truckNumber = sel.options[sel.selectedIndex].dataset.truckNumber;
+  const truckNumber = truckSel.options[truckSel.selectedIndex].dataset.truckNumber;
+  const dSel = document.getElementById('assignDriverSelect');
+  const driverId = dSel.value || null;
+  const driverName = driverId ? dSel.options[dSel.selectedIndex].dataset.name : null;
+
   const dateStr = formatDateISO(currentDate);
   const existingStops = deliveries.filter(d =>
     d.truckId === truckId && d.deliveryDate === dateStr && d.status !== 'CANCELLED'
   );
   const timeWindow = document.getElementById('assignTimeWindow').value || null;
+
+  const btn = document.getElementById('assignBtn');
+  btn.disabled = true;
+  btn.textContent = 'Assigning...';
 
   try {
     const r = await fetch(`${API}/dispatch`, {
@@ -806,8 +851,8 @@ async function assignFromDropdown(sel) {
         id: assigningDeliveryId,
         truckId,
         truckNumber,
-        driverId: truck?.defaultDriver?.id || null,
-        driverName: truck?.defaultDriver?.name || null,
+        driverId,
+        driverName,
         deliveryDate: dateStr,
         stopOrder: existingStops.length + 1,
         status: 'SCHEDULED',
@@ -824,6 +869,8 @@ async function assignFromDropdown(sel) {
       render();
     }
   } catch(e) { toast('Error assigning delivery', true); console.error(e); }
+  btn.disabled = false;
+  btn.textContent = 'Assign';
 }
 
 // ═══════════════════════════════════════════════════════
