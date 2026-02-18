@@ -785,11 +785,10 @@ function openAssignModal(deliveryId) {
     );
     const totalTons = truckDels.reduce((s, del) => s + (parseFloat(del.quantity) || 0), 0);
     const cap = truck.capacity || 24;
-    const driverName = truck.defaultDriver?.name || 'No driver';
     const opt = document.createElement('option');
     opt.value = tid;
     opt.dataset.truckNumber = truck.truckNumber;
-    opt.textContent = `${truck.truckNumber} — ${driverName} — ${fmtTons(totalTons)}/${cap}T`;
+    opt.textContent = `${truck.truckNumber} — ${fmtTons(totalTons)}/${cap}T`;
     sel.appendChild(opt);
   });
 
