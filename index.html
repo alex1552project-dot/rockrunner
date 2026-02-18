@@ -341,7 +341,6 @@
   <div class="truck-routes">
     <div class="section-header" style="margin-top:28px;">
       <div class="section-title">🚛 Truck Routes <span class="count" id="truckCount">0</span></div>
-      <button class="btn btn-outline btn-sm" onclick="openAddTruck()">+ Add Truck</button>
     </div>
     <div id="truckRoutes"></div>
   </div>
@@ -349,15 +348,15 @@
 
 <!-- ─── ASSIGNMENT MODAL ─────────────────────────────── -->
 <div class="modal-overlay" id="assignModal">
-  <div class="modal modal-md">
+  <div class="modal modal-sm">
     <div class="modal-header">
       <h3>Assign to Truck</h3>
       <button class="modal-close" onclick="closeModal('assignModal')">&times;</button>
     </div>
     <div class="modal-body">
       <div class="assign-delivery-info" id="assignDeliveryInfo"></div>
-      <div class="assign-time-row">
-        <label>Time Window (optional)</label>
+      <div class="form-row">
+        <label>Time Window</label>
         <select id="assignTimeWindow">
           <option value="">Assign later</option>
           <option>6:00 AM - 8:00 AM</option>
@@ -367,8 +366,12 @@
           <option>2:00 PM - 4:00 PM</option>
         </select>
       </div>
-      <label style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:block;">Select a truck:</label>
-      <div class="truck-pick-list" id="truckPickList"></div>
+      <div class="form-row">
+        <label>Select Truck</label>
+        <select id="assignTruckSelect" onchange="assignFromDropdown(this)">
+          <option value="">Choose a truck...</option>
+        </select>
+      </div>
     </div>
   </div>
 </div>
@@ -466,46 +469,6 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('deliveryModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveDelivery()">Add Delivery</button>
-    </div>
-  </div>
-</div>
-
-<!-- ─── ADD TRUCK MODAL ──────────────────────────────── -->
-<div class="modal-overlay" id="truckModal">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <h3 id="truckModalTitle">Add Truck</h3>
-      <button class="modal-close" onclick="closeModal('truckModal')">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-row">
-        <label>Truck Number *</label>
-        <input type="text" id="truckNumber" placeholder="TC-001">
-      </div>
-      <div class="form-grid">
-        <div class="form-row">
-          <label>Type</label>
-          <select id="truckType">
-            <option>End Dump</option>
-            <option>Tandem</option>
-            <option>Semi</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label>Capacity (tons)</label>
-          <input type="number" id="truckCap" value="24">
-        </div>
-      </div>
-      <div class="form-row">
-        <label>Assign Driver</label>
-        <select id="truckDriverSelect">
-          <option value="">No driver assigned</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('truckModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveTruck()">Save Truck</button>
     </div>
   </div>
 </div>
@@ -638,7 +601,7 @@ async function loadProducts() {
   try {
     const r = await fetch(`${API}/products`);
     const d = await r.json();
-    products = d.products || (Array.isArray(d) ? d : []);
+    products = d.materials || d.products || (Array.isArray(d) ? d : []);
     populateMaterialDropdown();
   } catch(e) { console.error('loadProducts:', e); }
 }
@@ -647,24 +610,8 @@ async function loadDrivers() {
   try {
     const r = await fetch(`${API}/drivers`);
     const d = await r.json();
-    activeDrivers = d.drivers || [];
-    populateDriverDropdown();
+    activeDrivers = (d.drivers || []).filter(dr => dr.active !== false);
   } catch(e) { console.error('loadDrivers:', e); activeDrivers = []; }
-}
-
-function populateDriverDropdown() {
-  const sel = document.getElementById('truckDriverSelect');
-  const current = sel.value;
-  sel.innerHTML = '<option value="">No driver assigned</option>';
-  activeDrivers.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d.driverId;
-    opt.dataset.name = d.name;
-    opt.dataset.phone = d.phone || '';
-    opt.textContent = `${d.name}${d.phone ? ' — ' + d.phone : ''}`;
-    sel.appendChild(opt);
-  });
-  if (current) sel.value = current;
 }
 
 function populateMaterialDropdown() {
@@ -673,7 +620,7 @@ function populateMaterialDropdown() {
   sel.innerHTML = '<option value="">Select material...</option>';
   products.filter(p => p.active !== false).forEach(p => {
     const opt = document.createElement('option');
-    opt.value = p._id;
+    opt.value = p.id || p._id;
     opt.dataset.name = p.name;
     opt.textContent = p.name;
     sel.appendChild(opt);
@@ -780,7 +727,7 @@ function renderTruckRoutes() {
     </div>`;
   }).join('');
 
-  container.innerHTML = html + `<div class="add-truck-row" onclick="openAddTruck()">+ Add Truck</div>`;
+  container.innerHTML = html || '<div class="empty-state">No trucks configured — add trucks in Command Center</div>';
   document.getElementById('truckCount').textContent = activeTruckCount;
 }
 
@@ -808,57 +755,47 @@ function openAssignModal(deliveryId) {
   if (!d) return;
   assigningDeliveryId = deliveryId;
 
-  // Delivery info
   document.getElementById('assignDeliveryInfo').innerHTML = `
     <div class="name">${esc(d.customerName || 'Unknown')}</div>
     <div class="details">
       <strong>${esc(d.materialName || '?')}</strong> · ${fmtTons(d.quantity)} tons<br>
-      ${esc([d.deliveryAddress, d.deliveryCity].filter(Boolean).join(', ') || 'No address')}<br>
-      ${d.deliveryDate || ''}
+      ${esc([d.deliveryAddress, d.deliveryCity].filter(Boolean).join(', ') || 'No address')}
     </div>`;
 
-  // Reset time window
   document.getElementById('assignTimeWindow').value = d.timeWindow || '';
 
-  // Truck list
+  // Populate truck dropdown
   const dateStr = formatDateISO(currentDate);
-  const pickHtml = trucks.map(truck => {
+  const sel = document.getElementById('assignTruckSelect');
+  sel.innerHTML = '<option value="">Choose a truck...</option>';
+  trucks.forEach(truck => {
     const tid = truck._id?.toString() || truck._id;
     const truckDels = deliveries.filter(del =>
       del.truckId === tid && del.deliveryDate === dateStr && del.status !== 'CANCELLED'
     );
     const totalTons = truckDels.reduce((s, del) => s + (parseFloat(del.quantity) || 0), 0);
     const cap = truck.capacity || 24;
-    const pct = Math.min((totalTons / cap) * 100, 100);
-    const loadCls = pct >= 100 ? 'load-over' : pct >= 80 ? 'load-warn' : 'load-ok';
     const driverName = truck.defaultDriver?.name || 'No driver';
+    const opt = document.createElement('option');
+    opt.value = tid;
+    opt.dataset.truckNumber = truck.truckNumber;
+    opt.textContent = `${truck.truckNumber} — ${driverName} — ${fmtTons(totalTons)}/${cap}T`;
+    sel.appendChild(opt);
+  });
 
-    return `<div class="truck-pick" onclick="assignToTruck('${tid}','${esc(truck.truckNumber)}')">
-      <div class="truck-pick-info">
-        <div class="truck-pick-name">${esc(truck.truckNumber)}</div>
-        <div class="truck-pick-driver">${esc(driverName)} · ${esc(truck.type || 'Truck')}</div>
-      </div>
-      <div class="truck-pick-stats">
-        <div class="truck-pick-load">${fmtTons(totalTons)} / ${cap}t</div>
-        <div class="truck-pick-bar"><div class="truck-pick-bar-fill ${loadCls}" style="width:${pct}%"></div></div>
-        <div class="truck-pick-stops">${truckDels.length} stop${truckDels.length !== 1 ? 's' : ''}</div>
-      </div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('truckPickList').innerHTML = pickHtml || '<div class="empty-state">No trucks available. Add a truck first.</div>';
   openModal('assignModal');
 }
 
-async function assignToTruck(truckId, truckNumber) {
-  if (!assigningDeliveryId) return;
+async function assignFromDropdown(sel) {
+  const truckId = sel.value;
+  if (!truckId || !assigningDeliveryId) return;
 
   const truck = trucks.find(t => (t._id?.toString() || t._id) === truckId);
+  const truckNumber = sel.options[sel.selectedIndex].dataset.truckNumber;
   const dateStr = formatDateISO(currentDate);
   const existingStops = deliveries.filter(d =>
     d.truckId === truckId && d.deliveryDate === dateStr && d.status !== 'CANCELLED'
   );
-
   const timeWindow = document.getElementById('assignTimeWindow').value || null;
 
   try {
@@ -1042,15 +979,6 @@ function openAddDelivery() {
   openModal('deliveryModal');
 }
 
-function openAddTruck() {
-  document.getElementById('truckNumber').value = '';
-  document.getElementById('truckCap').value = '24';
-  document.getElementById('truckDriverSelect').value = '';
-  document.getElementById('truckModalTitle').textContent = 'Add Truck';
-  populateDriverDropdown();
-  openModal('truckModal');
-}
-
 // ═══════════════════════════════════════════════════════
 // SAVE DELIVERY
 // ═══════════════════════════════════════════════════════
@@ -1097,50 +1025,6 @@ async function saveDelivery() {
       render();
     }
   } catch(e) { toast('Error saving delivery', true); console.error(e); }
-}
-
-// ═══════════════════════════════════════════════════════
-// SAVE TRUCK
-// ═══════════════════════════════════════════════════════
-async function saveTruck() {
-  const num = document.getElementById('truckNumber').value.trim();
-  const cap = document.getElementById('truckCap').value;
-  if (!num) { toast('Truck number required', true); return; }
-
-  const body = {
-    truckNumber: num,
-    type: document.getElementById('truckType').value,
-    capacity: parseFloat(cap) || 24,
-    defaultDriver: null
-  };
-
-  const driverSel = document.getElementById('truckDriverSelect');
-  const driverId = driverSel.value;
-  if (driverId) {
-    const opt = driverSel.options[driverSel.selectedIndex];
-    body.defaultDriver = {
-      name: opt.dataset.name,
-      phone: opt.dataset.phone || '',
-      id: driverId
-    };
-  }
-
-  try {
-    const r = await fetch(`${API}/trucks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await r.json();
-    if (data.success) {
-      toast('Truck added: ' + num);
-      closeModal('truckModal');
-      await loadTrucks();
-      render();
-    } else {
-      toast(data.error || 'Error adding truck', true);
-    }
-  } catch(e) { toast('Error saving truck', true); console.error(e); }
 }
 
 // ═══════════════════════════════════════════════════════
