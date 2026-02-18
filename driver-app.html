@@ -388,17 +388,16 @@ async function login() {
   const pin = document.getElementById('pinInput').value;
   if (pin.length !== 4) { toast('Enter 4-digit PIN', true); return; }
 
-  // For MVP: PIN maps to driver. In production, validate against DB.
-  // Hardcoded PINs — replace with auth function call
-  const drivers = {
-    '1234': { id: 'driver-1', name: 'Mike Rodriguez', truck: 'TC-001' },
-    '0000': { id: 'alex-saplala', name: 'Alex Saplala', truck: 'All' },
-    '5678': { id: 'driver-2', name: 'Anthony Adcock', truck: 'TC-002' },
-    '9012': { id: 'driver-3', name: 'Kevin Buck', truck: 'TC-003' }
-  };
-
-  currentDriver = drivers[pin];
-  if (!currentDriver) { toast('Invalid PIN', true); return; }
+  try {
+    const res = await fetch(`${API}/drivers`);
+    const data = await res.json();
+    const match = (data.drivers || []).find(d => d.pin === pin);
+    if (!match) { toast('Invalid PIN', true); return; }
+    currentDriver = { id: match.driverId, name: match.name, phone: match.phone || '' };
+  } catch(e) {
+    toast('Connection error — try again', true);
+    return;
+  }
 
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
