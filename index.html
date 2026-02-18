@@ -155,6 +155,17 @@
     .truck-info { flex:1; }
     .truck-name { font-size:17px; font-weight:700; }
     .truck-name .driver { font-weight:400; color:rgba(255,255,255,0.85); margin-left:6px; }
+    .truck-driver-row { display:flex; align-items:center; gap:6px; margin-top:3px; }
+    .truck-driver-btn {
+      font-size:11px; padding:2px 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.12); color:#fff; cursor:pointer; white-space:nowrap;
+    }
+    .truck-driver-btn:hover { background:rgba(255,255,255,0.25); }
+    .truck-driver-select {
+      font-size:12px; padding:3px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.3);
+      background:rgba(0,0,0,0.3); color:#fff; max-width:180px;
+    }
+    .truck-driver-select option { background:#1a2540; }
     .truck-meta { font-size:12px; color:rgba(255,255,255,0.75); margin-top:2px; }
     .truck-load-bar {
       width:100px; height:6px; background:rgba(255,255,255,0.3); border-radius:3px; overflow:hidden;
@@ -741,17 +752,29 @@ function renderTruckRoutes() {
       </div>`;
     }).join('') : '<div class="empty-state">No deliveries assigned</div>';
 
+    const driverOpts = activeDrivers.map(d =>
+      `<option value="${d.driverId}" data-name="${esc(d.name)}" data-phone="${esc(d.phone || '')}" ${d.driverId === (truck.defaultDriver?.id || '') ? 'selected' : ''}>${esc(d.name)}</option>`
+    ).join('');
+
     return `<div class="truck-group" id="truck-${tid}">
       <div class="truck-header" onclick="toggleTruck('${tid}')">
         <span class="truck-chevron">▼</span>
         <div class="truck-info">
-          <div class="truck-name">🚛 ${esc(truck.truckNumber)}<span class="driver">· ${esc(driverName)}</span></div>
-          <div class="truck-meta">${esc(truck.type || 'Truck')} · ${truckDels.length} stop${truckDels.length !== 1 ? 's' : ''}</div>
+          <div class="truck-name">🚛 ${esc(truck.truckNumber)}</div>
+          <div class="truck-driver-row" onclick="event.stopPropagation()">
+            <span style="font-size:12px;color:rgba(255,255,255,0.75);">${esc(driverName)}</span>
+            <button class="truck-driver-btn" onclick="showDriverSelect('${tid}', this)">change</button>
+            <select class="truck-driver-select" style="display:none" id="driverSel-${tid}" onchange="changeTruckDriver('${tid}', this)">
+              <option value="">No driver</option>
+              ${driverOpts}
+            </select>
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="truck-load-bar"><div class="truck-load-fill ${loadCls}" style="width:${pct}%"></div></div>
           <span class="truck-tons">${fmtTons(totalTons)} / ${cap}t</span>
         </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);">${esc(truck.type || 'Truck')} · ${truckDels.length} stop${truckDels.length !== 1 ? 's' : ''}</div>
       </div>
       <div class="truck-body">${cardsHtml}</div>
     </div>`;
@@ -872,6 +895,38 @@ async function assignToTruck(truckId, truckNumber) {
 function toggleTruck(truckId) {
   const el = document.getElementById('truck-' + truckId);
   if (el) el.classList.toggle('collapsed');
+}
+
+function showDriverSelect(truckId, btn) {
+  const sel = document.getElementById('driverSel-' + truckId);
+  if (sel.style.display === 'none') {
+    sel.style.display = '';
+    btn.textContent = 'cancel';
+  } else {
+    sel.style.display = 'none';
+    btn.textContent = 'change';
+  }
+}
+
+async function changeTruckDriver(truckId, sel) {
+  const driverId = sel.value;
+  const opt = sel.options[sel.selectedIndex];
+  const driverName = opt.dataset?.name || null;
+  const driverPhone = opt.dataset?.phone || null;
+
+  try {
+    await fetch(`${API}/trucks`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: truckId,
+        defaultDriver: driverId ? { id: driverId, name: driverName, phone: driverPhone } : null
+      })
+    });
+    toast(driverName ? `Driver: ${driverName}` : 'Driver removed');
+    await loadTrucks();
+    render();
+  } catch(e) { toast('Error updating driver', true); console.error(e); }
 }
 
 // ═══════════════════════════════════════════════════════
