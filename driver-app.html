@@ -355,6 +355,11 @@ body {
 
   <div class="truck-badge" id="truckBadge" style="display:none;"></div>
 
+  <div style="display:flex;gap:8px;padding:12px 16px 0;">
+    <button id="btnToday" onclick="setDay(false)" style="flex:1;padding:10px;border-radius:20px;border:2px solid var(--orange);background:var(--orange);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Today</button>
+    <button id="btnTomorrow" onclick="setDay(true)" style="flex:1;padding:10px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text-dim);font-size:15px;font-weight:700;cursor:pointer;">Tomorrow</button>
+  </div>
+
   <div class="day-summary" id="daySummary">
     <div class="summary-item">
       <div class="summary-num" id="sumStops">0</div>
@@ -399,6 +404,8 @@ let activeDeliveryId = null;
 let capturedPhoto = null;
 let gpsWatchId = null;
 let lastGpsSend = 0;
+let viewingTomorrow = false;
+let viewingDate = new Date();
 
 // ─── GPS TRACKING ────────────────────────────────
 function startGpsTracking() {
@@ -472,10 +479,19 @@ async function login() {
   await loadMyRoute();
 }
 
+// ─── DAY TOGGLE ──────────────────────────────────
+function setDay(tomorrow) {
+  viewingTomorrow = tomorrow;
+  viewingDate = new Date();
+  if (tomorrow) viewingDate.setDate(viewingDate.getDate() + 1);
+  document.getElementById('btnToday').style.cssText    = 'flex:1;padding:10px;border-radius:20px;border:2px solid var(--' + (!tomorrow ? 'orange);background:var(--orange);color:#fff' : 'border);background:transparent;color:var(--text-dim)') + ';font-size:15px;font-weight:700;cursor:pointer;';
+  document.getElementById('btnTomorrow').style.cssText = 'flex:1;padding:10px;border-radius:20px;border:2px solid var(--' + (tomorrow  ? 'orange);background:var(--orange);color:#fff' : 'border);background:transparent;color:var(--text-dim)') + ';font-size:15px;font-weight:700;cursor:pointer;';
+  loadMyRoute();
+}
+
 // ─── LOAD ROUTE ──────────────────────────────────
 async function loadMyRoute() {
-  const today = new Date();
-  const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  const dateStr = viewingDate.getFullYear() + '-' + String(viewingDate.getMonth()+1).padStart(2,'0') + '-' + String(viewingDate.getDate()).padStart(2,'0');
   
   try {
     const r = await fetch(`${API}/dispatch?date=${dateStr}&driverId=${currentDriver.id}`);
@@ -502,7 +518,9 @@ function renderRoute() {
   document.getElementById('sumDone').textContent = done;
 
   if (!myDeliveries.length) {
-    list.innerHTML = '<div class="empty-route">No deliveries assigned for today.<br>Check back after dispatch is finalized.</div>';
+    list.innerHTML = viewingTomorrow
+      ? '<div class="empty-route">No deliveries scheduled for tomorrow yet.</div>'
+      : '<div class="empty-route">No deliveries assigned for today.<br>Check back after dispatch is finalized.</div>';
     return;
   }
 
