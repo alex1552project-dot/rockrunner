@@ -485,15 +485,11 @@
           <input type="number" id="truckCap" value="24">
         </div>
       </div>
-      <div class="form-grid">
-        <div class="form-row">
-          <label>Driver Name</label>
-          <input type="text" id="truckDriver" placeholder="John Smith">
-        </div>
-        <div class="form-row">
-          <label>Driver Phone</label>
-          <input type="text" id="truckDriverPhone" placeholder="(936) 555-0123">
-        </div>
+      <div class="form-row">
+        <label>Assign Driver</label>
+        <select id="truckDriverSelect">
+          <option value="">No driver assigned</option>
+        </select>
       </div>
     </div>
     <div class="modal-footer">
@@ -530,6 +526,7 @@ let currentDate = new Date();
 let trucks = [];
 let deliveries = [];
 let products = [];
+let activeDrivers = [];
 let assigningDeliveryId = null; // for assignment modal
 
 // ═══════════════════════════════════════════════════════
@@ -604,7 +601,7 @@ function pickDate() {
 // DATA LOADING
 // ═══════════════════════════════════════════════════════
 async function loadAll() {
-  await Promise.all([loadTrucks(), loadProducts()]);
+  await Promise.all([loadTrucks(), loadProducts(), loadDrivers()]);
   await loadDeliveries();
   render();
 }
@@ -633,6 +630,30 @@ async function loadProducts() {
     products = d.products || (Array.isArray(d) ? d : []);
     populateMaterialDropdown();
   } catch(e) { console.error('loadProducts:', e); }
+}
+
+async function loadDrivers() {
+  try {
+    const r = await fetch(`${API}/drivers`);
+    const d = await r.json();
+    activeDrivers = d.drivers || [];
+    populateDriverDropdown();
+  } catch(e) { console.error('loadDrivers:', e); activeDrivers = []; }
+}
+
+function populateDriverDropdown() {
+  const sel = document.getElementById('truckDriverSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">No driver assigned</option>';
+  activeDrivers.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.driverId;
+    opt.dataset.name = d.name;
+    opt.dataset.phone = d.phone || '';
+    opt.textContent = `${d.name}${d.phone ? ' — ' + d.phone : ''}`;
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
 }
 
 function populateMaterialDropdown() {
@@ -969,9 +990,9 @@ function openAddDelivery() {
 function openAddTruck() {
   document.getElementById('truckNumber').value = '';
   document.getElementById('truckCap').value = '24';
-  document.getElementById('truckDriver').value = '';
-  document.getElementById('truckDriverPhone').value = '';
+  document.getElementById('truckDriverSelect').value = '';
   document.getElementById('truckModalTitle').textContent = 'Add Truck';
+  populateDriverDropdown();
   openModal('truckModal');
 }
 
@@ -1038,12 +1059,14 @@ async function saveTruck() {
     defaultDriver: null
   };
 
-  const driverName = document.getElementById('truckDriver').value.trim();
-  if (driverName) {
+  const driverSel = document.getElementById('truckDriverSelect');
+  const driverId = driverSel.value;
+  if (driverId) {
+    const opt = driverSel.options[driverSel.selectedIndex];
     body.defaultDriver = {
-      name: driverName,
-      phone: document.getElementById('truckDriverPhone').value.trim(),
-      id: driverName.toLowerCase().replace(/\s+/g, '-')
+      name: opt.dataset.name,
+      phone: opt.dataset.phone || '',
+      id: driverId
     };
   }
 
