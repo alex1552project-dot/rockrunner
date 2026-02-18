@@ -3,579 +3,392 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="refresh" content="300">
-<title>RockRunner — Yard Display</title>
+<title>Texas Got Rocks — Dispatch Board</title>
 <style>
 :root {
-  --navy: #001F3F;
-  --navy-light: #0a2d52;
-  --navy-dark: #001530;
+  --bg: #ffffff;
+  --bg-alt: #f8f9fb;
+  --border: #e2e8f0;
+  --text: #1a202c;
+  --text-muted: #64748b;
+  --blue: #2563eb;
+  --green: #16a34a;
+  --yellow: #d97706;
+  --red: #dc2626;
   --orange: #C65D2A;
-  --orange-dim: rgba(198,93,42,0.15);
-  --green: #22c55e;
-  --green-dim: rgba(34,197,94,0.12);
-  --yellow: #eab308;
-  --yellow-dim: rgba(234,179,8,0.12);
-  --blue: #3b82f6;
-  --blue-dim: rgba(59,130,246,0.12);
-  --red: #ef4444;
-  --purple: #a855f7;
-  --purple-dim: rgba(168,85,247,0.12);
-  --surface: #0f1923;
-  --surface2: #162230;
-  --border: #1e3347;
-  --text: #e4e8ef;
-  --text-dim: #7a8da0;
-  --text-muted: #4a5d73;
+  --gray: #94a3b8;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: var(--navy-dark);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
   color: var(--text);
   overflow: hidden;
   height: 100vh;
 }
 
-/* ─── HEADER ──────────────────────────────────── */
-.tv-header {
-  background: var(--navy);
-  border-bottom: 2px solid var(--border);
-  padding: 10px 28px;
+/* ─── SCREENS ────────────────────── */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 1s ease;
+  pointer-events: none;
+}
+.screen.active { opacity: 1; pointer-events: auto; }
+
+/* ─── TOP BAR ────────────────────── */
+.topbar {
+  background: var(--orange);
+  color: #fff;
+  padding: 20px 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
-.tv-header-left { display:flex; align-items:center; gap:16px; }
-.tv-logo { height:36px; border-radius:6px; }
-.tv-title { font-size:20px; font-weight:700; color:var(--orange); }
-.tv-subtitle { font-size:12px; color:var(--text-dim); }
-.tv-header-right { display:flex; align-items:center; gap:20px; }
-.tv-date { font-size:16px; font-weight:600; text-align:right; }
-.tv-time { font-size:13px; color:var(--text-dim); }
-.tv-refresh-dot {
-  width:10px; height:10px; border-radius:50%; background:var(--green);
-  animation: blink 3s infinite;
+.topbar-brand {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
 }
-@keyframes blink { 0%,90%{opacity:1} 95%{opacity:0.3} 100%{opacity:1} }
+.topbar-title {
+  font-size: 24px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+.topbar-clock {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.topbar-date {
+  font-size: 18px;
+  opacity: 0.85;
+  text-align: right;
+}
 
-/* ─── STATS STRIP ─────────────────────────────── */
-.stats-strip {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 8px 28px;
+/* ─── STATS ROW ──────────────────── */
+.stats-row {
   display: flex;
-  gap: 28px;
-  align-items: center;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
 }
-.stat-block { display:flex; align-items:center; gap:8px; }
-.stat-icon {
-  width:32px; height:32px; border-radius:8px;
-  display:flex; align-items:center; justify-content:center; font-size:15px;
+.stat-box {
+  flex: 1;
+  text-align: center;
+  padding: 16px 10px;
+  border-right: 1px solid var(--border);
 }
-.stat-value { font-size:20px; font-weight:700; }
-.stat-label { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.8px; }
-.legend { margin-left:auto; display:flex; gap:16px; align-items:center; }
-.legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); }
-.legend-dot { width:8px; height:8px; border-radius:50%; }
+.stat-box:last-child { border-right: none; }
+.stat-num { font-size: 48px; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* ─── MAIN LAYOUT ─────────────────────────────── */
-.tv-main {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  grid-template-rows: 1fr 220px;
-  height: calc(100vh - 108px);
-}
-
-/* ─── TODAY PANEL (top-left) ──────────────────── */
-.today-panel {
-  grid-column: 1; grid-row: 1;
-  padding: 12px 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  border-bottom: 1px solid var(--border);
-}
-.today-panel::-webkit-scrollbar { width:4px; }
-.today-panel::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
-/* ─── WEEK PANEL (bottom-left) ───────────────── */
-.week-panel {
-  grid-column: 1; grid-row: 2;
-  padding: 8px 20px 10px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.week-panel .panel-title { margin-bottom:6px; }
-.week-grid {
-  flex:1; display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap:5px; overflow:hidden;
-  max-height: 170px;
-}
-.week-day {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:6px; overflow:hidden; display:flex; flex-direction:column;
-}
-.week-day.today { border-color:var(--orange); }
-.week-day-header {
-  padding:4px 6px; background:var(--surface2);
-  border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between;
-}
-.week-day.today .week-day-header { background:var(--orange-dim); }
-.week-day-name { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-dim); }
-.week-day.today .week-day-name { color:var(--orange); }
-.week-day-date { font-size:11px; font-weight:600; }
-.week-day-body {
-  flex:1; padding:4px; overflow-y:auto;
-  display:flex; flex-direction:column; gap:3px;
-}
-.week-day-body::-webkit-scrollbar { width:2px; }
-.week-day-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-.week-del {
-  background:var(--surface2); border-radius:4px;
-  padding:3px 5px; font-size:10px; border-left:2px solid var(--border);
-}
-.week-del.src-tgr-border { border-left-color:var(--green); }
-.week-del.src-yard-border { border-left-color:var(--yellow); }
-.week-del.src-tc-border { border-left-color:var(--blue); }
-.week-del-name { font-weight:600; color:var(--text); }
-.week-del-material { color:var(--text-dim); font-size:9px; }
-.week-day-stats {
-  padding:3px 6px; border-top:1px solid var(--border);
-  font-size:9px; color:var(--text-muted);
-  display:flex; justify-content:space-between;
-}
-.week-day-empty {
-  padding:8px 0; display:flex; align-items:center; justify-content:center;
-  color:var(--text-muted); font-size:10px;
-}
-
-/* ─── QUEUE PANEL (right, full height) ────────── */
-.queue-panel {
-  grid-column: 2; grid-row: 1 / 3;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.queue-panel .panel-title { padding:12px 16px 0; }
-.queue-scroll {
-  flex:1; overflow-y:auto; padding:10px 14px;
-  display:flex; flex-direction:column; gap:8px;
-}
-.queue-scroll::-webkit-scrollbar { width:4px; }
-.queue-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
-/* ─── SHARED ──────────────────────────────────── */
-.panel-title {
-  font-size:13px; font-weight:700; text-transform:uppercase;
-  letter-spacing:1px; color:var(--text-dim); margin-bottom:12px;
-  display:flex; align-items:center; gap:8px;
-}
-.panel-title .count {
-  background:var(--orange); color:#fff;
-  font-size:10px; padding:2px 7px; border-radius:8px; font-weight:700;
-}
-
-/* ─── TRUCK ROWS ──────────────────────────────── */
-.truck-rows { flex:1; display:flex; flex-direction:column; gap:10px; }
+/* ─── TRUCK ROWS ─────────────────── */
+.truck-list { flex: 1; overflow: hidden; padding: 12px 24px; display: flex; flex-direction: column; gap: 8px; }
 .truck-row {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:10px; overflow:hidden;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 20px;
+  flex: 1;
+  min-height: 0;
 }
-.truck-row-header {
-  padding:10px 14px; display:flex; align-items:center;
-  justify-content:space-between; border-bottom:1px solid var(--border);
-  background:var(--surface2);
+.truck-label {
+  min-width: 260px;
+  flex-shrink: 0;
 }
-.truck-row-name { font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px; }
-.truck-row-meta { font-size:11px; color:var(--text-dim); }
-.truck-row-load { font-size:12px; font-weight:600; }
-.load-ok { color:var(--green); }
-.load-warn { color:var(--yellow); }
-.load-over { color:var(--red); }
-.truck-stops { padding:8px; display:flex; flex-wrap:wrap; gap:6px; }
-.no-stops { padding:16px; text-align:center; color:var(--text-muted); font-size:12px; }
+.truck-label-number {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--orange);
+}
+.truck-label-driver {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.truck-timeline {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  overflow: hidden;
+}
+.stop-block {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.3;
+}
+.stop-block.scheduled { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.stop-block.en-route  { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+.stop-block.delivered  { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.stop-block.cancelled  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.truck-empty { color: var(--gray); font-size: 16px; font-style: italic; }
 
-/* ─── DELIVERY TILES ──────────────────────────── */
-.del-tile {
-  background:var(--surface2); border:1px solid var(--border);
-  border-radius:6px; padding:8px 10px; min-width:200px; flex:1;
-  border-left:3px solid var(--border); position:relative;
+/* ─── WEEK AHEAD ─────────────────── */
+.week-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 16px;
+  padding: 24px 32px;
+  align-items: stretch;
 }
-.del-tile.status-SCHEDULED { border-left-color:var(--blue); }
-.del-tile.status-EN_ROUTE { border-left-color:var(--purple); animation:route-glow 2s infinite; }
-.del-tile.status-DELIVERED { border-left-color:var(--green); opacity:0.65; }
-@keyframes route-glow {
-  0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0)} 50%{box-shadow:0 0 10px 2px rgba(168,85,247,0.15)}
+.week-col {
+  border-radius: 16px;
+  padding: 24px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-alt);
 }
-.del-tile-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:3px; }
-.del-tile-customer { font-size:13px; font-weight:600; display:flex; align-items:center; gap:5px; }
-.del-tile-status {
-  font-size:9px; font-weight:700; text-transform:uppercase;
-  letter-spacing:0.5px; padding:2px 6px; border-radius:4px;
+.week-col.today { border-color: var(--blue); border-width: 3px; background: #eff6ff; }
+.week-col.status-available { border-color: var(--green); }
+.week-col.status-limited   { border-color: var(--yellow); }
+.week-col.status-full       { border-color: var(--red); }
+.week-col.status-closed     { border-color: var(--gray); background: #f8f8f8; opacity: 0.6; }
+.week-day { font-size: 28px; font-weight: 800; }
+.week-date { font-size: 18px; color: var(--text-muted); font-weight: 600; }
+.week-stat { font-size: 20px; font-weight: 600; line-height: 1.5; }
+.week-stat strong { font-size: 36px; display: block; font-weight: 800; }
+.week-badge {
+  font-size: 18px;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-.status-badge-SCHEDULED { background:var(--blue-dim); color:var(--blue); }
-.status-badge-EN_ROUTE { background:var(--purple-dim); color:var(--purple); }
-.status-badge-DELIVERED { background:var(--green-dim); color:var(--green); }
-.del-tile-material { font-size:11px; color:var(--text-dim); }
-.del-tile-address { font-size:10px; color:var(--text-muted); margin-top:1px; }
-.del-tile-time { font-size:10px; color:var(--orange); margin-top:3px; font-weight:600; }
-.source-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
-.src-tgr { background:var(--green); }
-.src-yard { background:var(--yellow); }
-.src-tc { background:var(--blue); }
+.badge-available { background: #dcfce7; color: var(--green); }
+.badge-limited   { background: #fef3c7; color: var(--yellow); }
+.badge-full       { background: #fee2e2; color: var(--red); }
+.badge-closed     { background: #f1f5f9; color: var(--gray); }
 
-/* ─── INCOMING CARDS ──────────────────────────── */
-.incoming-card {
-  background:var(--surface2); border:1px solid var(--border);
-  border-radius:8px; padding:10px 12px; border-left:3px solid var(--orange);
+/* ─── WATERMARK ──────────────────── */
+.watermark {
+  position: fixed;
+  bottom: 8px;
+  right: 16px;
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 600;
 }
-.incoming-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
-.incoming-customer { font-size:13px; font-weight:600; display:flex; align-items:center; gap:5px; }
-.incoming-date { font-size:10px; color:var(--orange); font-weight:600; }
-.incoming-material { font-size:11px; color:var(--text-dim); }
-.incoming-address { font-size:10px; color:var(--text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.incoming-tons { font-size:12px; font-weight:700; color:var(--orange); float:right; margin-top:-30px; }
-.queue-empty { text-align:center; padding:30px 14px; color:var(--text-muted); font-size:12px; }
-.upcoming-divider {
-  font-size:10px; font-weight:700; text-transform:uppercase;
-  letter-spacing:1px; color:var(--text-muted);
-  padding:10px 0 4px; border-top:1px solid var(--border); margin-top:6px;
-}
-.all-done { text-align:center; padding:40px 20px; color:var(--green); }
-.all-done-icon { font-size:40px; margin-bottom:10px; }
-.all-done-text { font-size:16px; font-weight:600; }
 </style>
 </head>
 <body>
 
-<div class="tv-header">
-  <div class="tv-header-left">
-    <img src="logo.jpg" alt="RockRunner" class="tv-logo">
+<!-- ═══ SCREEN 1: TODAY'S SCOREBOARD ═══════════════ -->
+<div class="screen active" id="screen1">
+  <div class="topbar">
     <div>
-      <div class="tv-title">RockRunner Logistics</div>
-      <div class="tv-subtitle">Dispatch Board — Live</div>
+      <div class="topbar-brand">Texas Got Rocks</div>
+      <div class="topbar-title">Dispatch Board</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="topbar-clock" id="clock1">--:-- --</div>
+      <div class="topbar-date" id="date1">—</div>
     </div>
   </div>
-  <div class="tv-header-right">
+  <div class="stats-row" id="statsRow">
+    <div class="stat-box"><div class="stat-num" id="statTrucks" style="color:var(--orange);">0</div><div class="stat-label">Trucks Active</div></div>
+    <div class="stat-box"><div class="stat-num" id="statScheduled" style="color:var(--blue);">0</div><div class="stat-label">Scheduled</div></div>
+    <div class="stat-box"><div class="stat-num" id="statCompleted" style="color:var(--green);">0</div><div class="stat-label">Completed</div></div>
+    <div class="stat-box"><div class="stat-num" id="statTons" style="color:var(--text);">0</div><div class="stat-label">Total Tons</div></div>
+  </div>
+  <div class="truck-list" id="truckList"></div>
+</div>
+
+<!-- ═══ SCREEN 2: WEEK AHEAD ══════════════════════ -->
+<div class="screen" id="screen2">
+  <div class="topbar">
     <div>
-      <div class="tv-date" id="tvDate"></div>
-      <div class="tv-time" id="tvTime"></div>
+      <div class="topbar-brand">Texas Got Rocks</div>
+      <div class="topbar-title">7-Day Look Ahead</div>
     </div>
-    <div class="tv-refresh-dot" title="Live — refreshes every 30s"></div>
+    <div style="text-align:right;">
+      <div class="topbar-clock" id="clock2">--:-- --</div>
+      <div class="topbar-date" id="date2">—</div>
+    </div>
   </div>
+  <div class="week-grid" id="weekGrid"></div>
 </div>
 
-<div class="stats-strip">
-  <div class="stat-block">
-    <div class="stat-icon" style="background:var(--orange-dim);color:var(--orange);">📋</div>
-    <div><div class="stat-value" id="tvStatTotal">0</div><div class="stat-label">Today</div></div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-icon" style="background:var(--blue-dim);color:var(--blue);">🚛</div>
-    <div><div class="stat-value" id="tvStatScheduled">0</div><div class="stat-label">Scheduled</div></div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-icon" style="background:var(--purple-dim);color:var(--purple);">🔄</div>
-    <div><div class="stat-value" id="tvStatEnRoute">0</div><div class="stat-label">En Route</div></div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-icon" style="background:var(--green-dim);color:var(--green);">✅</div>
-    <div><div class="stat-value" id="tvStatDelivered">0</div><div class="stat-label">Delivered</div></div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-icon" style="background:var(--orange-dim);color:var(--orange);">⚖️</div>
-    <div><div class="stat-value" id="tvStatTons">0</div><div class="stat-label">Tons</div></div>
-  </div>
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>TGR</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Yard Sale</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>T&C</div>
-  </div>
-</div>
-
-<div class="tv-main">
-  <div class="today-panel">
-    <div class="panel-title">Today's Deliveries <span class="count" id="todayCount">0</span></div>
-    <div class="truck-rows" id="truckRows"></div>
-  </div>
-  <div class="week-panel">
-    <div class="panel-title">This Week</div>
-    <div class="week-grid" id="weekGrid"></div>
-  </div>
-  <div class="queue-panel">
-    <div class="panel-title">On the Books <span class="count" id="queueCount">0</span></div>
-    <div class="queue-scroll" id="queueScroll"></div>
-  </div>
-</div>
+<div class="watermark">RockRunner Logistics</div>
 
 <script>
 const API = '/.netlify/functions';
 let trucks = [];
-let todayDeliveries = [];
-let unassignedDeliveries = [];
-let weekDeliveries = [];
+let deliveries = [];
+let capacityDays = [];
+let currentScreen = 1;
 
-// Source classification helper
-function getSourceClass(source) {
-  if (source === 'Texas Got Rocks' || source === 'texasgotrocks') return 'src-tgr';
-  if (source === 'Yard Sale' || source === 'YardTrackPro') return 'src-yard';
-  return 'src-tc';
-}
-function getSourceBorderClass(source) {
-  if (source === 'Texas Got Rocks' || source === 'texasgotrocks') return 'src-tgr-border';
-  if (source === 'Yard Sale' || source === 'YardTrackPro') return 'src-yard-border';
-  return 'src-tc-border';
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  updateClock();
-  setInterval(updateClock, 1000);
-  loadAll();
-  setInterval(loadAll, 30000);
-});
-
-function updateClock() {
-  const now = new Date();
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('tvDate').textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
-  let h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  document.getElementById('tvTime').textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ampm}`;
-}
-
-async function loadAll() {
-  await loadTrucks();
-  await Promise.all([loadTodayDeliveries(), loadUnassigned(), loadWeekDeliveries()]);
-  renderToday();
-  renderWeek();
-  renderQueue();
-  renderStats();
-}
-
+// ─── HELPERS ─────────────────────────────────────
 function todayISO() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-function formatISO(d) {
+function futureISO(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-async function loadTrucks() {
-  try {
-    const r = await fetch(`${API}/trucks`);
-    const d = await r.json();
-    trucks = d.success ? (d.trucks || []) : [];
-  } catch(e) { console.error(e); }
+function esc(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
+
+function updateClocks() {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', second:'2-digit', hour12:true });
+  const date = now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('clock1').textContent = time;
+  document.getElementById('clock2').textContent = time;
+  document.getElementById('date1').textContent = date;
+  document.getElementById('date2').textContent = date;
 }
 
-async function loadTodayDeliveries() {
+// ─── DATA LOADING ────────────────────────────────
+async function loadScoreboard() {
   try {
-    const r = await fetch(`${API}/dispatch?date=${todayISO()}`);
-    const d = await r.json();
-    todayDeliveries = (d.deliveries || []).filter(del => del.status !== 'CANCELLED');
-  } catch(e) { todayDeliveries = []; console.error(e); }
+    const today = todayISO();
+    const [truckRes, delRes] = await Promise.all([
+      fetch(`${API}/trucks`).then(r => r.json()),
+      fetch(`${API}/dispatch?date=${today}`).then(r => r.json())
+    ]);
+    trucks = (truckRes.trucks || []).filter(t => t.active !== false);
+    deliveries = (delRes.deliveries || []).filter(d => d.status !== 'CANCELLED');
+    renderScoreboard();
+  } catch(e) { console.error('Scoreboard load error:', e); }
 }
 
-async function loadUnassigned() {
+async function loadWeekAhead() {
   try {
-    const r = await fetch(`${API}/dispatch?status=UNASSIGNED`);
-    const d = await r.json();
-    unassignedDeliveries = (d.deliveries || []).sort((a,b) => {
-      if (a.deliveryDate < b.deliveryDate) return -1;
-      if (a.deliveryDate > b.deliveryDate) return 1;
-      return 0;
-    });
-  } catch(e) { unassignedDeliveries = []; console.error(e); }
+    const from = todayISO();
+    const to = futureISO(6);
+    const r = await fetch(`${API}/capacity?from=${from}&to=${to}`);
+    const data = await r.json();
+    capacityDays = data.days || [];
+    renderWeekAhead();
+  } catch(e) { console.error('Week ahead load error:', e); }
 }
 
-async function loadWeekDeliveries() {
-  try {
-    const now = new Date();
-    const sun = new Date(now);
-    sun.setDate(now.getDate() - now.getDay());
-    const sat = new Date(sun);
-    sat.setDate(sun.getDate() + 6);
-    const r = await fetch(`${API}/dispatch?startDate=${formatISO(sun)}&endDate=${formatISO(sat)}`);
-    const d = await r.json();
-    weekDeliveries = (d.deliveries || []).filter(del => del.status !== 'CANCELLED');
-  } catch(e) { weekDeliveries = []; console.error(e); }
-}
+// ─── RENDER SCOREBOARD ──────────────────────────
+function renderScoreboard() {
+  const scheduled = deliveries.filter(d => d.status === 'SCHEDULED').length;
+  const enRoute = deliveries.filter(d => d.status === 'EN_ROUTE').length;
+  const completed = deliveries.filter(d => d.status === 'DELIVERED').length;
+  const totalTons = deliveries.reduce((s,d) => s + (parseFloat(d.quantity)||0), 0);
+  const activeTruckIds = new Set(deliveries.map(d => d.truckId).filter(Boolean));
 
-// ─── RENDER TODAY ────────────────────────────────
-function renderToday() {
-  const container = document.getElementById('truckRows');
-  const assigned = todayDeliveries.filter(d => d.truckId);
-  document.getElementById('todayCount').textContent = todayDeliveries.length;
+  document.getElementById('statTrucks').textContent = activeTruckIds.size;
+  document.getElementById('statScheduled').textContent = scheduled + enRoute;
+  document.getElementById('statCompleted').textContent = completed;
+  document.getElementById('statTons').textContent = totalTons.toFixed(1);
 
+  const list = document.getElementById('truckList');
   if (!trucks.length) {
-    container.innerHTML = '<div class="no-stops">No trucks in roster</div>';
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:24px;">No trucks configured</div>';
     return;
   }
 
-  container.innerHTML = trucks.map(truck => {
-    const truckDels = assigned
-      .filter(d => d.truckId === truck._id)
-      .sort((a,b) => (a.stopOrder || 99) - (b.stopOrder || 99));
-    const totalTons = truckDels.reduce((s, d) => s + (d.quantity || 0), 0);
-    const loadClass = totalTons > truck.capacity ? 'load-over' : totalTons > truck.capacity * 0.8 ? 'load-warn' : 'load-ok';
-    const driverName = truck.defaultDriver ? truck.defaultDriver.name : 'No driver';
-    const stopsHTML = truckDels.length
-      ? truckDels.map(d => renderTile(d)).join('')
-      : '<div class="no-stops">No deliveries assigned</div>';
+  list.innerHTML = trucks.map(truck => {
+    const tid = truck._id?.toString() || truck._id;
+    const truckDels = deliveries.filter(d => d.truckId === tid)
+      .sort((a,b) => (a.stopOrder||99) - (b.stopOrder||99));
+    const driverName = truck.defaultDriver?.name || 'No driver';
+
+    let stopsHtml;
+    if (!truckDels.length) {
+      stopsHtml = '<span class="truck-empty">No deliveries assigned</span>';
+    } else {
+      stopsHtml = truckDels.map(d => {
+        const sc = (d.status||'').replace('_','-').toLowerCase();
+        const cls = sc === 'en-route' ? 'en-route' : sc;
+        return `<div class="stop-block ${cls}">${esc(d.customerName||'?')}<br><small>${esc(d.materialName||'')} &middot; ${(parseFloat(d.quantity)||0).toFixed(1)}T</small></div>`;
+      }).join('');
+    }
+
     return `<div class="truck-row">
-      <div class="truck-row-header">
-        <div class="truck-row-name">🚛 ${truck.truckNumber} <span class="truck-row-meta">${truck.type} · ${driverName}</span></div>
-        <div class="truck-row-load ${loadClass}">${totalTons.toFixed(2)}/${truck.capacity}T</div>
+      <div class="truck-label">
+        <div class="truck-label-number">\u{1F69B} ${esc(truck.truckNumber)}</div>
+        <div class="truck-label-driver">${esc(driverName)}</div>
       </div>
-      <div class="truck-stops">${stopsHTML}</div>
+      <div class="truck-timeline">${stopsHtml}</div>
     </div>`;
   }).join('');
-
-  const allDone = assigned.length > 0 && assigned.every(d => d.status === 'DELIVERED');
-  if (allDone) {
-    container.innerHTML += `<div class="all-done"><div class="all-done-icon">🎉</div><div class="all-done-text">All Deliveries Complete!</div></div>`;
-  }
 }
 
-function renderTile(d) {
-  const srcClass = getSourceClass(d.source);
-  return `<div class="del-tile status-${d.status}">
-    <div class="del-tile-header">
-      <div class="del-tile-customer"><span class="source-dot ${srcClass}"></span>${d.customerName || 'Customer'}</div>
-      <span class="del-tile-status status-badge-${d.status}">${formatStatus(d.status)}</span>
-    </div>
-    <div class="del-tile-material">${d.materialName || 'Material'} — ${d.quantity ? d.quantity.toFixed(2) : '?'} tons</div>
-    <div class="del-tile-address">${d.deliveryCity || d.deliveryAddress || ''}</div>
-    ${d.timeWindow ? `<div class="del-tile-time">${d.timeWindow}</div>` : ''}
-  </div>`;
-}
-
-function formatStatus(s) {
-  return { SCHEDULED:'Scheduled', EN_ROUTE:'En Route', DELIVERED:'Delivered' }[s] || s;
-}
-
-// ─── RENDER WEEK ─────────────────────────────────
-function renderWeek() {
-  const container = document.getElementById('weekGrid');
-  const now = new Date();
-  const sun = new Date(now);
-  sun.setDate(now.getDate() - now.getDay());
-  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// ─── RENDER WEEK AHEAD ─────────────────────────
+function renderWeekAhead() {
+  const grid = document.getElementById('weekGrid');
   const today = todayISO();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  let html = '';
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(sun);
-    day.setDate(sun.getDate() + i);
-    const dateStr = formatISO(day);
-    const isToday = dateStr === today;
-    const dayDels = weekDeliveries.filter(d => d.deliveryDate === dateStr);
-    const dayTons = dayDels.reduce((s, d) => s + (d.quantity || 0), 0);
+  grid.innerHTML = capacityDays.map(day => {
+    const d = new Date(day.date + 'T12:00:00');
+    const dayShort = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    const dateLabel = months[d.getMonth()] + ' ' + d.getDate();
+    const isToday = day.date === today;
+    const statusCls = 'status-' + day.status;
+    const badgeCls = 'badge-' + day.status;
+    const statusLabel = day.status === 'available' ? 'Available' :
+                        day.status === 'limited' ? 'Limited' :
+                        day.status === 'full' ? 'Full' : 'Closed';
 
-    const delsHTML = dayDels.length
-      ? dayDels.slice(0, 5).map(d => {
-          const srcClass = getSourceBorderClass(d.source);
-          return `<div class="week-del ${srcClass}">
-            <div class="week-del-name">${(d.customerName || 'Customer').split(' ')[0]}</div>
-            <div class="week-del-material">${d.materialName || ''} · ${d.quantity ? d.quantity.toFixed(2) : '?'}T</div>
-          </div>`;
-        }).join('') + (dayDels.length > 5 ? `<div style="font-size:9px;color:var(--text-muted);text-align:center;">+${dayDels.length - 5} more</div>` : '')
-      : '<div class="week-day-empty">—</div>';
-
-    html += `<div class="week-day ${isToday ? 'today' : ''}">
-      <div class="week-day-header">
-        <span class="week-day-name">${dayNames[i]}</span>
-        <span class="week-day-date">${months[day.getMonth()]} ${day.getDate()}</span>
-      </div>
-      <div class="week-day-body">${delsHTML}</div>
-      ${dayDels.length ? `<div class="week-day-stats"><span>${dayDels.length} del</span><span>${dayTons.toFixed(2)}T</span></div>` : ''}
+    return `<div class="week-col ${statusCls} ${isToday ? 'today' : ''}">
+      <div class="week-day">${dayShort}</div>
+      <div class="week-date">${dateLabel}</div>
+      ${day.status !== 'closed' ? `
+        <div class="week-stat"><strong>${day.deliveryCount}</strong>deliveries</div>
+        <div class="week-stat"><strong>${day.scheduledTons}</strong>tons</div>
+        <div class="week-stat"><strong>${day.trucksUsed}</strong>trucks needed</div>
+        <div class="week-stat"><strong>${day.availableSlots}</strong>slots open</div>
+      ` : `
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+          <div style="font-size:48px;opacity:0.3;">&#128564;</div>
+        </div>
+      `}
+      <div class="week-badge ${badgeCls}">${statusLabel}</div>
     </div>`;
-  }
-  container.innerHTML = html;
+  }).join('');
 }
 
-// ─── RENDER QUEUE ────────────────────────────────
-function renderQueue() {
-  const container = document.getElementById('queueScroll');
-  const today = todayISO();
-  const todayQueue = unassignedDeliveries.filter(d => d.deliveryDate === today);
-  const futureUnassigned = unassignedDeliveries.filter(d => d.deliveryDate > today);
-  const total = unassignedDeliveries.length;
-  document.getElementById('queueCount').textContent = total;
-
-  if (!total) {
-    container.innerHTML = '<div class="queue-empty">No unassigned orders<br>All caught up ✓</div>';
-    return;
-  }
-
-  let html = '';
-  if (todayQueue.length) {
-    html += `<div class="upcoming-divider" style="border-top:none;margin-top:0;padding-top:0;">⚠️ Today — Needs Truck</div>`;
-    html += todayQueue.map(d => renderIncomingCard(d)).join('');
-  }
-
-  const futureDates = {};
-  futureUnassigned.forEach(d => {
-    const key = d.deliveryDate || 'No Date';
-    if (!futureDates[key]) futureDates[key] = [];
-    futureDates[key].push(d);
-  });
-  Object.keys(futureDates).sort().forEach(date => {
-    html += `<div class="upcoming-divider">${formatDateLabel(date)}</div>`;
-    html += futureDates[date].map(d => renderIncomingCard(d)).join('');
-  });
-
-  container.innerHTML = html;
+// ─── SCREEN ROTATION ────────────────────────────
+function rotateScreen() {
+  document.getElementById('screen' + currentScreen).classList.remove('active');
+  currentScreen = currentScreen === 1 ? 2 : 1;
+  document.getElementById('screen' + currentScreen).classList.add('active');
 }
 
-function renderIncomingCard(d) {
-  const srcClass = getSourceClass(d.source);
-  return `<div class="incoming-card">
-    <div class="incoming-header">
-      <div class="incoming-customer"><span class="source-dot ${srcClass}"></span>${d.customerName || 'Customer'}</div>
-      <div class="incoming-date">${d.deliveryDate ? formatDateShort(d.deliveryDate) : 'No date'}</div>
-    </div>
-    <div class="incoming-material">${d.materialName || 'Material'} — ${d.quantity ? d.quantity.toFixed(2) : '?'} tons</div>
-    <div class="incoming-address">${d.deliveryCity || d.deliveryAddress || 'No address'}</div>
-    ${d.timeWindow ? `<div style="font-size:10px;color:var(--orange);font-weight:600;margin-top:2px;">${d.timeWindow}</div>` : ''}
-    <div class="incoming-tons">${d.quantity ? d.quantity.toFixed(2) : '?'}T</div>
-  </div>`;
-}
+// ─── INIT ───────────────────────────────────────
+updateClocks();
+setInterval(updateClocks, 1000);
 
-function formatDateLabel(dateStr) {
-  if (!dateStr || dateStr === 'No Date') return 'No Date Set';
-  const d = new Date(dateStr + 'T12:00:00');
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  if (dateStr === todayISO()) return '⚠️ Today';
-  if (dateStr === formatISO(tomorrow)) return 'Tomorrow';
-  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
-}
+loadScoreboard();
+loadWeekAhead();
 
-function formatDateShort(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T12:00:00');
-  return `${d.getMonth()+1}/${d.getDate()}`;
-}
+// Refresh data every 60 seconds
+setInterval(() => { loadScoreboard(); loadWeekAhead(); }, 60000);
 
-// ─── STATS ───────────────────────────────────────
-function renderStats() {
-  document.getElementById('tvStatTotal').textContent = todayDeliveries.length;
-  document.getElementById('tvStatScheduled').textContent = todayDeliveries.filter(d => d.status === 'SCHEDULED').length;
-  document.getElementById('tvStatEnRoute').textContent = todayDeliveries.filter(d => d.status === 'EN_ROUTE').length;
-  document.getElementById('tvStatDelivered').textContent = todayDeliveries.filter(d => d.status === 'DELIVERED').length;
-  document.getElementById('tvStatTons').textContent = todayDeliveries.reduce((s,d) => s + (d.quantity || 0), 0).toFixed(2);
-}
+// Rotate screens every 15 seconds
+setInterval(rotateScreen, 15000);
 </script>
 </body>
 </html>
