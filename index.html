@@ -304,6 +304,29 @@
     .toast.show { opacity:1; transform:translateY(0); }
     .toast.error { background:var(--red); }
 
+    /* ─── ROCKY BANNER ────────────────── */
+    #rockyBanner {
+      display:none; padding:12px 20px; align-items:center; gap:12px;
+      border-bottom:1px solid var(--border); font-size:14px; flex-wrap:wrap;
+    }
+    #rockyBanner.loading   { display:flex; background:rgba(139,92,246,0.1); color:#a78bfa; }
+    #rockyBanner.suggested { display:flex; background:rgba(34,197,94,0.06); border-color:rgba(34,197,94,0.2); }
+    #rockyBanner.confirmed { display:flex; background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.2); color:var(--blue); }
+    .rocky-spinner {
+      display:inline-block; width:16px; height:16px; border:2px solid currentColor;
+      border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;
+      flex-shrink:0; vertical-align:middle; margin-right:4px;
+    }
+    .ai-badge {
+      font-size:10px; padding:1px 5px; border-radius:3px;
+      background:rgba(139,92,246,0.2); color:#a78bfa; border:1px solid rgba(139,92,246,0.3);
+    }
+    .manual-badge {
+      font-size:10px; padding:1px 5px; border-radius:3px;
+      background:rgba(249,115,22,0.12); color:var(--orange); border:1px solid rgba(249,115,22,0.3);
+    }
+    .delivery-card.rocky-suggested { border-left-color:#8b5cf6; }
+
     /* ─── RESPONSIVE ──────────────────── */
     @media (max-width:1024px) {
       .main-wrapper { flex-direction:column; height:auto; }
@@ -345,6 +368,12 @@
     <button class="btn btn-primary" onclick="openAddDelivery()">+ Delivery</button>
     <button class="btn btn-success" id="finalizeBtn" onclick="finalizeSchedule()" disabled>📤 Finalize &amp; Notify</button>
   </div>
+</div>
+
+<!-- ─── ROCKY BANNER ─────────────────────────────────── -->
+<div id="rockyBanner">
+  <span id="rockyBannerText" style="flex:1;"></span>
+  <button class="btn btn-success btn-sm" id="rockyConfirmBtn" style="display:none;padding:7px 18px;font-size:13px;" onclick="confirmRockyAssignments()">✅ Confirm Assignments</button>
 </div>
 
 <!-- ─── MAIN CONTENT ─────────────────────────────────── -->
@@ -536,6 +565,11 @@ let products = [];
 let activeDrivers = [];
 let assigningDeliveryId = null; // for assignment modal
 
+// Rocky Suggests state
+let rockyPlan = null;
+let rockyAssignments = {};  // { deliveryId: { truckId, truckNumber, stopOrder, routeSource, reasoning, ... } }
+let rockyState = 'idle';    // 'idle' | 'loading' | 'suggested' | 'confirmed'
+
 // ─── MAP GLOBALS ─────────────────────────────────
 let map = null;
 let deliveryMarkers = {};  // keyed by delivery _id
@@ -585,14 +619,16 @@ function statusClass(status) {
 // ═══════════════════════════════════════════════════════
 function changeDate(delta) {
   currentDate.setDate(currentDate.getDate() + delta);
+  clearRockyPlan();
   renderDateLabel();
-  loadDeliveries().then(render);
+  loadDeliveries().then(() => { render(); loadRockySuggestions(); });
 }
 
 function goToday() {
   currentDate = new Date();
+  clearRockyPlan();
   renderDateLabel();
-  loadDeliveries().then(render);
+  loadDeliveries().then(() => { render(); loadRockySuggestions(); });
 }
 
 function pickDate() {
@@ -603,8 +639,9 @@ function pickDate() {
   picker.onchange = () => {
     if (picker.value) {
       currentDate = new Date(picker.value + 'T12:00:00');
+      clearRockyPlan();
       renderDateLabel();
-      loadDeliveries().then(render);
+      loadDeliveries().then(() => { render(); loadRockySuggestions(); });
     }
     picker.style.pointerEvents = 'none';
   };
@@ -617,6 +654,7 @@ async function loadAll() {
   await Promise.all([loadTrucks(), loadProducts(), loadDrivers()]);
   await loadDeliveries();
   render();
+  loadRockySuggestions(); // background — non-blocking
 }
 
 async function loadTrucks() {
@@ -680,7 +718,7 @@ function render() {
 function renderUnassigned() {
   const list = document.getElementById('unassignedList');
   const dateStr = formatDateISO(currentDate);
-  const unassigned = deliveries.filter(d => d.status === 'UNASSIGNED' && d.deliveryDate === dateStr);
+  const unassigned = deliveries.filter(d => d.status === 'UNASSIGNED' && d.deliveryDate === dateStr && !rockyAssignments[d._id]);
   document.getElementById('unassignedCount').textContent = unassigned.length;
 
   if (!unassigned.length) {
@@ -711,19 +749,34 @@ function renderTruckRoutes() {
 
   const html = trucks.map(truck => {
     const tid = truck._id?.toString() || truck._id;
-    const truckDels = deliveries.filter(d =>
+
+    // DB-assigned deliveries for this truck
+    const dbDels = deliveries.filter(d =>
       d.truckId === tid && d.deliveryDate === dateStr && d.status !== 'CANCELLED'
     ).sort((a, b) => (a.stopOrder || 99) - (b.stopOrder || 99));
 
-    const totalTons = truckDels.reduce((s, d) => s + (parseFloat(d.quantity) || 0), 0);
+    // Rocky-tentative deliveries for this truck (not yet saved to DB)
+    const rockyDelsForTruck = rockyState === 'suggested'
+      ? Object.entries(rockyAssignments)
+          .filter(([, a]) => a.truckId === tid)
+          .map(([deliveryId, assignment]) => {
+            const d = deliveries.find(del => del._id === deliveryId);
+            return d ? { ...d, _rocky: assignment } : null;
+          })
+          .filter(Boolean)
+          .sort((a, b) => (a._rocky.stopOrder || 99) - (b._rocky.stopOrder || 99))
+      : [];
+
+    const totalTons = [...dbDels, ...rockyDelsForTruck].reduce((s, d) => s + (parseFloat(d.quantity) || 0), 0);
     const cap = truck.capacity || 24;
     const pct = Math.min((totalTons / cap) * 100, 100);
     const loadCls = pct >= 100 ? 'load-over' : pct >= 80 ? 'load-warn' : 'load-ok';
     const driverName = truck.defaultDriver?.name || 'No driver';
-    if (truckDels.length > 0) activeTruckCount++;
+    const totalStops = dbDels.length + rockyDelsForTruck.length;
+    if (totalStops > 0) activeTruckCount++;
 
-    const cardsHtml = truckDels.length ? truckDels.map((d, i) => {
-      const src = getSourceTag(d.source);
+    // DB stop cards
+    const dbCards = dbDels.map((d, i) => {
       const sc = statusClass(d.status);
       return `<div class="delivery-card ${sc}" onclick="showDetail('${d._id}')">
         <span class="truck-stop-num">${i + 1}</span>
@@ -737,7 +790,30 @@ function renderTruckRoutes() {
           ${d.timeWindow ? `<span class="card-time">${d.timeWindow}</span>` : ''}
         </div>
       </div>`;
-    }).join('') : '<div class="empty-state">No deliveries assigned</div>';
+    }).join('');
+
+    // Rocky-suggested stop cards (with 🤖 or ✏️ badge)
+    const rockyCards = rockyDelsForTruck.map((d, i) => {
+      const isManual = d._rocky.routeSource === 'manual';
+      const badge = isManual
+        ? '<span class="manual-badge">✏️ manual</span>'
+        : '<span class="ai-badge">🤖 AI</span>';
+      const tw = d._rocky.timeWindow || d.timeWindow;
+      return `<div class="delivery-card rocky-suggested" onclick="openAssignModal('${d._id}')">
+        <span class="truck-stop-num">${dbDels.length + i + 1}</span>
+        <div class="card-top">
+          <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
+          ${badge}
+        </div>
+        <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtTons(d.quantity)} tons</div>
+        <div class="card-bottom">
+          <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
+          ${tw ? `<span class="card-time">${tw}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    const cardsHtml = (dbCards + rockyCards) || '<div class="empty-state">No deliveries assigned</div>';
 
     const driverOpts = activeDrivers.map(d =>
       `<option value="${d.driverId}" data-name="${esc(d.name)}" data-phone="${esc(d.phone || '')}" ${d.driverId === (truck.defaultDriver?.id || '') ? 'selected' : ''}>${esc(d.name)}</option>`
@@ -761,7 +837,7 @@ function renderTruckRoutes() {
           <div class="truck-load-bar"><div class="truck-load-fill ${loadCls}" style="width:${pct}%"></div></div>
           <span class="truck-tons">${fmtTons(totalTons)} / ${cap}t</span>
         </div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.6);">${esc(truck.type || 'Truck')} · ${truckDels.length} stop${truckDels.length !== 1 ? 's' : ''}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);">${esc(truck.type || 'Truck')} · ${totalStops} stop${totalStops !== 1 ? 's' : ''}</div>
       </div>
       <div class="truck-body">${cardsHtml}</div>
     </div>`;
@@ -774,7 +850,7 @@ function renderTruckRoutes() {
 function renderStats() {
   const dateStr = formatDateISO(currentDate);
   const dayDels = deliveries.filter(d => d.deliveryDate === dateStr && d.status !== 'CANCELLED');
-  const dayUnassigned = dayDels.filter(d => d.status === 'UNASSIGNED');
+  const dayUnassigned = dayDels.filter(d => d.status === 'UNASSIGNED' && !rockyAssignments[d._id]);
 
   document.getElementById('statUnassigned').textContent = dayUnassigned.length;
   document.getElementById('statScheduled').textContent = dayDels.filter(d => d.status === 'SCHEDULED').length;
@@ -834,6 +910,15 @@ function openAssignModal(deliveryId) {
   });
 
   document.getElementById('assignBtn').disabled = true;
+
+  // Pre-select Rocky's suggested truck if this is a Rocky-tentative delivery
+  const ra = rockyAssignments[deliveryId];
+  if (ra) {
+    const truckSel = document.getElementById('assignTruckSelect');
+    truckSel.value = ra.truckId;
+    onAssignTruckChange(truckSel);
+  }
+
   openModal('assignModal');
   panToDelivery(deliveryId);
 }
@@ -868,6 +953,24 @@ async function confirmAssign() {
     d.truckId === truckId && d.deliveryDate === dateStr && d.status !== 'CANCELLED'
   );
   const timeWindow = document.getElementById('assignTimeWindow').value || null;
+
+  // Rocky intercept: if this delivery is in the tentative Rocky plan,
+  // update in-memory assignment instead of writing to DB
+  if (rockyAssignments[assigningDeliveryId]) {
+    const otherRockyForTruck = Object.entries(rockyAssignments)
+      .filter(([id, a]) => a.truckId === truckId && id !== assigningDeliveryId).length;
+    const newStop = existingStops.length + otherRockyForTruck + 1;
+    rockyAssignments[assigningDeliveryId] = {
+      ...rockyAssignments[assigningDeliveryId],
+      truckId, truckNumber, stopOrder: newStop,
+      routeSource: 'manual', driverId, driverName, timeWindow
+    };
+    toast(`Reassigned to ${truckNumber} ✏️`);
+    closeModal('assignModal');
+    assigningDeliveryId = null;
+    render();
+    return;
+  }
 
   const btn = document.getElementById('assignBtn');
   btn.disabled = true;
@@ -1393,6 +1496,110 @@ async function refreshDriverLocations() {
 function startDriverRefresh() {
   refreshDriverLocations();
   driverRefreshTimer = setInterval(refreshDriverLocations, 30000);
+}
+
+// ═══════════════════════════════════════════════════════
+// ROCKY SUGGESTS — AI Auto-Dispatch
+// ═══════════════════════════════════════════════════════
+async function loadRockySuggestions() {
+  const dateStr = formatDateISO(currentDate);
+  const unassigned = deliveries.filter(d => d.status === 'UNASSIGNED' && d.deliveryDate === dateStr);
+  if (!unassigned.length) return; // nothing to suggest
+
+  setRockyState('loading');
+  try {
+    const r = await fetch(`${API}/rocky-suggests?date=${dateStr}`);
+    const data = await r.json();
+    if (!data.success || !data.assignments?.length) {
+      setRockyState('idle');
+      return;
+    }
+    rockyPlan = data;
+    rockyAssignments = {};
+    data.assignments.forEach(a => {
+      rockyAssignments[a.deliveryId] = { ...a, routeSource: 'rocky' };
+    });
+    setRockyState('suggested');
+    render();
+  } catch(e) {
+    console.error('Rocky suggests error:', e);
+    setRockyState('idle');
+  }
+}
+
+function setRockyState(state) {
+  rockyState = state;
+  const banner = document.getElementById('rockyBanner');
+  const text = document.getElementById('rockyBannerText');
+  const confirmBtn = document.getElementById('rockyConfirmBtn');
+  banner.className = '';
+  confirmBtn.style.display = 'none';
+  confirmBtn.disabled = false;
+  confirmBtn.textContent = '✅ Confirm Assignments';
+
+  if (state === 'loading') {
+    banner.classList.add('loading');
+    text.innerHTML = '<span class="rocky-spinner"></span> 🤖 Rocky is planning today\'s routes...';
+  } else if (state === 'suggested') {
+    banner.classList.add('suggested');
+    const count = Object.keys(rockyAssignments).length;
+    const truckSet = new Set(Object.values(rockyAssignments).map(a => a.truckId));
+    text.innerHTML = `<span style="font-size:16px;">🤖</span>&ensp;<strong>Rocky has suggested assignments for ${count} deliver${count === 1 ? 'y' : 'ies'} across ${truckSet.size} truck${truckSet.size === 1 ? '' : 's'}.</strong>&ensp;Review below and confirm when ready.`;
+    confirmBtn.style.display = '';
+  } else if (state === 'confirmed') {
+    banner.classList.add('confirmed');
+    text.innerHTML = '✅ Assignments confirmed — ready to Finalize &amp; Notify';
+  }
+}
+
+function clearRockyPlan() {
+  rockyPlan = null;
+  rockyAssignments = {};
+  setRockyState('idle');
+}
+
+async function confirmRockyAssignments() {
+  const assignments = Object.entries(rockyAssignments).map(([deliveryId, a]) => ({
+    deliveryId,
+    truckId: a.truckId,
+    truckNumber: a.truckNumber,
+    stopOrder: a.stopOrder || 1,
+    routeSource: a.routeSource || 'rocky',
+    driverId: a.driverId || null,
+    driverName: a.driverName || null,
+    timeWindow: a.timeWindow || null,
+    reasoning: a.reasoning || null
+  }));
+
+  const btn = document.getElementById('rockyConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Confirming...';
+
+  try {
+    const r = await fetch(`${API}/rocky-apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: formatDateISO(currentDate), assignments })
+    });
+    const data = await r.json();
+    if (data.success) {
+      rockyAssignments = {};
+      rockyPlan = null;
+      setRockyState('confirmed');
+      await loadDeliveries();
+      render();
+      toast(`✅ ${data.applied} assignment${data.applied === 1 ? '' : 's'} confirmed`);
+    } else {
+      toast('Error confirming assignments', true);
+      btn.disabled = false;
+      btn.textContent = '✅ Confirm Assignments';
+    }
+  } catch(e) {
+    console.error('Rocky apply error:', e);
+    toast('Error confirming assignments', true);
+    btn.disabled = false;
+    btn.textContent = '✅ Confirm Assignments';
+  }
 }
 
 // ═══════════════════════════════════════════════════════

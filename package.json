@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "description": "RockRunner Logistics — Dispatch System",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@netlify/functions": "^5.1.2",
     "mongodb": "^6.3.0"
   }
