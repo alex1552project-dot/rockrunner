@@ -307,7 +307,7 @@ async function loadScoreboard() {
       fetch(`${API}/dispatch?date=${today}`).then(r => r.json())
     ]);
     trucks = (truckRes.trucks || []).filter(t => t.active !== false);
-    deliveries = (delRes.deliveries || []).filter(d => d.status !== 'CANCELLED');
+    deliveries = (delRes.deliveries || []).filter(d => d.status !== 'CANCELLED' && d.status !== 'UNASSIGNED');
     renderScoreboard();
   } catch(e) { console.error('Scoreboard load error:', e); }
 }
