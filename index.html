@@ -1361,9 +1361,14 @@ async function refreshDriverLocations() {
     locations.forEach(loc => {
       const latlng = [loc.lat, loc.lng];
       const ago = Math.round((Date.now() - new Date(loc.timestamp).getTime()) / 60000);
+      const truck = trucks.find(t => t.defaultDriver?.id === loc.driverId);
+      const truckNum = truck ? truck.truckNumber : null;
+      const label = truckNum
+        ? `${truckNum} — ${esc(loc.driverName || loc.driverId)}`
+        : esc(loc.driverName || loc.driverId);
       const popupHtml = `
         <div style="font-family:sans-serif;">
-          <strong>🚛 ${esc(loc.driverName || loc.driverId)}</strong><br>
+          <strong>🚛 ${label}</strong><br>
           <span style="color:#666;font-size:12px;">Updated ${ago}m ago</span>
         </div>`;
 
