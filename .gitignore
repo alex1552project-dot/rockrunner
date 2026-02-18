@@ -1,0 +1,9 @@
+node_modules/
+
+# Migration scripts
+migrate*.js
+*-migration.js
+
+# Environment / credentials
+.env
+.env.*
