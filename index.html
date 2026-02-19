@@ -535,6 +535,27 @@
   </div>
 </div>
 
+<!-- ─── RESCHEDULE MODAL ─────────────────────────────── -->
+<div class="modal-overlay" id="rescheduleModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>📅 Reschedule Delivery</h3>
+      <button class="modal-close" onclick="closeModal('rescheduleModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="rescheduleInfo" style="color:var(--text-muted);font-size:13px;margin-bottom:14px;"></p>
+      <div class="form-row">
+        <label>New Delivery Date</label>
+        <input type="date" id="rescheduleDate" style="width:100%;padding:9px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:7px;color:#fff;font-size:13px;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="confirmReschedule()">Move Delivery</button>
+      <button class="btn btn-outline" onclick="closeModal('rescheduleModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── FINALIZE MODAL ──────────────────────────────── -->
 <div class="modal-overlay" id="finalizeModal">
   <div class="modal modal-md">
@@ -1115,8 +1136,12 @@ function showDetail(deliveryId) {
   if (d.status === 'SCHEDULED') {
     footerHtml = `
       <button class="btn btn-primary btn-sm" onclick="closeModal('detailModal');openAssignModal('${d._id}')">Reassign</button>
+      <button class="btn btn-outline btn-sm" onclick="openReschedule('${d._id}')">Reschedule</button>
       <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>
       <button class="btn btn-outline btn-sm" onclick="unassignDelivery('${d._id}')">Unassign</button>`;
+  } else if (d.status === 'EN_ROUTE') {
+    footerHtml = `
+      <button class="btn btn-outline btn-sm" onclick="openReschedule('${d._id}')">Reschedule</button>`;
   } else if (d.status === 'UNASSIGNED') {
     footerHtml = `
       <button class="btn btn-primary btn-sm" onclick="closeModal('detailModal');openAssignModal('${d._id}')">Assign</button>
@@ -1176,6 +1201,29 @@ async function updateTimeWindow(deliveryId, timeWindow) {
     await loadDeliveries();
     render();
   } catch(e) { toast('Error updating time', true); console.error(e); }
+}
+
+let reschedulingDeliveryId = null;
+
+function openReschedule(deliveryId) {
+  reschedulingDeliveryId = deliveryId;
+  const d = deliveries.find(del => del._id === deliveryId);
+  document.getElementById('rescheduleInfo').textContent =
+    d ? `${d.customerName || 'Customer'} — ${d.materialName || 'material'} · ${d.deliveryDate || ''}` : '';
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('rescheduleDate').min = tomorrow.toISOString().slice(0, 10);
+  document.getElementById('rescheduleDate').value = '';
+  closeModal('detailModal');
+  openModal('rescheduleModal');
+}
+
+async function confirmReschedule() {
+  const newDate = document.getElementById('rescheduleDate').value;
+  if (!newDate || !reschedulingDeliveryId) return;
+  await updateDeliveryDate(reschedulingDeliveryId, newDate);
+  reschedulingDeliveryId = null;
+  closeModal('rescheduleModal');
 }
 
 async function updateDeliveryDate(deliveryId, newDate) {
