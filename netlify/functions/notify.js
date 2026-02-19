@@ -256,7 +256,31 @@ exports.handler = async (event) => {
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Delivery not found' }) };
       }
 
-      const etaMinutes = body.etaMinutes || 30;
+      // ─── Real ETA from Google Distance Matrix ──────────────
+      let etaMinutes = 30; // fallback
+      try {
+        const destParts = [
+          delivery.deliveryAddress,
+          delivery.deliveryCity,
+          delivery.deliveryState || 'TX',
+          delivery.deliveryZip
+        ].filter(Boolean);
+        if (destParts.length > 1 && process.env.GOOGLE_MAPS_API_KEY) {
+          const origin = '30.3119,-95.4561'; // Conroe yard
+          const destination = encodeURIComponent(destParts.join(', '));
+          const gmRes = await fetch(
+            `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&mode=driving&units=imperial&key=${process.env.GOOGLE_MAPS_API_KEY}`
+          );
+          const gmData = await gmRes.json();
+          const element = gmData?.rows?.[0]?.elements?.[0];
+          if (element?.status === 'OK' && element.duration?.value) {
+            etaMinutes = Math.ceil(element.duration.value / 60);
+          }
+        }
+      } catch (etaErr) {
+        console.error('[ETA] Google Distance Matrix error:', etaErr.message);
+        // etaMinutes stays 30
+      }
       const smsMessage = `Your Texas Got Rocks delivery is on the way! Estimated arrival: ~${etaMinutes} minutes. Please ensure your delivery area is accessible.`;
 
       let smsResult = null;
