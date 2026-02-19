@@ -1081,7 +1081,11 @@ function showDetail(deliveryId) {
     <div class="detail-grid">
       <div class="detail-field"><label>Phone</label><div class="val">${d.customerPhone ? `<a href="tel:${d.customerPhone}" style="color:var(--blue);">${esc(d.customerPhone)}</a>` : '—'}</div></div>
       <div class="detail-field"><label>Email</label><div class="val">${esc(d.customerEmail || '—')}</div></div>
-      <div class="detail-field"><label>Date</label><div class="val">${d.deliveryDate || '—'}</div></div>
+      <div class="detail-field"><label>Date</label><div class="val">${
+        isEditable
+          ? `<input type="date" value="${d.deliveryDate || ''}" onchange="updateDeliveryDate('${d._id}', this.value)" style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:6px;color:#fff;padding:4px 8px;font-size:13px;width:100%;box-sizing:border-box;">`
+          : (d.deliveryDate || '—')
+      }</div></div>
       <div class="detail-field"><label>Time Window</label><div class="val">${timeHtml}</div></div>
       <div class="detail-field"><label>Material</label><div class="val">${esc(d.materialName || '—')}</div></div>
       <div class="detail-field"><label>Quantity</label><div class="val">${fmtTons(d.quantity)} tons</div></div>
@@ -1157,6 +1161,20 @@ async function updateTimeWindow(deliveryId, timeWindow) {
     await loadDeliveries();
     render();
   } catch(e) { toast('Error updating time', true); console.error(e); }
+}
+
+async function updateDeliveryDate(deliveryId, newDate) {
+  if (!newDate) return;
+  try {
+    await fetch(`${API}/dispatch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: deliveryId, deliveryDate: newDate, updatedBy: 'dispatcher' })
+    });
+    toast(`Delivery moved to ${newDate}`);
+    await loadDeliveries();
+    render();
+  } catch(e) { toast('Error updating date', true); console.error(e); }
 }
 
 // ═══════════════════════════════════════════════════════
