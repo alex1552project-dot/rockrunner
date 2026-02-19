@@ -390,6 +390,77 @@ exports.handler = async (event) => {
       };
     }
 
+    // ─── Review Request (sent ~5 min after delivery, triggered by driver app) ──
+    if (body.type === 'review_request') {
+      const deliveryId = body.deliveryId;
+      if (!deliveryId) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'deliveryId required' }) };
+      }
+
+      const delivery = await deliveryCol.findOne({ _id: new ObjectId(deliveryId) });
+      if (!delivery) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Delivery not found' }) };
+      }
+
+      // Duplicate guard
+      if (delivery.reviewRequestSent) {
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, alreadySent: true }) };
+      }
+
+      const firstName = (delivery.customerName || 'Customer').split(' ')[0];
+      const reviewLink = 'https://www.trustpilot.com/review/texasgotrocks.com';
+
+      // ── Customer warm message + review link ──
+      let customerEmailResult = null;
+      if (delivery.customerEmail) {
+        const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;">
+  <div style="max-width:500px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;">
+    <div style="background:#001F3F;padding:24px 28px;text-align:center;">
+      <div style="color:#C65D2A;font-size:22px;font-weight:700;">Texas Got Rocks</div>
+      <div style="color:#8891a0;font-size:13px;margin-top:4px;">We hope you love your delivery!</div>
+    </div>
+    <div style="padding:28px;">
+      <p style="font-size:16px;color:#333;margin:0 0 16px;">Hi ${firstName},</p>
+      <p style="font-size:15px;color:#333;margin:0 0 20px;line-height:1.5;">Your ${delivery.materialName || 'material'} delivery is now complete. We hope everything looks great!</p>
+      <p style="font-size:15px;color:#333;margin:0 0 20px;line-height:1.5;">If you have a moment, we'd love to hear about your experience. It means the world to a small local business.</p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${reviewLink}" style="background:#00b67a;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">⭐ Leave a Review on Trustpilot</a>
+      </div>
+      <p style="font-size:13px;color:#999;text-align:center;">Thank you for choosing Texas Got Rocks!</p>
+    </div>
+  </div>
+</body></html>`;
+        customerEmailResult = await sendEmail(
+          delivery.customerEmail,
+          delivery.customerName,
+          'How was your delivery? Tell us! ⭐',
+          html
+        );
+      }
+
+      // ── Trustpilot BCC invite ──
+      const tpEmail = 'texasgotrocks.com+621d4324d2@invite.trustpilot.com';
+      const tpHtml = `<p>Customer: ${delivery.customerName || ''}</p><p>Email: ${delivery.customerEmail || ''}</p><p>Order: ${delivery._id}</p>`;
+      const tpResult = await sendEmail(tpEmail, 'Trustpilot Invite', 'New Invitation Request', tpHtml);
+
+      await deliveryCol.updateOne(
+        { _id: new ObjectId(deliveryId) },
+        { $set: { reviewRequestSent: true, updatedAt: new Date() } }
+      );
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          customerEmailSent: customerEmailResult?.success || false,
+          trustpilotInviteSent: tpResult?.success || false
+        })
+      };
+    }
+
     // ─── Owner Alert: Board Finalized ─────────────────────────
     if (body.type === 'owner_finalized') {
       const { deliveryCount, truckCount, date } = body;

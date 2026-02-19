@@ -682,11 +682,21 @@ async function confirmDelivery() {
     const data = await r.json();
     if (data.success) {
       // Step 3: Send thank-you notification (fire-and-forget)
+      const confirmedDeliveryId = activeDeliveryId;
       fetch(`${API}/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'delivered', deliveryId: activeDeliveryId })
+        body: JSON.stringify({ type: 'delivered', deliveryId: confirmedDeliveryId })
       }).catch(err => console.error('Delivered notification error:', err));
+
+      // Step 4: Schedule Trustpilot review request — 5 minutes after delivery
+      setTimeout(() => {
+        fetch(`${API}/notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'review_request', deliveryId: confirmedDeliveryId })
+        }).catch(err => console.error('Review request error:', err));
+      }, 5 * 60 * 1000);
 
       toast('Delivery confirmed! Customer notified.');
       closePhoto();
