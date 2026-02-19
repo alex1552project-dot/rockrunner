@@ -401,6 +401,7 @@ const API = '/.netlify/functions';
 let currentDriver = null;
 let currentTruckId = null;
 let myDeliveries = [];
+let materialWeights = {}; // materialName → tons/CYD
 let activeDeliveryId = null;
 let capturedPhoto = null;
 let gpsWatchId = null;
@@ -501,11 +502,18 @@ async function loadMyRoute() {
     const filterParam = (viewingTomorrow && currentTruckId)
       ? `truckId=${currentTruckId}`
       : `driverId=${currentDriver.id}`;
-    const r = await fetch(`${API}/dispatch?date=${dateStr}&${filterParam}`);
-    const data = await r.json();
+    const [data, prodData] = await Promise.all([
+      fetch(`${API}/dispatch?date=${dateStr}&${filterParam}`).then(r => r.json()),
+      Object.keys(materialWeights).length === 0
+        ? fetch(`${API}/products`).then(r => r.json())
+        : Promise.resolve(null)
+    ]);
     myDeliveries = (data.deliveries || [])
       .filter(d => d.status !== 'CANCELLED')
       .sort((a,b) => (a.stopOrder || 99) - (b.stopOrder || 99));
+    if (prodData) {
+      (prodData.materials || []).forEach(p => { if (p.weight) materialWeights[p.name] = p.weight; });
+    }
   } catch(e) {
     myDeliveries = [];
     console.error(e);
@@ -543,7 +551,12 @@ function renderRoute() {
           <div class="stop-customer">${d.customerName || 'Customer'}</div>
           <div class="stop-material">${d.materialName || 'Material'}</div>
         </div>
-        <div class="stop-tons">${d.quantity ? parseFloat(d.quantity).toFixed(1) : '?'}T</div>
+        <div class="stop-tons">${(() => {
+          const tons = parseFloat(d.quantity);
+          if (!d.quantity || isNaN(tons)) return '?';
+          const w = materialWeights[d.materialName];
+          return w ? `${(tons/w).toFixed(1)}<small style="font-size:14px"> CYD</small><br>${tons.toFixed(1)}T` : `${tons.toFixed(1)}T`;
+        })()}</div>
       </div>
       ${isCompleted ? `<div class="completed-badge">Delivered ✓</div>` : `
         <div class="stop-body">

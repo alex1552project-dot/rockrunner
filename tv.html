@@ -302,6 +302,7 @@ body {
 const API = '/.netlify/functions';
 let trucks = [];
 let deliveries = [];
+let materialWeights = {}; // materialName → tons/CYD weight factor
 let capacityDays = [];
 let currentScreen = 1;
 
@@ -333,12 +334,15 @@ function updateClocks() {
 async function loadScoreboard() {
   try {
     const today = todayISO();
-    const [truckRes, delRes] = await Promise.all([
+    const [truckRes, delRes, prodRes] = await Promise.all([
       fetch(`${API}/trucks`).then(r => r.json()),
-      fetch(`${API}/dispatch?date=${today}`).then(r => r.json())
+      fetch(`${API}/dispatch?date=${today}`).then(r => r.json()),
+      fetch(`${API}/products`).then(r => r.json())
     ]);
     trucks = (truckRes.trucks || []).filter(t => t.active !== false);
     deliveries = (delRes.deliveries || []).filter(d => d.status !== 'CANCELLED' && d.status !== 'UNASSIGNED');
+    materialWeights = {};
+    (prodRes.materials || []).forEach(p => { if (p.weight) materialWeights[p.name] = p.weight; });
     renderScoreboard();
   } catch(e) { console.error('Scoreboard load error:', e); }
 }
@@ -408,7 +412,10 @@ function renderScoreboard() {
       stopsHtml = truckDels.map(d => {
         const sc = (d.status||'').replace('_','-').toLowerCase();
         const cls = sc === 'en-route' ? 'en-route' : sc;
-        return `<div class="stop-block ${cls}">${esc(d.customerName||'?')}<br><small>${esc(d.materialName||'')} &middot; ${(parseFloat(d.quantity)||0).toFixed(1)}T</small></div>`;
+        const tons = parseFloat(d.quantity) || 0;
+        const w = materialWeights[d.materialName];
+        const qty = w ? `${(tons/w).toFixed(1)} CYD / ${tons.toFixed(1)}T` : `${tons.toFixed(1)}T`;
+        return `<div class="stop-block ${cls}">${esc(d.customerName||'?')}<br><small>${esc(d.materialName||'')} &middot; ${qty}</small></div>`;
       }).join('');
     }
 

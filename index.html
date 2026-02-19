@@ -591,6 +591,21 @@ function fmtTons(val) {
   return isNaN(n) ? '?' : n.toFixed(1);
 }
 
+// Returns "X CYD / Y Tons" when material weight is known, else "Y Tons"
+function fmtQty(d) {
+  const tons = parseFloat(d.quantity);
+  if (isNaN(tons)) return '?';
+  const product = products.find(p =>
+    (p.productId && p.productId === d.productId) ||
+    (p.id?.toString() === d.productId) ||
+    p.name === d.materialName
+  );
+  const weight = product?.weight;
+  if (!weight) return `${tons.toFixed(1)} tons`;
+  const cyd = tons / weight;
+  return `${cyd.toFixed(1)} CYD / ${tons.toFixed(1)} tons`;
+}
+
 function formatDateISO(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -733,7 +748,7 @@ function renderUnassigned() {
         <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
         <span class="card-source ${src.cls}">${src.label}</span>
       </div>
-      <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtTons(d.quantity)} tons</div>
+      <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtQty(d)}</div>
       <div class="card-bottom">
         <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
         ${d.deliveryDate ? `<span class="card-city">${d.deliveryDate}</span>` : ''}
@@ -784,7 +799,7 @@ function renderTruckRoutes() {
           <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
           ${sc ? `<span class="card-status-badge badge-${sc.replace('-','')}">${d.status.replace('_',' ')}</span>` : ''}
         </div>
-        <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtTons(d.quantity)} tons</div>
+        <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtQty(d)}</div>
         <div class="card-bottom">
           <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
           ${d.timeWindow ? `<span class="card-time">${d.timeWindow}</span>` : ''}
@@ -805,7 +820,7 @@ function renderTruckRoutes() {
           <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
           ${badge}
         </div>
-        <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtTons(d.quantity)} tons</div>
+        <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtQty(d)}</div>
         <div class="card-bottom">
           <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
           <span style="display:flex;align-items:center;gap:6px;">
@@ -877,7 +892,7 @@ function openAssignModal(deliveryId) {
   document.getElementById('assignDeliveryInfo').innerHTML = `
     <div class="name">${esc(d.customerName || 'Unknown')}</div>
     <div class="details">
-      <strong>${esc(d.materialName || '?')}</strong> · ${fmtTons(d.quantity)} tons<br>
+      <strong>${esc(d.materialName || '?')}</strong> · ${fmtQty(d)}<br>
       ${esc([d.deliveryAddress, d.deliveryCity].filter(Boolean).join(', ') || 'No address')}
     </div>`;
 
@@ -1088,7 +1103,7 @@ function showDetail(deliveryId) {
       }</div></div>
       <div class="detail-field"><label>Time Window</label><div class="val">${timeHtml}</div></div>
       <div class="detail-field"><label>Material</label><div class="val">${esc(d.materialName || '—')}</div></div>
-      <div class="detail-field"><label>Quantity</label><div class="val">${fmtTons(d.quantity)} tons</div></div>
+      <div class="detail-field"><label>Quantity</label><div class="val">${fmtQty(d)}</div></div>
       <div class="detail-field" style="grid-column:1/-1;"><label>Address</label><div class="val">${esc([d.deliveryAddress, d.deliveryCity, d.deliveryState, d.deliveryZip].filter(Boolean).join(', ') || '—')}</div></div>
       ${d.truckNumber ? `<div class="detail-field"><label>Truck</label><div class="val">${esc(d.truckNumber)}</div></div>` : ''}
       ${d.driverName ? `<div class="detail-field"><label>Driver</label><div class="val">${esc(d.driverName)}</div></div>` : ''}
@@ -1253,7 +1268,7 @@ function finalizeSchedule() {
 
   // Build summary list
   const rows = scheduled.map(d =>
-    `<div class="finalize-row"><span class="fr-name">${esc(d.customerName || 'Unknown')}</span><span class="fr-material">${esc(d.materialName || '?')} · ${fmtTons(d.quantity)}t</span><span class="fr-truck">${esc(d.truckNumber || '—')}</span></div>`
+    `<div class="finalize-row"><span class="fr-name">${esc(d.customerName || 'Unknown')}</span><span class="fr-material">${esc(d.materialName || '?')} · ${fmtQty(d)}</span><span class="fr-truck">${esc(d.truckNumber || '—')}</span></div>`
   ).join('');
 
   let body = `<p style="color:var(--text-muted);font-size:14px;margin-bottom:12px;">You are about to finalize <strong style="color:#fff;">${scheduled.length}</strong> assigned deliver${scheduled.length === 1 ? 'y' : 'ies'} and notify <strong style="color:#fff;">${withContact.length}</strong> customer${withContact.length === 1 ? '' : 's'} via SMS and email.</p>`;
@@ -1443,7 +1458,7 @@ function addDeliveryMarker(d, lat, lng, opts = {}) {
   marker.bindPopup(`
     <div style="font-family:sans-serif;min-width:160px;">
       <strong>${esc(d.customerName || 'Unknown')}</strong><br>
-      ${esc(d.materialName || '?')} &middot; ${fmtTons(d.quantity)}T<br>
+      ${esc(d.materialName || '?')} &middot; ${fmtQty(d)}<br>
       <span style="color:#666;font-size:12px;">${esc(d.deliveryAddress || '')}</span><br>
       <span style="color:${color};font-weight:600;font-size:12px;">${statusLabel}</span>
     </div>

@@ -30,12 +30,13 @@ exports.handler = async (event) => {
     // Get all active products, sorted by name
     const products = await collection.find({ active: { $ne: false } }).sort({ name: 1 }).toArray();
     
-    // Return simplified list for dropdown
+    // Return list for dropdown + weight for CYD conversion
     const materials = products.map(p => ({
       id: p._id,
       productId: p.productId,
       name: p.name,
-      category: p.category || ''
+      category: p.category || '',
+      weight: p.weight || null  // tons per CYD — used for CYD/tons display
     }));
 
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, materials }) };
