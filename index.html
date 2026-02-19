@@ -523,6 +523,21 @@
           </select>
         </div>
       </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Origin / Pickup Location</label>
+          <input type="text" id="delOrigin" placeholder="Conroe Yard, supplier name..." list="originSuggestions" autocomplete="off" oninput="onOriginInput(this.value)">
+          <datalist id="originSuggestions"></datalist>
+        </div>
+        <div class="form-row">
+          <label>PO Number</label>
+          <input type="text" id="delPO" placeholder="Optional">
+        </div>
+      </div>
+      <div class="form-row" id="delOriginAddrRow" style="display:none;">
+        <label>Origin Address</label>
+        <input type="text" id="delOriginAddr" placeholder="18565 Main St, Conroe, TX 77385">
+      </div>
       <div class="form-row">
         <label>Notes</label>
         <input type="text" id="delNotes" placeholder="Gate code, special instructions...">
@@ -691,6 +706,7 @@ async function loadAll() {
   await loadDeliveries();
   render();
   loadRockySuggestions(); // background — non-blocking
+  loadKnownOrigins();     // background — populates origin autocomplete
 }
 
 async function loadTrucks() {
@@ -1246,9 +1262,42 @@ async function updateDeliveryDate(deliveryId, newDate) {
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
+// Saved origin locations for autocomplete (materializes from recent deliveries)
+let knownOrigins = {}; // name → address
+
 function openAddDelivery() {
   document.getElementById('delDate').value = formatDateISO(currentDate);
+  document.getElementById('delOrigin').value = '';
+  document.getElementById('delOriginAddr').value = '';
+  document.getElementById('delOriginAddrRow').style.display = 'none';
+  document.getElementById('delPO').value = '';
+  // Populate datalist from recent deliveries
+  const dl = document.getElementById('originSuggestions');
+  dl.innerHTML = Object.keys(knownOrigins).map(n => `<option value="${esc(n)}">`).join('');
   openModal('deliveryModal');
+}
+
+function onOriginInput(value) {
+  const addrRow = document.getElementById('delOriginAddrRow');
+  addrRow.style.display = 'block';
+  // Auto-fill address if this origin name was used before
+  if (knownOrigins[value]) {
+    document.getElementById('delOriginAddr').value = knownOrigins[value];
+  }
+}
+
+async function loadKnownOrigins() {
+  try {
+    // Pull distinct origin/address pairs from recent deliveries
+    const r = await fetch(`${API}/dispatch?startDate=${formatDateISO(new Date(Date.now() - 90*24*60*60*1000))}&endDate=${formatDateISO(currentDate)}`);
+    const data = await r.json();
+    knownOrigins = {};
+    (data.deliveries || []).forEach(d => {
+      if (d.origin && !knownOrigins[d.origin]) {
+        knownOrigins[d.origin] = d.originAddress || '';
+      }
+    });
+  } catch(e) { /* non-critical */ }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1285,14 +1334,20 @@ async function saveDelivery() {
         deliveryDate: date,
         timeWindow: document.getElementById('delTime').value || null,
         deliveryNotes: document.getElementById('delNotes').value.trim(),
+        origin: document.getElementById('delOrigin').value.trim() || null,
+        originAddress: document.getElementById('delOriginAddr').value.trim() || null,
+        poNumber: document.getElementById('delPO').value.trim() || null,
         createdBy: 'dispatcher'
       })
     });
     const data = await r.json();
     if (data.success) {
+      const origin = document.getElementById('delOrigin').value.trim();
+      const originAddr = document.getElementById('delOriginAddr').value.trim();
+      if (origin) knownOrigins[origin] = originAddr;
       toast('Delivery added');
       closeModal('deliveryModal');
-      ['delCustomer','delPhone','delEmail','delAddress','delCity','delZip','delQty','delNotes'].forEach(id => document.getElementById(id).value = '');
+      ['delCustomer','delPhone','delEmail','delAddress','delCity','delZip','delQty','delNotes','delOrigin','delOriginAddr','delPO'].forEach(id => document.getElementById(id).value = '');
       await loadDeliveries();
       render();
     }
