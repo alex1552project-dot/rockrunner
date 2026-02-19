@@ -1095,16 +1095,19 @@ function showDetail(deliveryId) {
   let footerHtml = '';
   if (d.status === 'SCHEDULED') {
     footerHtml = `
+      <button class="btn btn-primary btn-sm" onclick="closeModal('detailModal');openAssignModal('${d._id}')">Reassign</button>
       <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>
       <button class="btn btn-outline btn-sm" onclick="unassignDelivery('${d._id}')">Unassign</button>`;
   } else if (d.status === 'UNASSIGNED') {
-    footerHtml = `<button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>`;
+    footerHtml = `
+      <button class="btn btn-primary btn-sm" onclick="closeModal('detailModal');openAssignModal('${d._id}')">Assign</button>
+      <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>`;
   }
   footerHtml += `<button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>`;
   document.getElementById('detailFooter').innerHTML = footerHtml;
 
   openModal('detailModal');
-  panToDelivery(deliveryId);
+  // panToDelivery removed — Leaflet popup conflicts with the modal
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1383,6 +1386,11 @@ async function processGeocodeQueue() {
       if (results.length) {
         const lat = parseFloat(results[0].lat);
         const lng = parseFloat(results[0].lon);
+        // Cache in memory so subsequent updateMapPins calls render instantly
+        delivery.lat = lat;
+        delivery.lng = lng;
+        const idx = deliveries.findIndex(d => d._id === delivery._id);
+        if (idx !== -1) { deliveries[idx].lat = lat; deliveries[idx].lng = lng; }
         addDeliveryMarker(delivery, lat, lng, opts);
         // Cache coords on delivery doc (fire-and-forget)
         fetch(`${API}/dispatch`, {
