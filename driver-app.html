@@ -399,6 +399,7 @@ body {
 <script>
 const API = '/.netlify/functions';
 let currentDriver = null;
+let currentTruckId = null;
 let myDeliveries = [];
 let activeDeliveryId = null;
 let capturedPhoto = null;
@@ -465,6 +466,7 @@ async function login() {
     const td = await tr.json();
     const myTruck = (td.trucks || []).find(t => t.defaultDriver?.id === currentDriver.id);
     if (myTruck) {
+      currentTruckId = myTruck._id?.toString() || myTruck._id;
       document.getElementById('truckBadge').textContent = '🚛 ' + myTruck.truckNumber;
       document.getElementById('truckBadge').style.display = '';
     }
@@ -492,9 +494,14 @@ function setDay(tomorrow) {
 // ─── LOAD ROUTE ──────────────────────────────────
 async function loadMyRoute() {
   const dateStr = viewingDate.getFullYear() + '-' + String(viewingDate.getMonth()+1).padStart(2,'0') + '-' + String(viewingDate.getDate()).padStart(2,'0');
-  
+
   try {
-    const r = await fetch(`${API}/dispatch?date=${dateStr}&driverId=${currentDriver.id}`);
+    // Today: filter by driverId (deliveries fully assigned to this driver)
+    // Tomorrow: filter by truckId (deliveries may only have truck, not yet a specific driverId)
+    const filterParam = (viewingTomorrow && currentTruckId)
+      ? `truckId=${currentTruckId}`
+      : `driverId=${currentDriver.id}`;
+    const r = await fetch(`${API}/dispatch?date=${dateStr}&${filterParam}`);
     const data = await r.json();
     myDeliveries = (data.deliveries || [])
       .filter(d => d.status !== 'CANCELLED')
