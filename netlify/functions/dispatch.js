@@ -130,6 +130,10 @@ exports.handler = async (event) => {
         deliveredAt: null,
         cancelledAt: null,
         
+        // Pickup source (driver's starting point for this delivery)
+        sourceName: body.sourceName || null,
+        sourceAddress: body.sourceAddress || null,
+
         // Proof of delivery
         deliveryPhoto: null,
         deliveryNotes: body.deliveryNotes || '',

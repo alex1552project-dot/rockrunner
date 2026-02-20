@@ -137,7 +137,7 @@ body {
   flex: 1;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -146,6 +146,8 @@ body {
   text-align: center;
   line-height: 1.3;
 }
+.stop-name { font-size: 20px; font-weight: 800; display: block; }
+.stop-qty  { font-size: 13px; font-weight: 600; opacity: 0.85; }
 .stop-block.scheduled { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 .stop-block.en-route  { background: #22c55e; color: #fff; border: 1px solid #16a34a; }
 .stop-block.delivered  { background: #3b82f6; color: #fff; border: 1px solid #2563eb; }
@@ -302,7 +304,7 @@ body {
 const API = '/.netlify/functions';
 let trucks = [];
 let deliveries = [];
-let materialWeights = {}; // materialName → tons/CYD weight factor
+let products = []; // full product objects for fmtQty lookup
 let capacityDays = [];
 let currentScreen = 1;
 
@@ -319,6 +321,21 @@ function futureISO(offset) {
 }
 
 function esc(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
+
+// Returns "X CYD / YT" when material weight is known, else "YT"
+function fmtQty(d) {
+  const tons = parseFloat(d.quantity);
+  if (isNaN(tons)) return '?';
+  const product = products.find(p =>
+    (p.productId && p.productId === d.productId) ||
+    (p._id && String(p._id) === String(d.productId)) ||
+    p.name === d.materialName
+  );
+  const weight = product?.weight;
+  if (!weight) return `${tons.toFixed(1)}T`;
+  const cyd = tons / weight;
+  return `${cyd.toFixed(1)} CYD / ${tons.toFixed(1)}T`;
+}
 
 function updateClocks() {
   const now = new Date();
@@ -341,8 +358,7 @@ async function loadScoreboard() {
     ]);
     trucks = (truckRes.trucks || []).filter(t => t.active !== false);
     deliveries = (delRes.deliveries || []).filter(d => d.status !== 'CANCELLED' && d.status !== 'UNASSIGNED');
-    materialWeights = {};
-    (prodRes.materials || []).forEach(p => { if (p.weight) materialWeights[p.name] = p.weight; });
+    products = prodRes.materials || prodRes.products || (Array.isArray(prodRes) ? prodRes : []);
     renderScoreboard();
   } catch(e) { console.error('Scoreboard load error:', e); }
 }
@@ -412,10 +428,7 @@ function renderScoreboard() {
       stopsHtml = truckDels.map(d => {
         const sc = (d.status||'').replace('_','-').toLowerCase();
         const cls = sc === 'en-route' ? 'en-route' : sc;
-        const tons = parseFloat(d.quantity) || 0;
-        const w = materialWeights[d.materialName];
-        const qty = w ? `${(tons/w).toFixed(1)} CYD / ${tons.toFixed(1)}T` : `${tons.toFixed(1)}T`;
-        return `<div class="stop-block ${cls}">${esc(d.customerName||'?')}<br><small>${esc(d.materialName||'')} &middot; ${qty}</small></div>`;
+        return `<div class="stop-block ${cls}"><span class="stop-name">${esc(d.customerName||'?')}</span><span class="stop-qty">${esc(d.materialName||'')} &middot; ${fmtQty(d)}</span></div>`;
       }).join('');
     }
 

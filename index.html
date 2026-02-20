@@ -505,7 +505,7 @@
           <label id="delQtyLabel">Quantity (tons) *</label>
           <div style="display:flex;gap:6px;align-items:center;">
             <input type="number" id="delQty" step="0.1" min="0.1" placeholder="8" style="flex:1">
-            <button type="button" id="delQtyUnitBtn" onclick="toggleQtyUnit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">tons</button>
+            <button type="button" id="delQtyUnitBtn" onclick="toggleQtyUnit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,0.08);color:var(--text);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">tons</button>
           </div>
         </div>
       </div>
@@ -775,12 +775,18 @@ function toggleQtyUnit() {
     if (!isNaN(val) && val > 0) qtyInput.value = (val / weight).toFixed(1);
     qtyInput.placeholder = '4';
     btn.textContent = 'CYD';
+    btn.style.background = 'var(--blue)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--blue)';
     label.textContent = 'Quantity (CYD) *';
     delQtyUnit = 'cyd';
   } else {
     if (!isNaN(val) && val > 0) qtyInput.value = (val * weight).toFixed(1);
     qtyInput.placeholder = '8';
     btn.textContent = 'tons';
+    btn.style.background = 'rgba(255,255,255,0.08)';
+    btn.style.color = 'var(--text)';
+    btn.style.borderColor = 'var(--border)';
     label.textContent = 'Quantity (tons) *';
     delQtyUnit = 'tons';
   }
@@ -1311,16 +1317,21 @@ async function updateDeliveryDate(deliveryId, newDate) {
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-// Saved origin locations for autocomplete (materializes from recent deliveries)
+// Saved origin/pickup locations for autocomplete (from delivery_sources collection)
 let knownOrigins = {}; // name → address
+const CONROE_YARD_NAME = 'Conroe Yard';
+const CONROE_YARD_ADDR = '14211 Stuebner Airline Rd, Houston, TX 77069';
 
 function openAddDelivery() {
   document.getElementById('delDate').value = formatDateISO(currentDate);
   document.getElementById('delOrigin').value = '';
-  document.getElementById('delOriginAddr').value = '';
+  const addrInput = document.getElementById('delOriginAddr');
+  addrInput.value = '';
+  addrInput.disabled = false;
+  addrInput.style.opacity = '';
   document.getElementById('delOriginAddrRow').style.display = 'none';
   document.getElementById('delPO').value = '';
-  // Populate datalist from recent deliveries
+  // Populate datalist from saved sources
   const dl = document.getElementById('originSuggestions');
   dl.innerHTML = Object.keys(knownOrigins).map(n => `<option value="${esc(n)}">`).join('');
   openModal('deliveryModal');
@@ -1328,24 +1339,36 @@ function openAddDelivery() {
 
 function onOriginInput(value) {
   const addrRow = document.getElementById('delOriginAddrRow');
+  const addrInput = document.getElementById('delOriginAddr');
+  const trimmed = value.trim();
+  if (!trimmed) {
+    addrRow.style.display = 'none';
+    addrInput.disabled = false;
+    addrInput.style.opacity = '';
+    return;
+  }
   addrRow.style.display = 'block';
-  // Auto-fill address if this origin name was used before
-  if (knownOrigins[value]) {
-    document.getElementById('delOriginAddr').value = knownOrigins[value];
+  if (trimmed.toLowerCase() === CONROE_YARD_NAME.toLowerCase()) {
+    addrInput.value = CONROE_YARD_ADDR;
+    addrInput.disabled = true;
+    addrInput.style.opacity = '0.5';
+  } else {
+    addrInput.disabled = false;
+    addrInput.style.opacity = '';
+    if (knownOrigins[trimmed] && !addrInput.value) {
+      addrInput.value = knownOrigins[trimmed];
+    }
   }
 }
 
 async function loadKnownOrigins() {
   try {
-    // Pull distinct origin/address pairs from recent deliveries
-    const r = await fetch(`${API}/dispatch?startDate=${formatDateISO(new Date(Date.now() - 90*24*60*60*1000))}&endDate=${formatDateISO(currentDate)}`);
+    const r = await fetch(`${API}/sources`);
     const data = await r.json();
     knownOrigins = {};
-    (data.deliveries || []).forEach(d => {
-      if (d.origin && !knownOrigins[d.origin]) {
-        knownOrigins[d.origin] = d.originAddress || '';
-      }
-    });
+    (data.sources || []).forEach(s => { knownOrigins[s.name] = s.address || ''; });
+    // Always seed Conroe Yard
+    if (!knownOrigins[CONROE_YARD_NAME]) knownOrigins[CONROE_YARD_NAME] = CONROE_YARD_ADDR;
   } catch(e) { /* non-critical */ }
 }
 
@@ -1401,25 +1424,40 @@ async function saveDelivery() {
         deliveryDate: date,
         timeWindow: document.getElementById('delTime').value || null,
         deliveryNotes: document.getElementById('delNotes').value.trim(),
-        origin: document.getElementById('delOrigin').value.trim() || null,
-        originAddress: document.getElementById('delOriginAddr').value.trim() || null,
+        sourceName: document.getElementById('delOrigin').value.trim() || null,
+        sourceAddress: document.getElementById('delOriginAddr').value.trim() || null,
         poNumber: document.getElementById('delPO').value.trim() || null,
         createdBy: 'dispatcher'
       })
     });
     const data = await r.json();
     if (data.success) {
-      const origin = document.getElementById('delOrigin').value.trim();
-      const originAddr = document.getElementById('delOriginAddr').value.trim();
-      if (origin) knownOrigins[origin] = originAddr;
+      const sourceName = document.getElementById('delOrigin').value.trim();
+      const sourceAddress = document.getElementById('delOriginAddr').value.trim();
+      if (sourceName) {
+        knownOrigins[sourceName] = sourceAddress;
+        // Persist to delivery_sources collection
+        fetch(`${API}/sources`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: sourceName, address: sourceAddress })
+        }).catch(() => {});
+      }
       toast('Delivery added');
       closeModal('deliveryModal');
       // Reset unit toggle
       delQtyUnit = 'tons';
-      document.getElementById('delQtyUnitBtn').textContent = 'tons';
+      const qub = document.getElementById('delQtyUnitBtn');
+      qub.textContent = 'tons';
+      qub.style.background = 'rgba(255,255,255,0.08)';
+      qub.style.color = 'var(--text)';
+      qub.style.borderColor = 'var(--border)';
       document.getElementById('delQtyLabel').textContent = 'Quantity (tons) *';
       document.getElementById('delMaterialCustomRow').style.display = 'none';
       document.getElementById('delMaterialCustom').value = '';
+      const addrInput = document.getElementById('delOriginAddr');
+      addrInput.disabled = false;
+      addrInput.style.opacity = '';
       ['delCustomer','delPhone','delEmail','delAddress','delCity','delZip','delQty','delNotes','delOrigin','delOriginAddr','delPO'].forEach(id => document.getElementById(id).value = '');
       await loadDeliveries();
       render();

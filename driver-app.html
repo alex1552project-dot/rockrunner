@@ -182,6 +182,12 @@ body {
   margin-bottom: 12px;
   font-weight: 700;
 }
+.stop-pickup {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--blue);
+  margin-bottom: 10px;
+}
 
 /* ─── ACTION BUTTONS (BIG — glove-friendly) ──── */
 .stop-actions {
@@ -562,6 +568,7 @@ function renderRoute() {
       </div>
       ${isCompleted ? `<div class="completed-badge">Delivered ✓</div>` : `
         <div class="stop-body">
+          ${d.sourceName ? `<div class="stop-pickup">🏭 Pickup from: ${d.sourceName.toLowerCase().includes('conroe') ? 'Conroe Yard' : `${d.sourceName}${d.sourceAddress ? ' — ' + d.sourceAddress : ''}`}</div>` : ''}
           <div class="stop-address">📍 ${d.deliveryAddress || ''}${d.deliveryCity ? ', ' + d.deliveryCity : ''} ${d.deliveryZip || ''}</div>
           ${d.timeWindow ? `<div class="stop-time">🕐 ${d.timeWindow}</div>` : ''}
           ${d.deliveryNotes ? `<div class="stop-notes">⚠️ ${d.deliveryNotes}</div>` : ''}

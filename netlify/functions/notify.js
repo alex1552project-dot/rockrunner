@@ -266,7 +266,13 @@ exports.handler = async (event) => {
           delivery.deliveryZip
         ].filter(Boolean);
         if (destParts.length > 1 && process.env.GOOGLE_MAPS_API_KEY) {
-          const origin = '30.3119,-95.4561'; // Conroe yard
+          // Use delivery's sourceAddress when driver is starting from a non-Conroe location
+          const isConroe = !delivery.sourceName ||
+            delivery.sourceName.toLowerCase().includes('conroe') ||
+            !delivery.sourceAddress;
+          const origin = isConroe
+            ? '30.3119,-95.4561'
+            : encodeURIComponent(delivery.sourceAddress);
           const destination = encodeURIComponent(destParts.join(', '));
           const gmRes = await fetch(
             `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&mode=driving&units=imperial&key=${process.env.GOOGLE_MAPS_API_KEY}`
