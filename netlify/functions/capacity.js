@@ -29,6 +29,11 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'from and to date params required (YYYY-MM-DD)' }) };
     }
 
+    // ─── Load products for CYD calculation ──────────
+    const productList = await db.collection('products').find({}).toArray();
+    const weightMap = {};
+    productList.forEach(p => { if (p.weight && p.name) weightMap[p.name] = p.weight; });
+
     // ─── Load active trucks ──────────────────────────
     const activeTrucks = await db.collection('trucks').find({ active: { $ne: false } }).toArray();
     const totalTrucks = activeTrucks.length;
@@ -75,6 +80,7 @@ exports.handler = async (event) => {
           trucksAvailable: 0,
           totalCapacityTons: 0,
           scheduledTons: 0,
+          scheduledCyd: 0,
           availableTons: 0,
           deliveryCount: 0,
           maxDeliveries: 0,
@@ -88,6 +94,11 @@ exports.handler = async (event) => {
 
       const dayDels = byDate[dateStr] || [];
       const scheduledTons = dayDels.reduce((s, del) => s + (parseFloat(del.quantity) || 0), 0);
+      const scheduledCyd = dayDels.reduce((s, del) => {
+        const tons = parseFloat(del.quantity) || 0;
+        const w = weightMap[del.materialName];
+        return s + (w ? tons / w : 0);
+      }, 0);
       const deliveryCount = dayDels.length;
       const trucksUsed = new Set(dayDels.map(del => del.truckId).filter(Boolean)).size;
       const trucksAvailable = Math.max(0, totalTrucks - trucksUsed);
@@ -111,6 +122,7 @@ exports.handler = async (event) => {
         trucksAvailable,
         totalCapacityTons,
         scheduledTons: Math.round(scheduledTons * 10) / 10,
+        scheduledCyd: Math.round(scheduledCyd * 10) / 10,
         availableTons: Math.round(availableTons * 10) / 10,
         deliveryCount,
         maxDeliveries,

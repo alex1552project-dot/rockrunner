@@ -407,7 +407,18 @@ function renderScoreboard() {
   document.getElementById('statTrucks').textContent = activeTruckIds.size;
   document.getElementById('statScheduled').textContent = scheduled + enRoute;
   document.getElementById('statCompleted').textContent = completed;
+  const cydTotal = deliveries.reduce((s, d) => {
+    const tons = parseFloat(d.quantity) || 0;
+    const product = products.find(p =>
+      (p.productId && p.productId === d.productId) ||
+      (p._id && String(p._id) === String(d.productId)) ||
+      p.name === d.materialName
+    );
+    return s + (product?.weight ? tons / product.weight : 0);
+  }, 0);
   document.getElementById('statTons').textContent = totalTons.toFixed(1);
+  document.getElementById('statTons').nextElementSibling.textContent =
+    cydTotal > 0 ? `${cydTotal.toFixed(1)} CYD / Total Tons` : 'Total Tons';
 
   const list = document.getElementById('truckList');
   if (!trucks.length) {
@@ -465,7 +476,7 @@ function renderWeekAhead() {
       <div class="week-date">${dateLabel}</div>
       ${day.status !== 'closed' ? `
         <div class="week-stat"><strong>${day.deliveryCount}</strong>deliveries</div>
-        <div class="week-stat"><strong>${day.scheduledTons}</strong>tons</div>
+        <div class="week-stat">${day.scheduledCyd > 0 ? `<strong>${day.scheduledCyd.toFixed(1)}</strong> CYD / ` : ''}<strong>${day.scheduledTons}</strong> tons</div>
         <div class="week-stat"><strong>${day.trucksUsed}</strong>trucks needed</div>
         <div class="week-stat"><strong>${day.availableSlots}</strong>slots open</div>
       ` : `
