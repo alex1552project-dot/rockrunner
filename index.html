@@ -1572,9 +1572,11 @@ let geocodeRunning = false;
 
 async function geocodeAndPin(delivery, opts = {}) {
   const id = delivery._id;
-  // Already have coords cached on the delivery
-  if (delivery.lat != null && delivery.lng != null) {
-    addDeliveryMarker(delivery, delivery.lat, delivery.lng, opts);
+  // Check in-memory cache (lat/lng) then DB-stored fields (deliveryLat/deliveryLng)
+  const cachedLat = delivery.lat ?? delivery.deliveryLat;
+  const cachedLng = delivery.lng ?? delivery.deliveryLng;
+  if (cachedLat != null && cachedLng != null) {
+    addDeliveryMarker(delivery, cachedLat, cachedLng, opts);
     return;
   }
   const addr = [delivery.deliveryAddress, delivery.deliveryCity, delivery.deliveryState || 'TX', delivery.deliveryZip].filter(Boolean).join(', ');

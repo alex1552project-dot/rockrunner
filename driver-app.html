@@ -494,7 +494,9 @@ function setDay(tomorrow) {
 
 // ─── LOAD ROUTE ──────────────────────────────────
 async function loadMyRoute() {
-  const dateStr = viewingDate.getFullYear() + '-' + String(viewingDate.getMonth()+1).padStart(2,'0') + '-' + String(viewingDate.getDate()).padStart(2,'0');
+  const chiNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  if (viewingTomorrow) chiNow.setDate(chiNow.getDate() + 1);
+  const dateStr = chiNow.getFullYear() + '-' + String(chiNow.getMonth()+1).padStart(2,'0') + '-' + String(chiNow.getDate()).padStart(2,'0');
 
   try {
     // Today: filter by driverId (deliveries fully assigned to this driver)

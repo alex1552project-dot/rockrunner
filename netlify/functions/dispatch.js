@@ -254,6 +254,12 @@ exports.handler = async (event) => {
         update.$set.stopOrder = body.stopOrder;
       }
 
+      // Persist geocoded coordinates (cached by map on first render)
+      if (body.lat !== undefined && body.lng !== undefined) {
+        update.$set.deliveryLat = body.lat;
+        update.$set.deliveryLng = body.lng;
+      }
+
       // Status change
       if (body.status) {
         update.$set.status = body.status;
