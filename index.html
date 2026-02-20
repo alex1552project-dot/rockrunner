@@ -499,12 +499,19 @@
       <div class="form-grid">
         <div class="form-row">
           <label>Material *</label>
-          <select id="delMaterial"><option value="">Select material...</option></select>
+          <select id="delMaterial" onchange="onMaterialChange()"><option value="">Select material...</option></select>
         </div>
         <div class="form-row">
-          <label>Quantity (tons) *</label>
-          <input type="number" id="delQty" step="0.5" min="0.5" placeholder="8">
+          <label id="delQtyLabel">Quantity (tons) *</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" id="delQty" step="0.1" min="0.1" placeholder="8" style="flex:1">
+            <button type="button" id="delQtyUnitBtn" onclick="toggleQtyUnit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">tons</button>
+          </div>
         </div>
+      </div>
+      <div class="form-row" id="delMaterialCustomRow" style="display:none;">
+        <label>Custom Material Name *</label>
+        <input type="text" id="delMaterialCustom" placeholder="Enter material name...">
       </div>
       <div class="form-grid">
         <div class="form-row">
@@ -743,6 +750,42 @@ async function loadDrivers() {
   } catch(e) { console.error('loadDrivers:', e); activeDrivers = []; }
 }
 
+// ─── CUSTOM MATERIAL + CYD TOGGLE ───────────────────────
+let delQtyUnit = 'tons'; // 'tons' or 'cyd'
+
+function onMaterialChange() {
+  const sel = document.getElementById('delMaterial');
+  const customRow = document.getElementById('delMaterialCustomRow');
+  const isCustom = sel.value === '__custom__';
+  customRow.style.display = isCustom ? 'block' : 'none';
+  if (!isCustom) document.getElementById('delMaterialCustom').value = '';
+}
+
+function toggleQtyUnit() {
+  const btn = document.getElementById('delQtyUnitBtn');
+  const label = document.getElementById('delQtyLabel');
+  const sel = document.getElementById('delMaterial');
+  const qtyInput = document.getElementById('delQty');
+  let weight = 1.4;
+  if (sel.value && sel.value !== '__custom__') {
+    weight = parseFloat(sel.options[sel.selectedIndex].dataset.weight) || 1.4;
+  }
+  const val = parseFloat(qtyInput.value);
+  if (delQtyUnit === 'tons') {
+    if (!isNaN(val) && val > 0) qtyInput.value = (val / weight).toFixed(1);
+    qtyInput.placeholder = '4';
+    btn.textContent = 'CYD';
+    label.textContent = 'Quantity (CYD) *';
+    delQtyUnit = 'cyd';
+  } else {
+    if (!isNaN(val) && val > 0) qtyInput.value = (val * weight).toFixed(1);
+    qtyInput.placeholder = '8';
+    btn.textContent = 'tons';
+    label.textContent = 'Quantity (tons) *';
+    delQtyUnit = 'tons';
+  }
+}
+
 function populateMaterialDropdown() {
   const sel = document.getElementById('delMaterial');
   const current = sel.value;
@@ -751,9 +794,15 @@ function populateMaterialDropdown() {
     const opt = document.createElement('option');
     opt.value = p.id || p._id;
     opt.dataset.name = p.name;
+    opt.dataset.weight = p.weight || '1.4';
     opt.textContent = p.name;
     sel.appendChild(opt);
   });
+  // Custom entry option
+  const customOpt = document.createElement('option');
+  customOpt.value = '__custom__';
+  customOpt.textContent = '── Not listed? Type manually ──';
+  sel.appendChild(customOpt);
   if (current) sel.value = current;
 }
 
@@ -1306,15 +1355,33 @@ async function loadKnownOrigins() {
 async function saveDelivery() {
   const customer = document.getElementById('delCustomer').value.trim();
   const materialSel = document.getElementById('delMaterial');
-  const qty = document.getElementById('delQty').value;
+  const isCustom = materialSel.value === '__custom__';
+  const customMaterialName = isCustom ? document.getElementById('delMaterialCustom').value.trim() : '';
+  const qty = parseFloat(document.getElementById('delQty').value);
   const date = document.getElementById('delDate').value;
 
-  if (!customer || !materialSel.value || !qty || !date) {
+  if (!customer || (!materialSel.value && !isCustom) || isNaN(qty) || !date) {
     toast('Please fill required fields', true);
     return;
   }
+  if (isCustom && !customMaterialName) {
+    toast('Please enter the custom material name', true);
+    return;
+  }
 
-  const materialName = materialSel.options[materialSel.selectedIndex].dataset.name || materialSel.options[materialSel.selectedIndex].text;
+  const materialName = isCustom
+    ? customMaterialName
+    : (materialSel.options[materialSel.selectedIndex].dataset.name || materialSel.options[materialSel.selectedIndex].text);
+
+  // Convert CYD to tons if dispatcher entered CYD
+  let quantityTons = qty;
+  if (delQtyUnit === 'cyd') {
+    let weight = 1.4;
+    if (!isCustom && materialSel.value) {
+      weight = parseFloat(materialSel.options[materialSel.selectedIndex].dataset.weight) || 1.4;
+    }
+    quantityTons = Math.round(qty * weight * 100) / 100;
+  }
 
   try {
     const r = await fetch(`${API}/dispatch`, {
@@ -1328,9 +1395,9 @@ async function saveDelivery() {
         deliveryAddress: document.getElementById('delAddress').value.trim(),
         deliveryCity: document.getElementById('delCity').value.trim(),
         deliveryZip: document.getElementById('delZip').value.trim(),
-        productId: materialSel.value,
+        productId: isCustom ? null : materialSel.value,
         materialName,
-        quantity: parseFloat(qty),
+        quantity: quantityTons,
         deliveryDate: date,
         timeWindow: document.getElementById('delTime').value || null,
         deliveryNotes: document.getElementById('delNotes').value.trim(),
@@ -1347,6 +1414,12 @@ async function saveDelivery() {
       if (origin) knownOrigins[origin] = originAddr;
       toast('Delivery added');
       closeModal('deliveryModal');
+      // Reset unit toggle
+      delQtyUnit = 'tons';
+      document.getElementById('delQtyUnitBtn').textContent = 'tons';
+      document.getElementById('delQtyLabel').textContent = 'Quantity (tons) *';
+      document.getElementById('delMaterialCustomRow').style.display = 'none';
+      document.getElementById('delMaterialCustom').value = '';
       ['delCustomer','delPhone','delEmail','delAddress','delCity','delZip','delQty','delNotes','delOrigin','delOriginAddr','delPO'].forEach(id => document.getElementById(id).value = '');
       await loadDeliveries();
       render();
