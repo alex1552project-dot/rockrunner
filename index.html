@@ -895,7 +895,9 @@ function renderTruckRoutes() {
         <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtQty(d)}</div>
         <div class="card-bottom">
           <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
-          ${d.timeWindow ? `<span class="card-time">${d.timeWindow}</span>` : ''}
+          ${d.timeWindow ? (d.timeWindow === 'Morning' || d.timeWindow === 'Afternoon'
+            ? `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;${d.timeWindow === 'Morning' ? 'background:#dbeafe;color:#1d4ed8' : 'background:#fef9c3;color:#854d0e'};">${d.timeWindow === 'Morning' ? '🌅 Morning' : '☀️ Afternoon'}</span>`
+            : `<span class="card-time">${d.timeWindow}</span>`) : ''}
         </div>
       </div>`;
     }).join('');
