@@ -885,7 +885,8 @@ function renderTruckRoutes() {
     // DB stop cards
     const dbCards = dbDels.map((d, i) => {
       const sc = statusClass(d.status);
-      return `<div class="delivery-card ${sc}" onclick="showDetail('${d._id}')">
+      const clickFn = (d.status === 'SCHEDULED' || d.status === 'UNASSIGNED') ? `openAssignModal('${d._id}')` : `showDetail('${d._id}')`;
+      return `<div class="delivery-card ${sc}" onclick="${clickFn}">
         <span class="truck-stop-num">${i + 1}</span>
         <div class="card-top">
           <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
@@ -1292,18 +1293,20 @@ function openReschedule(deliveryId) {
 async function confirmReschedule() {
   const newDate = document.getElementById('rescheduleDate').value;
   if (!newDate || !reschedulingDeliveryId) return;
-  await updateDeliveryDate(reschedulingDeliveryId, newDate);
+  await updateDeliveryDate(reschedulingDeliveryId, newDate, true);
   reschedulingDeliveryId = null;
   closeModal('rescheduleModal');
 }
 
-async function updateDeliveryDate(deliveryId, newDate) {
+async function updateDeliveryDate(deliveryId, newDate, resetStatus = false) {
   if (!newDate) return;
   try {
+    const payload = { id: deliveryId, deliveryDate: newDate, updatedBy: 'dispatcher' };
+    if (resetStatus) payload.status = 'SCHEDULED';
     await fetch(`${API}/dispatch`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: deliveryId, deliveryDate: newDate, updatedBy: 'dispatcher' })
+      body: JSON.stringify(payload)
     });
     toast(`Delivery moved to ${newDate}`);
     await loadDeliveries();

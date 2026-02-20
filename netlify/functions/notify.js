@@ -173,7 +173,12 @@ function deliveredEmail(delivery) {
       </div>` : delivery.deliveryPhoto ? `
       <p style="font-size:14px;color:#666;margin:0 0 16px;">&#x1F4F8; A delivery photo has been saved to your order record.</p>` : ''}
       <p style="font-size:15px;color:#333;margin:0 0 12px;line-height:1.5;">Thank you for choosing Texas Got Rocks! We appreciate your business.</p>
-      <p style="font-size:14px;color:#666;margin:0;line-height:1.5;">If you have any questions or concerns about your delivery, please call us at <strong>(936) 259-2887</strong>.</p>
+      <p style="font-size:14px;color:#666;margin:0 0 20px;line-height:1.5;">If you have any questions or concerns about your delivery, please call us at <strong>(936) 259-2887</strong>.</p>
+      <div style="background:#f0faf6;border-radius:8px;padding:16px;text-align:center;border:1px solid #bbeed8;">
+        <p style="margin:0 0 12px;font-size:14px;color:#333;font-weight:600;">Enjoying your new rocks?</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#555;">A quick review helps other Texans find us — and it means the world to our small team.</p>
+        <a href="https://www.trustpilot.com/review/texasgotrocks.com" style="display:inline-block;background:#00B67A;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">&#x2B50; Leave a Review</a>
+      </div>
     </div>
     <div style="padding:16px 28px;background:#f8f9fa;border-top:1px solid #e0e0e0;text-align:center;">
       <p style="margin:0;font-size:12px;color:#999;">Texas Got Rocks &middot; Always FREE Delivery &middot; (936) 259-2887</p>
@@ -376,11 +381,20 @@ exports.handler = async (event) => {
         );
       }
 
+      // ── Trustpilot invite (piggybacked on delivery completion) ──
+      const tpEmail = 'texasgotrocks.com+621d4324d2@invite.trustpilot.com';
+      const tpHtml = `<p>Customer: ${delivery.customerName || ''}</p><p>Email: ${delivery.customerEmail || ''}</p><p>Order: ${delivery._id}</p>`;
+      let tpResult = null;
+      if (!delivery.trustpilotInviteSent) {
+        tpResult = await sendEmail(tpEmail, 'Trustpilot Invite', 'New Invitation Request', tpHtml);
+      }
+
       await deliveryCol.updateOne(
         { _id: new ObjectId(deliveryId) },
         { $set: {
           deliveredSmsSent: smsResult?.success || delivery.deliveredSmsSent || false,
           deliveredEmailSent: emailResult?.success || delivery.deliveredEmailSent || false,
+          trustpilotInviteSent: tpResult?.success || delivery.trustpilotInviteSent || false,
           updatedAt: new Date()
         }}
       );
@@ -391,7 +405,8 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           success: true,
           smsSent: smsResult?.success || false,
-          emailSent: emailResult?.success || false
+          emailSent: emailResult?.success || false,
+          trustpilotInviteSent: tpResult?.success || false
         })
       };
     }

@@ -258,6 +258,15 @@ exports.handler = async (event) => {
         update.$set.stopOrder = body.stopOrder;
       }
 
+      // Update delivery date (reschedule / date change)
+      if (body.deliveryDate !== undefined) {
+        update.$set.deliveryDate = body.deliveryDate;
+        if (!historyEntry.status) {
+          historyEntry.status = 'RESCHEDULED';
+          historyEntry.notes = `Delivery date changed to ${body.deliveryDate}`;
+        }
+      }
+
       // Persist geocoded coordinates (cached by map on first render)
       if (body.lat !== undefined && body.lng !== undefined) {
         update.$set.deliveryLat = body.lat;
