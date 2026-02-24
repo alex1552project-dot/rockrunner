@@ -367,13 +367,13 @@
 
     /* ─── EDIT DELIVERY BTN ──────────── */
     .stop-edit-btn {
-      position:absolute; top:8px; right:8px;
-      background:rgba(255,255,255,0.08); border:1px solid var(--border);
-      border-radius:6px; padding:4px 8px; cursor:pointer;
-      color:var(--text-muted); font-size:13px; transition:all 0.15s;
-      z-index:2;
+      display:block; width:100%; margin-top:10px;
+      background:rgba(255,255,255,0.06); border:1px solid var(--border);
+      border-radius:6px; padding:7px 12px; cursor:pointer;
+      color:var(--text-muted); font-size:13px; font-weight:500;
+      transition:all 0.15s; text-align:center;
     }
-    .stop-edit-btn:hover { background:rgba(59,130,246,0.2); color:var(--blue); border-color:var(--blue); }
+    .stop-edit-btn:hover { background:rgba(59,130,246,0.15); color:var(--blue); border-color:var(--blue); }
     /* ─── EDIT DELIVERY MODAL ────────── */
     .btn-cancel-delivery {
       background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
@@ -950,7 +950,6 @@ function renderUnassigned() {
   list.innerHTML = unassigned.map(d => {
     const src = getSourceTag(d.source);
     return `<div class="delivery-card" onclick="openAssignModal('${d._id}')">
-      <button class="stop-edit-btn" onclick="event.stopPropagation();openEditDelivery('${d._id}')" title="Edit delivery">✏️</button>
       <div class="card-top">
         <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
         <span class="card-source ${src.cls}">${src.label}</span>
@@ -960,6 +959,7 @@ function renderUnassigned() {
         <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
         ${d.deliveryDate ? `<span class="card-city">${d.deliveryDate}</span>` : ''}
       </div>
+      <button class="stop-edit-btn" onclick="event.stopPropagation();openEditDelivery('${d._id}')">✏️ Edit Delivery</button>
     </div>`;
   }).join('');
 }
@@ -1003,7 +1003,6 @@ function renderTruckRoutes() {
       const clickFn = (d.status === 'SCHEDULED' || d.status === 'UNASSIGNED') ? `openAssignModal('${d._id}')` : `showDetail('${d._id}')`;
       return `<div class="delivery-card ${sc}" onclick="${clickFn}">
         <span class="truck-stop-num">${i + 1}</span>
-        <button class="stop-edit-btn" style="right:28px;" onclick="event.stopPropagation();openEditDelivery('${d._id}')" title="Edit delivery">✏️</button>
         <div class="card-top">
           <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
           ${sc ? `<span class="card-status-badge badge-${sc.replace('-','')}">${d.status.replace('_',' ')}</span>` : ''}
@@ -1015,6 +1014,7 @@ function renderTruckRoutes() {
             ? `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;${d.timeWindow === 'Morning' ? 'background:#dbeafe;color:#1d4ed8' : 'background:#fef9c3;color:#854d0e'};">${d.timeWindow === 'Morning' ? '🌅 Morning' : '☀️ Afternoon'}</span>`
             : `<span class="card-time">${d.timeWindow}</span>`) : ''}
         </div>
+        <button class="stop-edit-btn" onclick="event.stopPropagation();openEditDelivery('${d._id}')">✏️ Edit Delivery</button>
       </div>`;
     }).join('');
 
