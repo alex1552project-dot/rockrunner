@@ -348,6 +348,22 @@
     .location-link-success { color:var(--green); }
     .location-link-error { color:var(--red); }
     .location-link-coords { font-family:monospace; font-size:11px; color:var(--text-muted); }
+
+    /* ─── LOCATION PIN TABS ──────────── */
+    .loc-tabs {
+      display:flex; gap:4px; margin-top:6px;
+    }
+    .loc-tab {
+      flex:1; padding:7px 12px; border:1px solid var(--border); border-radius:6px;
+      background:transparent; color:var(--text-muted); cursor:pointer;
+      font-size:12px; font-weight:500; transition:all 0.15s; text-align:center;
+    }
+    .loc-tab:hover { background:rgba(255,255,255,0.06); color:#fff; }
+    .loc-tab.active { background:rgba(59,130,246,0.15); color:var(--blue); border-color:var(--blue); }
+    #pinDropMap {
+      height:280px; border-radius:8px; border:1px solid var(--border);
+      background:var(--bg-surface);
+    }
   </style>
 </head>
 <body>
@@ -502,12 +518,25 @@
           <input type="text" id="delZip" placeholder="77301">
         </div>
       </div>
-      <div class="form-row" id="locationLinkRow">
-        <label>📍 Paste Location Link <span style="font-weight:400;color:var(--text-muted);">(optional — Google Maps, Apple Maps, or coordinates)</span></label>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <input type="text" id="delLocationLink" placeholder="Paste a Google/Apple Maps link or coordinates..." oninput="onLocationLinkInput(this.value)" style="flex:1;">
-          <button type="button" id="locationLinkClearBtn" onclick="clearLocationLink()" style="display:none;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:rgba(239,68,68,0.15);color:var(--red);cursor:pointer;font-size:13px;">✕</button>
+      <div class="form-row" id="locationPinSection">
+        <label>📍 Location Pin <span style="font-weight:400;color:var(--text-muted);">(optional — for sites with no street address)</span></label>
+        <div class="loc-tabs">
+          <button type="button" class="loc-tab active" id="locTabLink" onclick="switchLocTab('link')">📋 Paste a Link</button>
+          <button type="button" class="loc-tab" id="locTabMap" onclick="switchLocTab('map')">🗺 Drop a Pin</button>
         </div>
+        <!-- Tab 1: Paste a Link -->
+        <div id="locPanelLink" class="loc-panel">
+          <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+            <input type="text" id="delLocationLink" placeholder="Paste a Google/Apple Maps link or coordinates..." oninput="onLocationLinkInput(this.value)" style="flex:1;">
+            <button type="button" id="locationLinkClearBtn" onclick="clearLocationLink()" style="display:none;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:rgba(239,68,68,0.15);color:var(--red);cursor:pointer;font-size:13px;">✕</button>
+          </div>
+        </div>
+        <!-- Tab 2: Drop a Pin -->
+        <div id="locPanelMap" class="loc-panel" style="display:none;">
+          <div id="pinDropMap" style="margin-top:8px;"></div>
+          <div style="margin-top:6px;font-size:11px;color:var(--text-muted);">Click to place pin · Drag to adjust</div>
+        </div>
+        <!-- Shared status display -->
         <div id="locationLinkStatus" style="margin-top:6px;font-size:12px;display:none;"></div>
       </div>
       <div class="form-grid">
@@ -631,6 +660,9 @@ let rockyState = 'idle';    // 'idle' | 'loading' | 'suggested' | 'confirmed'
 let deliveryPinLat = null;
 let deliveryPinLng = null;
 let locationLinkDebounce = null;
+let pinDropMapInstance = null;
+let pinDropMarker = null;
+let activeLocTab = 'link';
 
 // ─── MAP GLOBALS ─────────────────────────────────
 let map = null;
@@ -2036,10 +2068,75 @@ function clearLocationLink() {
   document.getElementById('locationLinkClearBtn').style.display = 'none';
   deliveryPinLat = null;
   deliveryPinLng = null;
+  resetPinDrop();
 }
 
 function resetLocationLink() {
   clearLocationLink();
+  resetPinDrop();
+  activeLocTab = 'link';
+  var tabLink = document.getElementById('locTabLink');
+  var tabMap = document.getElementById('locTabMap');
+  var panelLink = document.getElementById('locPanelLink');
+  var panelMap = document.getElementById('locPanelMap');
+  if (tabLink) tabLink.classList.add('active');
+  if (tabMap) tabMap.classList.remove('active');
+  if (panelLink) panelLink.style.display = 'block';
+  if (panelMap) panelMap.style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+// LOCATION PIN — Tab switching + Map pin drop
+// ═══════════════════════════════════════════════════════
+
+function switchLocTab(tab) {
+  activeLocTab = tab;
+  document.getElementById('locTabLink').classList.toggle('active', tab === 'link');
+  document.getElementById('locTabMap').classList.toggle('active', tab === 'map');
+  document.getElementById('locPanelLink').style.display = tab === 'link' ? 'block' : 'none';
+  document.getElementById('locPanelMap').style.display = tab === 'map' ? 'block' : 'none';
+
+  if (tab === 'map') {
+    initPinDropMap();
+  }
+}
+
+function initPinDropMap() {
+  if (pinDropMapInstance) {
+    setTimeout(() => pinDropMapInstance.invalidateSize(), 150);
+    return;
+  }
+  pinDropMapInstance = L.map('pinDropMap').setView([30.3119, -95.4561], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 18
+  }).addTo(pinDropMapInstance);
+
+  pinDropMapInstance.on('click', function(e) {
+    placePin(e.latlng.lat, e.latlng.lng);
+  });
+
+  setTimeout(() => pinDropMapInstance.invalidateSize(), 250);
+}
+
+function placePin(lat, lng) {
+  if (pinDropMarker) {
+    pinDropMarker.setLatLng([lat, lng]);
+  } else {
+    pinDropMarker = L.marker([lat, lng], { draggable: true }).addTo(pinDropMapInstance);
+    pinDropMarker.on('dragend', function(e) {
+      const pos = e.target.getLatLng();
+      placePin(pos.lat, pos.lng);
+    });
+  }
+  applyParsedCoords(lat, lng);
+}
+
+function resetPinDrop() {
+  if (pinDropMarker && pinDropMapInstance) {
+    pinDropMapInstance.removeLayer(pinDropMarker);
+    pinDropMarker = null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════
