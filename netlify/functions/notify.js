@@ -26,8 +26,46 @@ const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'info@texasgotrocks.com';
 const SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Texas Got Rocks';
 const OWNER_PHONE = '9363635803'; // Corey Pelletier — owner alerts
 
+// ─── Brand Configuration ─────────────────────────────
+const BRANDS = {
+  tgr: {
+    name: 'Texas Got Rocks',
+    smsSender: 'TXGotRocks',
+    emailFrom: { name: 'Texas Got Rocks', email: 'info@texasgotrocks.com' },
+    phone: '(936) 259-2887',
+    phoneRaw: '9362592887',
+    tagline: 'Always FREE Delivery',
+    trustpilotEnabled: true,
+    trustpilotLink: 'https://www.trustpilot.com/review/texasgotrocks.com',
+    trustpilotInviteEmail: 'texasgotrocks.com+621d4324d2@invite.trustpilot.com',
+    headerColor: '#001F3F',
+    accentColor: '#C65D2A'
+  },
+  tc: {
+    name: 'T & C Materials',
+    smsSender: 'TCMaterials',
+    emailFrom: { name: 'T & C Materials', email: 'info@tcmaterialsllc.com' },
+    phone: '(936) 279-2959',
+    phoneRaw: '9362792959',
+    tagline: 'Quality Materials Delivered',
+    trustpilotEnabled: false,
+    trustpilotLink: null,
+    trustpilotInviteEmail: null,
+    headerColor: '#001F3F',
+    accentColor: '#C65D2A'
+  }
+};
+
+function getBrand(delivery) {
+  const channel = (delivery.source || '').toLowerCase();
+  if (channel.includes('yard') || channel.includes('t&c') || channel.includes('t & c') || channel.includes('tc material')) {
+    return BRANDS.tc;
+  }
+  return BRANDS.tgr;
+}
+
 // ─── SMS via Brevo ───────────────────────────────────
-async function sendSMS(phone, message) {
+async function sendSMS(phone, message, sender = 'TXGotRocks') {
   let formatted = phone.replace(/[^\d+]/g, '');
   if (!formatted.startsWith('+')) {
     if (formatted.startsWith('1') && formatted.length === 11) {
@@ -44,7 +82,7 @@ async function sendSMS(phone, message) {
       body: JSON.stringify({
         type: 'transactional',
         unicodeEnabled: false,
-        sender: 'TXGotRocks',
+        sender: sender,
         recipient: formatted,
         content: message
       })
@@ -59,7 +97,7 @@ async function sendSMS(phone, message) {
 }
 
 // ─── Email via Brevo ─────────────────────────────────
-async function sendEmail(to, toName, subject, htmlContent) {
+async function sendEmail(to, toName, subject, htmlContent, fromConfig = null) {
   if (!to) return { success: false, reason: 'No email address' };
 
   try {
@@ -67,7 +105,7 @@ async function sendEmail(to, toName, subject, htmlContent) {
       method: 'POST',
       headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+        sender: fromConfig || { name: SENDER_NAME, email: SENDER_EMAIL },
         to: [{ email: to, name: toName || '' }],
         subject,
         htmlContent
@@ -83,14 +121,14 @@ async function sendEmail(to, toName, subject, htmlContent) {
 }
 
 // ─── Email Templates ─────────────────────────────────
-function scheduleConfirmationEmail(del) {
+function scheduleConfirmationEmail(del, brand) {
   const firstName = (del.customerName || 'Customer').split(' ')[0];
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;">
   <div style="max-width:500px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;">
-    <div style="background:#001F3F;padding:24px 28px;text-align:center;">
-      <div style="color:#C65D2A;font-size:22px;font-weight:700;">Texas Got Rocks</div>
+    <div style="background:${brand.headerColor};padding:24px 28px;text-align:center;">
+      <div style="color:${brand.accentColor};font-size:22px;font-weight:700;">${brand.name}</div>
       <div style="color:#8891a0;font-size:13px;margin-top:4px;">Delivery Confirmation</div>
     </div>
     <div style="padding:28px;">
@@ -108,21 +146,21 @@ function scheduleConfirmationEmail(del) {
       <p style="font-size:14px;color:#666;margin:0;line-height:1.5;">Please make sure the delivery area is accessible for our truck.</p>
     </div>
     <div style="padding:16px 28px;background:#f8f9fa;border-top:1px solid #e0e0e0;text-align:center;">
-      <p style="margin:0;font-size:12px;color:#999;">Texas Got Rocks &middot; Always FREE Delivery &middot; (936) 259-2887</p>
+      <p style="margin:0;font-size:12px;color:#999;">${brand.name} &middot; ${brand.tagline} &middot; ${brand.phone}</p>
       <p style="margin:4px 0 0;font-size:11px;color:#bbb;">Reply STOP to opt out of text messages.</p>
     </div>
   </div>
 </body></html>`;
 }
 
-function enRouteEmail(delivery, etaMinutes) {
+function enRouteEmail(delivery, etaMinutes, brand) {
   const firstName = (delivery.customerName || 'Customer').split(' ')[0];
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;">
   <div style="max-width:500px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;">
-    <div style="background:#001F3F;padding:24px 28px;text-align:center;">
-      <div style="color:#C65D2A;font-size:22px;font-weight:700;">Texas Got Rocks</div>
+    <div style="background:${brand.headerColor};padding:24px 28px;text-align:center;">
+      <div style="color:${brand.accentColor};font-size:22px;font-weight:700;">${brand.name}</div>
       <div style="color:#22c55e;font-size:14px;font-weight:600;margin-top:4px;">&#x1F69B; Your Delivery Is On the Way!</div>
     </div>
     <div style="padding:28px;">
@@ -138,23 +176,29 @@ function enRouteEmail(delivery, etaMinutes) {
           <tr><td style="padding:6px 0;color:#666;font-size:13px;">Quantity</td><td style="padding:6px 0;font-weight:600;font-size:14px;text-align:right;">${delivery.quantity || '?'} tons</td></tr>
         </table>
       </div>
-      <p style="font-size:14px;color:#666;margin:0;line-height:1.5;">Please ensure your delivery area is clear and accessible for our truck. If you need to reach us, call <strong>(936) 259-2887</strong>.</p>
+      <p style="font-size:14px;color:#666;margin:0;line-height:1.5;">Please ensure your delivery area is clear and accessible for our truck. If you need to reach us, call <strong>${brand.phone}</strong>.</p>
     </div>
     <div style="padding:16px 28px;background:#f8f9fa;border-top:1px solid #e0e0e0;text-align:center;">
-      <p style="margin:0;font-size:12px;color:#999;">Texas Got Rocks &middot; Always FREE Delivery &middot; (936) 259-2887</p>
+      <p style="margin:0;font-size:12px;color:#999;">${brand.name} &middot; ${brand.tagline} &middot; ${brand.phone}</p>
     </div>
   </div>
 </body></html>`;
 }
 
-function deliveredEmail(delivery) {
+function deliveredEmail(delivery, brand) {
   const firstName = (delivery.customerName || 'Customer').split(' ')[0];
+  const trustpilotSection = brand.trustpilotEnabled ? `
+      <div style="background:#f0faf6;border-radius:8px;padding:16px;text-align:center;border:1px solid #bbeed8;">
+        <p style="margin:0 0 12px;font-size:14px;color:#333;font-weight:600;">Enjoying your new rocks?</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#555;">A quick review helps other Texans find us — and it means the world to our small team.</p>
+        <a href="${brand.trustpilotLink}" style="display:inline-block;background:#00B67A;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">&#x2B50; Leave a Review</a>
+      </div>` : '';
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;">
   <div style="max-width:500px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;">
-    <div style="background:#001F3F;padding:24px 28px;text-align:center;">
-      <div style="color:#C65D2A;font-size:22px;font-weight:700;">Texas Got Rocks</div>
+    <div style="background:${brand.headerColor};padding:24px 28px;text-align:center;">
+      <div style="color:${brand.accentColor};font-size:22px;font-weight:700;">${brand.name}</div>
       <div style="color:#22c55e;font-size:14px;font-weight:600;margin-top:4px;">&#x2705; Delivery Complete!</div>
     </div>
     <div style="padding:28px;">
@@ -172,16 +216,11 @@ function deliveredEmail(delivery) {
         <img src="${delivery.deliveryPhoto}" alt="Delivery photo" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0;">
       </div>` : delivery.deliveryPhoto ? `
       <p style="font-size:14px;color:#666;margin:0 0 16px;">&#x1F4F8; A delivery photo has been saved to your order record.</p>` : ''}
-      <p style="font-size:15px;color:#333;margin:0 0 12px;line-height:1.5;">Thank you for choosing Texas Got Rocks! We appreciate your business.</p>
-      <p style="font-size:14px;color:#666;margin:0 0 20px;line-height:1.5;">If you have any questions or concerns about your delivery, please call us at <strong>(936) 259-2887</strong>.</p>
-      <div style="background:#f0faf6;border-radius:8px;padding:16px;text-align:center;border:1px solid #bbeed8;">
-        <p style="margin:0 0 12px;font-size:14px;color:#333;font-weight:600;">Enjoying your new rocks?</p>
-        <p style="margin:0 0 12px;font-size:13px;color:#555;">A quick review helps other Texans find us — and it means the world to our small team.</p>
-        <a href="https://www.trustpilot.com/review/texasgotrocks.com" style="display:inline-block;background:#00B67A;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">&#x2B50; Leave a Review</a>
-      </div>
+      <p style="font-size:15px;color:#333;margin:0 0 12px;line-height:1.5;">Thank you for choosing ${brand.name}! We appreciate your business.</p>
+      <p style="font-size:14px;color:#666;margin:0 0 20px;line-height:1.5;">If you have any questions or concerns about your delivery, please call us at <strong>${brand.phone}</strong>.</p>${trustpilotSection}
     </div>
     <div style="padding:16px 28px;background:#f8f9fa;border-top:1px solid #e0e0e0;text-align:center;">
-      <p style="margin:0;font-size:12px;color:#999;">Texas Got Rocks &middot; Always FREE Delivery &middot; (936) 259-2887</p>
+      <p style="margin:0;font-size:12px;color:#999;">${brand.name} &middot; ${brand.tagline} &middot; ${brand.phone}</p>
     </div>
   </div>
 </body></html>`;
@@ -204,14 +243,15 @@ exports.handler = async (event) => {
       const results = [];
 
       for (const del of (body.deliveries || [])) {
+        const brand = getBrand(del);
         const firstName = (del.customerName || 'Customer').split(' ')[0];
-        const smsMessage = `Hi ${firstName}! Your delivery of ${del.quantity} tons of ${del.materialName} from Texas Got Rocks is scheduled for ${formatDate(del.deliveryDate)}${del.timeWindow ? ' between ' + del.timeWindow : ''}. You'll get a text when the driver is on the way. Reply STOP to opt out.`;
+        const smsMessage = `Hi ${firstName}! Your delivery of ${del.quantity} tons of ${del.materialName} from ${brand.name} is scheduled for ${formatDate(del.deliveryDate)}${del.timeWindow ? ' between ' + del.timeWindow : ''}. You'll get a text when the driver is on the way. Reply STOP to opt out.`;
 
         const result = { deliveryId: del.id, sms: null, email: null };
 
         // Send SMS (if phone exists)
         if (del.customerPhone) {
-          result.sms = await sendSMS(del.customerPhone, smsMessage);
+          result.sms = await sendSMS(del.customerPhone, smsMessage, brand.smsSender);
         }
 
         // Send Email (if email exists)
@@ -220,7 +260,8 @@ exports.handler = async (event) => {
             del.customerEmail,
             del.customerName,
             `Delivery Confirmed - ${formatDate(del.deliveryDate)}`,
-            scheduleConfirmationEmail(del)
+            scheduleConfirmationEmail(del, brand),
+            brand.emailFrom
           );
         }
 
@@ -292,14 +333,15 @@ exports.handler = async (event) => {
         console.error('[ETA] Google Distance Matrix error:', etaErr.message);
         // etaMinutes stays 30
       }
-      const smsMessage = `Your Texas Got Rocks delivery is on the way! Estimated arrival: ~${etaMinutes} minutes. Please ensure your delivery area is accessible.`;
+      const brand = getBrand(delivery);
+      const smsMessage = `Your ${brand.name} delivery is on the way! Estimated arrival: ~${etaMinutes} minutes. Please ensure your delivery area is accessible.`;
 
       let smsResult = null;
       let emailResult = null;
 
       // Send SMS
       if (delivery.customerPhone) {
-        smsResult = await sendSMS(delivery.customerPhone, smsMessage);
+        smsResult = await sendSMS(delivery.customerPhone, smsMessage, brand.smsSender);
       }
 
       // Send Email
@@ -308,7 +350,8 @@ exports.handler = async (event) => {
           delivery.customerEmail,
           delivery.customerName,
           'Your Delivery Is On the Way!',
-          enRouteEmail(delivery, etaMinutes)
+          enRouteEmail(delivery, etaMinutes, brand),
+          brand.emailFrom
         );
       }
 
@@ -363,13 +406,14 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ success: true, alreadySent: true }) };
       }
 
-      const smsMessage = `Thank you! Your ${delivery.materialName || 'material'} has been delivered. We appreciate your business! — Texas Got Rocks`;
+      const brand = getBrand(delivery);
+      const smsMessage = `Thank you! Your ${delivery.materialName || 'material'} has been delivered. We appreciate your business! — ${brand.name}`;
 
       let smsResult = null;
       let emailResult = null;
 
       if (delivery.customerPhone && !delivery.deliveredSmsSent) {
-        smsResult = await sendSMS(delivery.customerPhone, smsMessage);
+        smsResult = await sendSMS(delivery.customerPhone, smsMessage, brand.smsSender);
       }
 
       if (delivery.customerEmail && !delivery.deliveredEmailSent) {
@@ -377,16 +421,16 @@ exports.handler = async (event) => {
           delivery.customerEmail,
           delivery.customerName,
           'Your Delivery Is Complete!',
-          deliveredEmail(delivery)
+          deliveredEmail(delivery, brand),
+          brand.emailFrom
         );
       }
 
-      // ── Trustpilot invite (piggybacked on delivery completion) ──
-      const tpEmail = 'texasgotrocks.com+621d4324d2@invite.trustpilot.com';
+      // ── Trustpilot invite (only for brands with Trustpilot enabled) ──
       const tpHtml = `<p>Customer: ${delivery.customerName || ''}</p><p>Email: ${delivery.customerEmail || ''}</p><p>Order: ${delivery._id}</p>`;
       let tpResult = null;
-      if (!delivery.trustpilotInviteSent) {
-        tpResult = await sendEmail(tpEmail, 'Trustpilot Invite', 'New Invitation Request', tpHtml);
+      if (brand.trustpilotEnabled && !delivery.trustpilotInviteSent) {
+        tpResult = await sendEmail(brand.trustpilotInviteEmail, 'Trustpilot Invite', 'New Invitation Request', tpHtml);
       }
 
       await deliveryCol.updateOne(
@@ -423,13 +467,19 @@ exports.handler = async (event) => {
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Delivery not found' }) };
       }
 
+      const brand = getBrand(delivery);
+
+      // Skip reviews for brands without Trustpilot
+      if (!brand.trustpilotEnabled) {
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, skipped: true, reason: 'Reviews disabled for this brand' }) };
+      }
+
       // Duplicate guard
       if (delivery.reviewRequestSent) {
         return { statusCode: 200, headers, body: JSON.stringify({ success: true, alreadySent: true }) };
       }
 
       const firstName = (delivery.customerName || 'Customer').split(' ')[0];
-      const reviewLink = 'https://www.trustpilot.com/review/texasgotrocks.com';
 
       // ── Customer warm message + review link ──
       let customerEmailResult = null;
@@ -438,8 +488,8 @@ exports.handler = async (event) => {
 <html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;">
   <div style="max-width:500px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;">
-    <div style="background:#001F3F;padding:24px 28px;text-align:center;">
-      <div style="color:#C65D2A;font-size:22px;font-weight:700;">Texas Got Rocks</div>
+    <div style="background:${brand.headerColor};padding:24px 28px;text-align:center;">
+      <div style="color:${brand.accentColor};font-size:22px;font-weight:700;">${brand.name}</div>
       <div style="color:#8891a0;font-size:13px;margin-top:4px;">We hope you love your delivery!</div>
     </div>
     <div style="padding:28px;">
@@ -447,9 +497,9 @@ exports.handler = async (event) => {
       <p style="font-size:15px;color:#333;margin:0 0 20px;line-height:1.5;">Your ${delivery.materialName || 'material'} delivery is now complete. We hope everything looks great!</p>
       <p style="font-size:15px;color:#333;margin:0 0 20px;line-height:1.5;">If you have a moment, we'd love to hear about your experience. It means the world to a small local business.</p>
       <div style="text-align:center;margin:28px 0;">
-        <a href="${reviewLink}" style="background:#00b67a;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">⭐ Leave a Review on Trustpilot</a>
+        <a href="${brand.trustpilotLink}" style="background:#00b67a;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">⭐ Leave a Review on Trustpilot</a>
       </div>
-      <p style="font-size:13px;color:#999;text-align:center;">Thank you for choosing Texas Got Rocks!</p>
+      <p style="font-size:13px;color:#999;text-align:center;">Thank you for choosing ${brand.name}!</p>
     </div>
   </div>
 </body></html>`;
@@ -457,14 +507,14 @@ exports.handler = async (event) => {
           delivery.customerEmail,
           delivery.customerName,
           'How was your delivery? Tell us! ⭐',
-          html
+          html,
+          brand.emailFrom
         );
       }
 
       // ── Trustpilot BCC invite ──
-      const tpEmail = 'texasgotrocks.com+621d4324d2@invite.trustpilot.com';
       const tpHtml = `<p>Customer: ${delivery.customerName || ''}</p><p>Email: ${delivery.customerEmail || ''}</p><p>Order: ${delivery._id}</p>`;
-      const tpResult = await sendEmail(tpEmail, 'Trustpilot Invite', 'New Invitation Request', tpHtml);
+      const tpResult = await sendEmail(brand.trustpilotInviteEmail, 'Trustpilot Invite', 'New Invitation Request', tpHtml);
 
       await deliveryCol.updateOne(
         { _id: new ObjectId(deliveryId) },
