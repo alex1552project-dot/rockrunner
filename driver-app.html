@@ -334,6 +334,84 @@ body {
   margin: 0 16px;
   letter-spacing: 0.5px;
 }
+
+/* ─── TRUCK SELECTOR ────────────────────────── */
+.truck-switch-hint {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-left: 6px;
+}
+.truck-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.truck-picker-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+}
+.truck-picker-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 24px 16px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.truck-picker-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.truck-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  border-radius: 14px;
+  border: 2px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.truck-picker-option:active { transform: scale(0.97); }
+.truck-picker-option.active {
+  border-color: var(--orange);
+  background: rgba(198,93,42,0.15);
+}
+.truck-picker-icon { font-size: 28px; }
+.truck-picker-name { flex: 1; }
+.truck-picker-check {
+  color: var(--orange);
+  font-size: 22px;
+  font-weight: 800;
+}
+.truck-picker-cancel {
+  margin-top: 4px;
+  padding: 16px;
+  border-radius: 14px;
+  border: none;
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -406,6 +484,7 @@ body {
 const API = '/.netlify/functions';
 let currentDriver = null;
 let currentTruckId = null;
+let myTrucks = [];
 let myDeliveries = [];
 let materialWeights = {}; // materialName → tons/CYD
 let activeDeliveryId = null;
@@ -467,15 +546,14 @@ async function login() {
   document.getElementById('mainApp').style.display = 'block';
   document.getElementById('driverBadge').textContent = currentDriver.name;
 
-  // Look up assigned truck
+  // Look up ALL assigned trucks
   try {
     const tr = await fetch(`${API}/trucks`);
     const td = await tr.json();
-    const myTruck = (td.trucks || []).find(t => t.defaultDriver?.id === currentDriver.id);
-    if (myTruck) {
-      currentTruckId = myTruck._id?.toString() || myTruck._id;
-      document.getElementById('truckBadge').textContent = '🚛 ' + myTruck.truckNumber;
-      document.getElementById('truckBadge').style.display = '';
+    myTrucks = (td.trucks || []).filter(t => t.defaultDriver?.id === currentDriver.id);
+    if (myTrucks.length > 0) {
+      selectTruck(myTrucks[0]);
+      renderTruckSelector();
     }
   } catch(e) { /* truck lookup optional */ }
 
@@ -486,6 +564,68 @@ async function login() {
 
   startGpsTracking();
   await loadMyRoute();
+}
+
+// ─── TRUCK SELECTOR ──────────────────────────────
+function selectTruck(truck) {
+  currentTruckId = truck._id?.toString() || truck._id;
+  document.getElementById('truckBadge').style.display = '';
+
+  if (myTrucks.length > 1) {
+    document.getElementById('truckBadge').innerHTML = '🚛 ' + truck.truckNumber + ' <span class="truck-switch-hint">▼ tap to switch</span>';
+    document.getElementById('truckBadge').onclick = showTruckPicker;
+    document.getElementById('truckBadge').style.cursor = 'pointer';
+  } else {
+    document.getElementById('truckBadge').textContent = '🚛 ' + truck.truckNumber;
+    document.getElementById('truckBadge').onclick = null;
+    document.getElementById('truckBadge').style.cursor = 'default';
+  }
+}
+
+function renderTruckSelector() {
+  if (myTrucks.length < 2) return;
+  if (!document.getElementById('truckPicker')) {
+    const picker = document.createElement('div');
+    picker.id = 'truckPicker';
+    picker.className = 'truck-picker';
+    document.body.appendChild(picker);
+  }
+}
+
+function showTruckPicker() {
+  const picker = document.getElementById('truckPicker');
+  if (!picker) return;
+
+  picker.innerHTML = `
+    <div class="truck-picker-backdrop" onclick="closeTruckPicker()"></div>
+    <div class="truck-picker-sheet">
+      <div class="truck-picker-title">Switch Truck</div>
+      ${myTrucks.map(t => {
+        const truckId = t._id?.toString() || t._id;
+        const isActive = truckId === currentTruckId;
+        return `<button class="truck-picker-option ${isActive ? 'active' : ''}" onclick="pickTruck('${truckId}')">
+          <span class="truck-picker-icon">🚛</span>
+          <span class="truck-picker-name">${t.truckNumber}</span>
+          ${isActive ? '<span class="truck-picker-check">✓</span>' : ''}
+        </button>`;
+      }).join('')}
+      <button class="truck-picker-cancel" onclick="closeTruckPicker()">Cancel</button>
+    </div>
+  `;
+  picker.style.display = 'flex';
+}
+
+function pickTruck(truckId) {
+  const truck = myTrucks.find(t => (t._id?.toString() || t._id) === truckId);
+  if (!truck) return;
+  selectTruck(truck);
+  closeTruckPicker();
+  loadMyRoute();
+}
+
+function closeTruckPicker() {
+  const picker = document.getElementById('truckPicker');
+  if (picker) picker.style.display = 'none';
 }
 
 // ─── DAY TOGGLE ──────────────────────────────────
@@ -505,9 +645,7 @@ async function loadMyRoute() {
   const dateStr = chiNow.getFullYear() + '-' + String(chiNow.getMonth()+1).padStart(2,'0') + '-' + String(chiNow.getDate()).padStart(2,'0');
 
   try {
-    // Today: filter by driverId (deliveries fully assigned to this driver)
-    // Tomorrow: filter by truckId (deliveries may only have truck, not yet a specific driverId)
-    const filterParam = (viewingTomorrow && currentTruckId)
+    const filterParam = currentTruckId
       ? `truckId=${currentTruckId}`
       : `driverId=${currentDriver.id}`;
     const [data, prodData] = await Promise.all([
