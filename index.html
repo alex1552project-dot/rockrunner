@@ -364,6 +364,23 @@
       height:280px; border-radius:8px; border:1px solid var(--border);
       background:var(--bg-surface);
     }
+
+    /* ─── EDIT DELIVERY BTN ──────────── */
+    .stop-edit-btn {
+      position:absolute; top:8px; right:8px;
+      background:rgba(255,255,255,0.08); border:1px solid var(--border);
+      border-radius:6px; padding:4px 8px; cursor:pointer;
+      color:var(--text-muted); font-size:13px; transition:all 0.15s;
+      z-index:2;
+    }
+    .stop-edit-btn:hover { background:rgba(59,130,246,0.2); color:var(--blue); border-color:var(--blue); }
+    /* ─── EDIT DELIVERY MODAL ────────── */
+    .btn-cancel-delivery {
+      background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
+      color:var(--red); padding:8px 16px; border-radius:8px; cursor:pointer;
+      font-size:13px; font-weight:600; transition:all 0.15s;
+    }
+    .btn-cancel-delivery:hover { background:rgba(239,68,68,0.3); }
   </style>
 </head>
 <body>
@@ -633,6 +650,51 @@
   </div>
 </div>
 
+<!-- ═══ EDIT DELIVERY MODAL ════════════════════════ -->
+<div class="modal-overlay" id="editDeliveryModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Edit Delivery</h3>
+      <button class="modal-close" onclick="closeEditDelivery()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="editDelSummary" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;"></div>
+
+      <div class="form-row">
+        <label>Delivery Date</label>
+        <input type="date" id="editDelDate">
+      </div>
+
+      <div class="form-row">
+        <label>Time Window</label>
+        <select id="editDelTime">
+          <option value="">No time window</option>
+          <option value="7:00 AM - 9:00 AM">7:00 AM - 9:00 AM</option>
+          <option value="9:00 AM - 11:00 AM">9:00 AM - 11:00 AM</option>
+          <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
+          <option value="12:00 PM - 2:00 PM">12:00 PM - 2:00 PM</option>
+          <option value="1:00 PM - 3:00 PM">1:00 PM - 3:00 PM</option>
+          <option value="2:00 PM - 4:00 PM">2:00 PM - 4:00 PM</option>
+          <option value="3:00 PM - 5:00 PM">3:00 PM - 5:00 PM</option>
+          <option value="5:00 PM - 7:00 PM">5:00 PM - 7:00 PM</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label>Delivery Notes</label>
+        <input type="text" id="editDelNotes" placeholder="Add or update notes...">
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:space-between;">
+      <button class="btn-cancel-delivery" id="editDelCancelBtn" onclick="cancelDelivery()">🗑 Cancel Delivery</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeEditDelivery()">Close</button>
+        <button class="btn btn-primary" onclick="saveEditDelivery()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Hidden date picker -->
 <input type="date" id="hiddenDatePicker" style="position:absolute;opacity:0;pointer-events:none;">
 
@@ -650,6 +712,7 @@ let deliveries = [];
 let products = [];
 let activeDrivers = [];
 let assigningDeliveryId = null; // for assignment modal
+let editingDeliveryId = null;   // for edit delivery modal
 
 // Rocky Suggests state
 let rockyPlan = null;
@@ -887,6 +950,7 @@ function renderUnassigned() {
   list.innerHTML = unassigned.map(d => {
     const src = getSourceTag(d.source);
     return `<div class="delivery-card" onclick="openAssignModal('${d._id}')">
+      <button class="stop-edit-btn" onclick="event.stopPropagation();openEditDelivery('${d._id}')" title="Edit delivery">✏️</button>
       <div class="card-top">
         <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
         <span class="card-source ${src.cls}">${src.label}</span>
@@ -939,6 +1003,7 @@ function renderTruckRoutes() {
       const clickFn = (d.status === 'SCHEDULED' || d.status === 'UNASSIGNED') ? `openAssignModal('${d._id}')` : `showDetail('${d._id}')`;
       return `<div class="delivery-card ${sc}" onclick="${clickFn}">
         <span class="truck-stop-num">${i + 1}</span>
+        <button class="stop-edit-btn" style="right:28px;" onclick="event.stopPropagation();openEditDelivery('${d._id}')" title="Edit delivery">✏️</button>
         <div class="card-top">
           <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
           ${sc ? `<span class="card-status-badge badge-${sc.replace('-','')}">${d.status.replace('_',' ')}</span>` : ''}
@@ -1365,6 +1430,92 @@ async function updateDeliveryDate(deliveryId, newDate, resetStatus = false) {
     await loadDeliveries();
     render();
   } catch(e) { toast('Error updating date', true); console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════
+// EDIT DELIVERY — Dispatcher controls
+// ═══════════════════════════════════════════════════════
+
+function openEditDelivery(deliveryId) {
+  editingDeliveryId = deliveryId;
+  const delivery = deliveries.find(d => d._id === deliveryId);
+  if (!delivery) { toast('Delivery not found', true); return; }
+
+  const statusColor = { DELIVERED:'var(--green)', EN_ROUTE:'#a78bfa', CANCELLED:'var(--red)' }[delivery.status] || 'var(--blue)';
+  document.getElementById('editDelSummary').innerHTML = `
+    <div style="font-weight:700;font-size:15px;color:#fff;">${esc(delivery.customerName || 'Customer')}</div>
+    <div style="color:var(--text-muted);font-size:13px;margin-top:4px;">${esc(delivery.materialName || '')} · ${delivery.quantity || '?'} tons</div>
+    <div style="color:var(--text-muted);font-size:13px;margin-top:2px;">${esc(delivery.deliveryAddress || '')}${delivery.deliveryCity ? ', ' + esc(delivery.deliveryCity) : ''}</div>
+    <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">Status: <span style="color:${statusColor};">${delivery.status}</span></div>
+  `;
+
+  document.getElementById('editDelDate').value = delivery.deliveryDate || '';
+  document.getElementById('editDelTime').value = delivery.timeWindow || '';
+  document.getElementById('editDelNotes').value = delivery.deliveryNotes || '';
+
+  const cancelBtn = document.getElementById('editDelCancelBtn');
+  cancelBtn.style.display = (delivery.status === 'DELIVERED' || delivery.status === 'CANCELLED') ? 'none' : 'block';
+
+  openModal('editDeliveryModal');
+}
+
+function closeEditDelivery() {
+  closeModal('editDeliveryModal');
+  editingDeliveryId = null;
+}
+
+async function saveEditDelivery() {
+  if (!editingDeliveryId) return;
+
+  const updateBody = {
+    id: editingDeliveryId,
+    updatedBy: 'dispatcher',
+    deliveryDate: document.getElementById('editDelDate').value,
+    timeWindow: document.getElementById('editDelTime').value,
+  };
+
+  const notes = document.getElementById('editDelNotes').value;
+  if (notes) updateBody.deliveryNotes = notes;
+
+  try {
+    const res = await fetch(`${API}/dispatch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateBody)
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast('Delivery updated');
+      closeEditDelivery();
+      await loadDeliveries();
+      render();
+    } else {
+      toast('Error saving changes', true);
+    }
+  } catch(e) { toast('Error saving changes', true); console.error(e); }
+}
+
+async function cancelDelivery() {
+  if (!editingDeliveryId) return;
+
+  const reason = prompt('Reason for cancellation (optional):');
+  if (reason === null) return;
+  if (!confirm('Are you sure you want to cancel this delivery?')) return;
+
+  try {
+    const res = await fetch(`${API}/dispatch?id=${editingDeliveryId}&by=dispatcher&reason=${encodeURIComponent(reason || 'Cancelled by dispatcher')}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast('Delivery cancelled');
+      closeEditDelivery();
+      await loadDeliveries();
+      render();
+    } else {
+      toast('Error cancelling delivery', true);
+    }
+  } catch(e) { toast('Error cancelling delivery', true); console.error(e); }
 }
 
 // ═══════════════════════════════════════════════════════
