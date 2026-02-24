@@ -342,6 +342,26 @@
       .form-grid { grid-template-columns:1fr; }
       .detail-grid { grid-template-columns:1fr; }
     }
+
+    /* ─── PIN DROP ────────────────────── */
+    .pin-drop-toggle {
+      display:inline-flex; align-items:center; gap:6px; padding:6px 12px;
+      border-radius:6px; border:1px solid var(--border); background:rgba(255,255,255,0.06);
+      color:var(--text-muted); cursor:pointer; font-size:12px; font-weight:500;
+      transition:all 0.15s; margin-top:6px;
+    }
+    .pin-drop-toggle:hover { background:rgba(59,130,246,0.15); color:var(--blue); border-color:var(--blue); }
+    .pin-drop-toggle.active { background:rgba(59,130,246,0.2); color:var(--blue); border-color:var(--blue); }
+    #pinDropMap { height:280px; border-radius:8px; border:1px solid var(--border); margin-top:8px; }
+    .pin-drop-info { font-size:12px; color:var(--text-muted); margin-top:6px; line-height:1.5; }
+    .pin-drop-info .resolved-addr { color:var(--text); font-weight:500; }
+    .pin-drop-coords { font-size:11px; color:var(--text-muted); font-family:monospace; }
+    .pin-drop-manual { display:flex; gap:8px; margin-top:8px; }
+    .pin-drop-manual input { flex:1; }
+    .pin-drop-ios-link {
+      display:inline-flex; align-items:center; gap:4px; color:var(--blue);
+      font-size:12px; text-decoration:none; margin-top:6px;
+    }
   </style>
 </head>
 <body>
@@ -482,20 +502,38 @@
           <input type="email" id="delEmail" placeholder="customer@email.com">
         </div>
       </div>
-      <div class="form-row">
-        <label>Delivery Address *</label>
-        <input type="text" id="delAddress" placeholder="123 Main St">
-      </div>
-      <div class="form-grid">
+      <div id="addressTextMode">
         <div class="form-row">
-          <label>City</label>
-          <input type="text" id="delCity" placeholder="Conroe">
+          <label>Delivery Address *</label>
+          <input type="text" id="delAddress" placeholder="123 Main St">
         </div>
-        <div class="form-row">
-          <label>ZIP</label>
-          <input type="text" id="delZip" placeholder="77301">
+        <div class="form-grid">
+          <div class="form-row">
+            <label>City</label>
+            <input type="text" id="delCity" placeholder="Conroe">
+          </div>
+          <div class="form-row">
+            <label>ZIP</label>
+            <input type="text" id="delZip" placeholder="77301">
+          </div>
         </div>
       </div>
+      <div id="addressPinMode" style="display:none;">
+        <div class="form-row">
+          <label>Drop a pin on the map</label>
+          <div id="pinDropMap"></div>
+          <div class="pin-drop-info">
+            <span class="pin-drop-coords" id="pinDropCoords"></span>
+            <div class="resolved-addr" id="pinDropResolvedAddr"></div>
+          </div>
+          <div class="pin-drop-manual" id="pinDropManualRow" style="display:none;">
+            <input type="number" id="pinDropManualLat" step="any" placeholder="Latitude" onchange="onManualLatLng()">
+            <input type="number" id="pinDropManualLng" step="any" placeholder="Longitude" onchange="onManualLatLng()">
+          </div>
+          <a id="pinDropAppleMapsLink" class="pin-drop-ios-link" href="#" target="_blank" style="display:none;">📍 Open in Apple Maps</a>
+        </div>
+      </div>
+      <button type="button" class="pin-drop-toggle" id="pinDropToggle" onclick="togglePinDropMode()">📍 Use Map Pin</button>
       <div class="form-grid">
         <div class="form-row">
           <label>Material *</label>
@@ -612,6 +650,13 @@ let assigningDeliveryId = null; // for assignment modal
 let rockyPlan = null;
 let rockyAssignments = {};  // { deliveryId: { truckId, truckNumber, stopOrder, routeSource, reasoning, ... } }
 let rockyState = 'idle';    // 'idle' | 'loading' | 'suggested' | 'confirmed'
+
+// ─── PIN DROP GLOBALS ────────────────────────────
+let pinDropMode = false;
+let pinDropLat = null;
+let pinDropLng = null;
+let pinDropMapInstance = null;
+let pinDropMarker = null;
 
 // ─── MAP GLOBALS ─────────────────────────────────
 let map = null;
@@ -1328,6 +1373,7 @@ const CONROE_YARD_NAME = 'Conroe Yard';
 const CONROE_YARD_ADDR = '14211 Stuebner Airline Rd, Houston, TX 77069';
 
 function openAddDelivery() {
+  resetPinDrop();
   document.getElementById('delDate').value = formatDateISO(currentDate);
   document.getElementById('delOrigin').value = '';
   const addrInput = document.getElementById('delOriginAddr');
@@ -1432,6 +1478,8 @@ async function saveDelivery() {
         sourceName: document.getElementById('delOrigin').value.trim() || null,
         sourceAddress: document.getElementById('delOriginAddr').value.trim() || null,
         poNumber: document.getElementById('delPO').value.trim() || null,
+        deliveryLat: pinDropLat || null,
+        deliveryLng: pinDropLng || null,
         createdBy: 'dispatcher'
       })
     });
@@ -1463,6 +1511,7 @@ async function saveDelivery() {
       const addrInput = document.getElementById('delOriginAddr');
       addrInput.disabled = false;
       addrInput.style.opacity = '';
+      resetPinDrop();
       ['delCustomer','delPhone','delEmail','delAddress','delCity','delZip','delQty','delNotes','delOrigin','delOriginAddr','delPO'].forEach(id => document.getElementById(id).value = '');
       await loadDeliveries();
       render();
@@ -1875,6 +1924,146 @@ async function confirmRockyAssignments() {
     btn.disabled = false;
     btn.textContent = '✅ Confirm Assignments';
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// PIN DROP — Map picker in Add Delivery modal
+// ═══════════════════════════════════════════════════════
+function togglePinDropMode() {
+  pinDropMode = !pinDropMode;
+  const toggle = document.getElementById('pinDropToggle');
+  const textMode = document.getElementById('addressTextMode');
+  const pinMode = document.getElementById('addressPinMode');
+
+  if (pinDropMode) {
+    toggle.classList.add('active');
+    toggle.textContent = '✏️ Use Text Address';
+    textMode.style.display = 'none';
+    pinMode.style.display = 'block';
+    initPinDropMap();
+    // Show manual lat/lng + Apple Maps link on iOS
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      document.getElementById('pinDropManualRow').style.display = 'flex';
+      document.getElementById('pinDropAppleMapsLink').style.display = 'inline-flex';
+      updateAppleMapsLink();
+    }
+  } else {
+    toggle.classList.remove('active');
+    toggle.textContent = '📍 Use Map Pin';
+    textMode.style.display = 'block';
+    pinMode.style.display = 'none';
+  }
+}
+
+function initPinDropMap() {
+  if (pinDropMapInstance) {
+    setTimeout(() => pinDropMapInstance.invalidateSize(), 100);
+    return;
+  }
+  pinDropMapInstance = L.map('pinDropMap').setView([30.3119, -95.4561], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 18
+  }).addTo(pinDropMapInstance);
+
+  pinDropMapInstance.on('click', function(e) {
+    placePin(e.latlng.lat, e.latlng.lng);
+  });
+
+  // Fix tile rendering after modal animation
+  setTimeout(() => pinDropMapInstance.invalidateSize(), 200);
+}
+
+function placePin(lat, lng) {
+  pinDropLat = lat;
+  pinDropLng = lng;
+
+  if (pinDropMarker) {
+    pinDropMarker.setLatLng([lat, lng]);
+  } else {
+    pinDropMarker = L.marker([lat, lng], { draggable: true }).addTo(pinDropMapInstance);
+    pinDropMarker.on('dragend', function(e) {
+      const pos = e.target.getLatLng();
+      placePin(pos.lat, pos.lng);
+    });
+  }
+
+  // Show coordinates
+  document.getElementById('pinDropCoords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  document.getElementById('pinDropResolvedAddr').textContent = 'Resolving address...';
+
+  // Update manual fields
+  document.getElementById('pinDropManualLat').value = lat.toFixed(6);
+  document.getElementById('pinDropManualLng').value = lng.toFixed(6);
+  updateAppleMapsLink();
+
+  // Reverse geocode
+  reverseGeocode(lat, lng);
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`);
+    const data = await r.json();
+    if (data && data.address) {
+      const a = data.address;
+      const street = [a.house_number, a.road].filter(Boolean).join(' ');
+      const city = a.city || a.town || a.village || a.hamlet || '';
+      const zip = a.postcode || '';
+      const resolvedText = [street, city, a.state, zip].filter(Boolean).join(', ');
+
+      document.getElementById('pinDropResolvedAddr').textContent = resolvedText || 'Address not found';
+
+      // Populate hidden address fields so saveDelivery() picks them up
+      document.getElementById('delAddress').value = street;
+      document.getElementById('delCity').value = city;
+      document.getElementById('delZip').value = zip;
+    } else {
+      document.getElementById('pinDropResolvedAddr').textContent = 'Could not resolve address';
+    }
+  } catch(e) {
+    console.error('Reverse geocode error:', e);
+    document.getElementById('pinDropResolvedAddr').textContent = 'Geocoding error';
+  }
+}
+
+function onManualLatLng() {
+  const lat = parseFloat(document.getElementById('pinDropManualLat').value);
+  const lng = parseFloat(document.getElementById('pinDropManualLng').value);
+  if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+    pinDropMapInstance?.setView([lat, lng], 15);
+    placePin(lat, lng);
+  }
+}
+
+function updateAppleMapsLink() {
+  const link = document.getElementById('pinDropAppleMapsLink');
+  const lat = pinDropLat || 30.3119;
+  const lng = pinDropLng || -95.4561;
+  link.href = `https://maps.apple.com/?ll=${lat},${lng}&q=Delivery+Location`;
+}
+
+function resetPinDrop() {
+  pinDropMode = false;
+  pinDropLat = null;
+  pinDropLng = null;
+  if (pinDropMarker && pinDropMapInstance) {
+    pinDropMapInstance.removeLayer(pinDropMarker);
+    pinDropMarker = null;
+  }
+  const toggle = document.getElementById('pinDropToggle');
+  if (toggle) {
+    toggle.classList.remove('active');
+    toggle.textContent = '📍 Use Map Pin';
+  }
+  const textMode = document.getElementById('addressTextMode');
+  const pinMode = document.getElementById('addressPinMode');
+  if (textMode) textMode.style.display = 'block';
+  if (pinMode) pinMode.style.display = 'none';
+  const coords = document.getElementById('pinDropCoords');
+  const addr = document.getElementById('pinDropResolvedAddr');
+  if (coords) coords.textContent = '';
+  if (addr) addr.textContent = '';
 }
 
 // ═══════════════════════════════════════════════════════
