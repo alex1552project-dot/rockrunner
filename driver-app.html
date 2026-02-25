@@ -230,6 +230,14 @@ body {
   flex: 0;
   width: 72px;
 }
+.btn-pickup {
+  background: var(--blue);
+  color: #fff;
+}
+.btn-loaded {
+  background: var(--green);
+  color: #fff;
+}
 .btn-disabled {
   background: var(--surface2) !important;
   color: var(--text-dim) !important;
@@ -239,15 +247,23 @@ body {
 
 /* ─── COMPLETED OVERLAY ──────────────────────── */
 .stop-card.completed {
-  opacity: 0.6;
+  opacity: 0.55;
 }
-.stop-card.completed .stop-body { display: none; }
-.stop-card.completed .stop-actions { display: none; }
+.stop-card.completed .stop-header {
+  padding-bottom: 6px;
+}
 .completed-badge {
-  padding: 12px 18px;
-  font-size: 17px;
+  padding: 10px 18px;
+  font-size: 15px;
   color: var(--green);
-  font-weight: 800;
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── EN ROUTE CARD HIGHLIGHT ────────────────── */
+.stop-card.enroute {
+  border-color: var(--purple);
+  border-width: 2px;
 }
 
 /* ─── PHOTO CAPTURE MODAL ────────────────────── */
@@ -493,6 +509,7 @@ let gpsWatchId = null;
 let lastGpsSend = 0;
 let viewingTomorrow = false;
 let viewingDate = new Date();
+let pickupCompleted = {}; // deliveryId → true (client-side, resets on reload)
 
 // ─── GPS TRACKING ────────────────────────────────
 function startGpsTracking() {
@@ -685,14 +702,53 @@ function renderRoute() {
     return;
   }
 
-  list.innerHTML = myDeliveries.map((d, i) => {
+  // Sort: active deliveries first (by stopOrder), completed at bottom
+  const sorted = [...myDeliveries].sort((a, b) => {
+    const aDelivered = a.status === 'DELIVERED' ? 1 : 0;
+    const bDelivered = b.status === 'DELIVERED' ? 1 : 0;
+    if (aDelivered !== bDelivered) return aDelivered - bDelivered;
+    return (a.stopOrder || 99) - (b.stopOrder || 99);
+  });
+
+  list.innerHTML = sorted.map((d, i) => {
     const isCompleted = d.status === 'DELIVERED';
+    const isCancelled = d.status === 'CANCELLED';
     const isEnRoute = d.status === 'EN_ROUTE';
+    const hasSource = d.sourceName && d.sourceName.trim();
+    const isYardPickup = !hasSource || d.sourceName.toLowerCase().includes('conroe');
+
+    // Auto-skip pickup phase if no source info
+    if (!hasSource) pickupCompleted[d._id] = true;
+
+    const isPickedUp = pickupCompleted[d._id] || false;
     const stopNum = i + 1;
 
-    return `<div class="stop-card ${isCompleted ? 'completed' : ''}">
+    if (isCancelled) return '';
+
+    if (isCompleted) {
+      return `<div class="stop-card completed">
+        <div class="stop-header">
+          <div class="stop-number completed">✓</div>
+          <div class="stop-info">
+            <div class="stop-customer">${d.customerName || 'Customer'}</div>
+            <div class="stop-material">${d.materialName || 'Material'}</div>
+          </div>
+          <div class="stop-tons">${(() => {
+            const tons = parseFloat(d.quantity);
+            if (!d.quantity || isNaN(tons)) return '?';
+            const w = materialWeights[d.materialName];
+            return w ? `${(tons/w).toFixed(1)}<small style="font-size:14px"> CYD</small><br>${tons.toFixed(1)}T` : `${tons.toFixed(1)}T`;
+          })()}</div>
+        </div>
+        <div class="completed-badge">
+          ✅ Delivered${d.deliveredAt ? ' · ' + new Date(d.deliveredAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
+        </div>
+      </div>`;
+    }
+
+    return `<div class="stop-card ${isEnRoute ? 'enroute' : ''}">
       <div class="stop-header">
-        <div class="stop-number ${isCompleted ? 'completed' : isEnRoute ? 'active' : ''}">${isCompleted ? '✓' : stopNum}</div>
+        <div class="stop-number ${isEnRoute ? 'active' : ''}">${stopNum}</div>
         <div class="stop-info">
           <div class="stop-customer">${d.customerName || 'Customer'}</div>
           <div class="stop-material">${d.materialName || 'Material'}</div>
@@ -704,31 +760,59 @@ function renderRoute() {
           return w ? `${(tons/w).toFixed(1)}<small style="font-size:14px"> CYD</small><br>${tons.toFixed(1)}T` : `${tons.toFixed(1)}T`;
         })()}</div>
       </div>
-      ${isCompleted ? `<div class="completed-badge">Delivered ✓</div>` : `
-        <div class="stop-body">
-          ${d.sourceName ? `<div class="stop-pickup">🏭 Pickup from: ${d.sourceName.toLowerCase().includes('conroe') ? 'Conroe Yard' : `${d.sourceName}${d.sourceAddress ? ' — ' + d.sourceAddress : ''}`}</div>` : ''}
-          <div class="stop-address">📍 ${d.deliveryAddress || ''}${d.deliveryCity ? ', ' + d.deliveryCity : ''} ${d.deliveryZip || ''}</div>
-          ${d.timeWindow ? `<div class="stop-time">🕐 ${d.timeWindow}</div>` : ''}
-          ${d.deliveryNotes ? `<div class="stop-notes">⚠️ ${d.deliveryNotes}</div>` : ''}
-        </div>
-        <div class="stop-actions">
-          ${d.customerPhone ? `<button class="action-btn btn-call" onclick="callCustomer('${d.customerPhone}')">📞</button>` : ''}
-          <button class="action-btn btn-navigate" onclick="navigate('${encodeURIComponent(d.deliveryAddress + ', ' + (d.deliveryCity||'') + ' ' + (d.deliveryState||'TX') + ' ' + (d.deliveryZip||''))}')">🧭 Navigate</button>
-          ${!isEnRoute
-            ? `<button class="action-btn btn-enroute" onclick="markEnRoute('${d._id}')">🚛 En Route</button>`
-            : `<button class="action-btn btn-delivered" onclick="startDeliveryPhoto('${d._id}')">📸 Delivered</button>`
-          }
-        </div>
-      `}
+      <div class="stop-body">
+        ${hasSource ? `<div class="stop-pickup">🏭 Pickup: ${isYardPickup ? 'Conroe Yard' : d.sourceName}${!isYardPickup && d.sourceAddress ? '<br><span style="font-size:13px;color:var(--text-dim);">' + d.sourceAddress + '</span>' : ''}</div>` : ''}
+        <div class="stop-address">📍 ${d.deliveryAddress || ''}${d.deliveryCity ? ', ' + d.deliveryCity : ''} ${d.deliveryZip || ''}</div>
+        ${d.timeWindow ? `<div class="stop-time">🕐 ${d.timeWindow}</div>` : ''}
+        ${d.deliveryNotes ? `<div class="stop-notes">⚠️ ${d.deliveryNotes}</div>` : ''}
+      </div>
+      <div class="stop-actions">
+        ${d.customerPhone ? `<button class="action-btn btn-call" onclick="callCustomer('${d.customerPhone}')">📞</button>` : ''}
+        ${!isEnRoute ? `
+          ${!isPickedUp ? `
+            <button class="action-btn btn-pickup" onclick="navigateToPickup('${d._id}', '${encodeURIComponent(isYardPickup ? '30.3119,-95.4561' : (d.sourceAddress || ''))}', ${isYardPickup})">🏭 Pickup</button>
+            <button class="action-btn btn-loaded" onclick="markLoaded('${d._id}')">✅ Loaded</button>
+          ` : `
+            <button class="action-btn btn-navigate" onclick="navigate('${encodeURIComponent(d.deliveryAddress + ', ' + (d.deliveryCity||'') + ' ' + (d.deliveryState||'TX') + ' ' + (d.deliveryZip||''))}', ${d.deliveryLat || 'null'}, ${d.deliveryLng || 'null'})">🧭 Deliver</button>
+            <button class="action-btn btn-enroute" onclick="markEnRoute('${d._id}')">🚛 En Route</button>
+          `}
+        ` : `
+          <button class="action-btn btn-navigate" onclick="navigate('${encodeURIComponent(d.deliveryAddress + ', ' + (d.deliveryCity||'') + ' ' + (d.deliveryState||'TX') + ' ' + (d.deliveryZip||''))}', ${d.deliveryLat || 'null'}, ${d.deliveryLng || 'null'})">🧭 Navigate</button>
+          <button class="action-btn btn-delivered" onclick="startDeliveryPhoto('${d._id}')">📸 Delivered</button>
+        `}
+      </div>
     </div>`;
   }).join('');
 }
 
 // ─── ACTIONS ─────────────────────────────────────
-function navigate(address) {
-  // Universal map link — works on iOS (Apple Maps) and Android (Google Maps)
-  const url = `https://maps.google.com/maps?daddr=${address}`;
+function navigate(address, lat, lng) {
+  let url;
+  if (lat && lng && lat !== 'null' && lng !== 'null') {
+    // Use coordinates for pin-dropped deliveries — more accurate
+    url = `https://maps.google.com/maps?daddr=${lat},${lng}`;
+  } else {
+    url = `https://maps.google.com/maps?daddr=${address}`;
+  }
   window.open(url, '_blank');
+}
+
+// ─── PICKUP NAVIGATION ────────────────────────────
+function navigateToPickup(deliveryId, sourceAddress, isYard) {
+  let url;
+  if (isYard) {
+    url = 'https://maps.google.com/maps?daddr=30.3119,-95.4561';
+  } else {
+    url = `https://maps.google.com/maps?daddr=${sourceAddress}`;
+  }
+  window.open(url, '_blank');
+}
+
+function markLoaded(deliveryId) {
+  if (!confirm('Confirm: Material loaded and ready for delivery?')) return;
+  pickupCompleted[deliveryId] = true;
+  toast('Material loaded! Navigate to delivery site.');
+  renderRoute();
 }
 
 function callCustomer(phone) {
