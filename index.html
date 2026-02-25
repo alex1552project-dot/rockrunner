@@ -1040,6 +1040,7 @@ function renderTruckRoutes() {
             ${!isManual ? '<span style="font-size:10px;color:#a78bfa;opacity:0.85;">↕ reassign</span>' : ''}
           </span>
         </div>
+        <button class="stop-edit-btn" onclick="event.stopPropagation();openEditDelivery('${d._id}')">✏️ Edit Delivery</button>
       </div>`;
     }).join('');
 
