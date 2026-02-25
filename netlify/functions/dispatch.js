@@ -180,8 +180,21 @@ exports.handler = async (event) => {
           return { statusCode: 400, headers, body: JSON.stringify({ error: 'date required for finalize' }) };
         }
 
-        // Find all UNASSIGNED deliveries that now have trucks assigned for this date
-        // (dispatcher already dragged them to trucks but hasn't finalized)
+        // Capture deliveries BEFORE flipping scheduleSmsSent — order matters
+        const alreadyNotified = await deliveries.countDocuments({
+          deliveryDate: date,
+          status: 'SCHEDULED',
+          scheduleSmsSent: true
+        });
+
+        const toNotify = await deliveries.find({
+          deliveryDate: date,
+          status: 'SCHEDULED',
+          scheduleSmsSent: false,
+          $or: [{ customerPhone: { $ne: '' } }, { customerEmail: { $ne: '' } }]
+        }).toArray();
+
+        // NOW flip scheduleSmsSent to true
         const result = await deliveries.updateMany(
           { deliveryDate: date, status: 'SCHEDULED', scheduleSmsSent: false },
           {
@@ -196,20 +209,6 @@ exports.handler = async (event) => {
             }
           }
         );
-
-        // Return the deliveries that need SMS (caller handles Brevo)
-        const alreadyNotified = await deliveries.countDocuments({
-          deliveryDate: date,
-          status: 'SCHEDULED',
-          scheduleSmsSent: true
-        });
-
-        const toNotify = await deliveries.find({
-          deliveryDate: date,
-          status: 'SCHEDULED',
-          scheduleSmsSent: false,
-          $or: [{ customerPhone: { $ne: '' } }, { customerEmail: { $ne: '' } }]
-        }).toArray();
 
         return {
           statusCode: 200,
