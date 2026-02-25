@@ -1733,7 +1733,7 @@ async function executeFinalizeAndNotify() {
     const finalData = await finalRes.json();
 
     // Step 2: Send notifications
-    let notified = 0;
+    let notifyData = null;
     if (finalData.toNotify && finalData.toNotify.length) {
       const notifyRes = await fetch(`${API}/notify`, {
         method: 'POST',
@@ -1743,8 +1743,7 @@ async function executeFinalizeAndNotify() {
           deliveries: finalData.toNotify
         })
       });
-      const notifyData = await notifyRes.json();
-      notified = (notifyData.smsSent || 0) + (notifyData.emailSent || 0);
+      notifyData = await notifyRes.json();
     }
 
     // Step 3: Alert owner (fire-and-forget)
@@ -1764,11 +1763,41 @@ async function executeFinalizeAndNotify() {
     const newCount = finalData.toNotify?.length || 0;
     const skippedCount = finalData.alreadyNotified || 0;
     const totalCount = newCount + skippedCount;
-    document.getElementById('finalizeBody').innerHTML = `
-      <div class="finalize-success">
-        <div class="check">✅</div>
-        <div class="msg">${newCount} new notification${newCount !== 1 ? 's' : ''} sent${skippedCount > 0 ? `<br><span style="font-size:13px;font-weight:400;color:var(--text-muted);">${skippedCount} previously notified (skipped) · ${totalCount} total scheduled</span>` : ''}</div>
+    const notifyResults = notifyData?.results || [];
+
+    let detailHtml = '';
+    (finalData.toNotify || []).forEach((del, i) => {
+      const r = notifyResults[i] || {};
+      const smsOk = r.sms?.success;
+      const emailOk = r.email?.success;
+      const hasPhone = del.customerPhone && del.customerPhone.trim();
+      const hasEmail = del.customerEmail && del.customerEmail.trim();
+      detailHtml += `<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.08);font-size:13px;">
+        <div style="font-weight:700;color:#fff;">${esc(del.customerName || 'Customer')}</div>
+        <div style="color:var(--text-muted);margin-top:2px;">${esc(del.materialName || '')} · ${del.quantity || '?'} tons</div>
+        <div style="margin-top:4px;">
+          ${hasPhone ? (smsOk ? '<span style="color:var(--green);">SMS ✓</span>' : '<span style="color:var(--red);">SMS ✗</span>') : '<span style="color:var(--text-muted);">SMS — no phone</span>'}
+          <span style="margin-left:12px;">${hasEmail ? (emailOk ? '<span style="color:var(--green);">Email ✓</span>' : '<span style="color:var(--red);">Email ✗</span>') : '<span style="color:var(--text-muted);">Email — no email</span>'}</span>
+        </div>
       </div>`;
+    });
+
+    const summaryLine = skippedCount > 0 || totalCount > 0
+      ? `<div style="font-size:13px;color:var(--text-muted);margin-top:8px;">${skippedCount} previously notified${newCount > 0 ? ' (skipped)' : ''} · ${totalCount} total scheduled</div>`
+      : '';
+
+    document.getElementById('finalizeBody').innerHTML = newCount > 0
+      ? `<div class="finalize-success">
+          <div class="check">✅</div>
+          <div class="msg">${newCount} new notification${newCount !== 1 ? 's' : ''} sent</div>
+          <div style="max-height:280px;overflow-y:auto;margin:12px 0;text-align:left;">${detailHtml}</div>
+          ${summaryLine}
+        </div>`
+      : `<div class="finalize-success">
+          <div class="check">✅</div>
+          <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px;">All customers already notified</div>
+          ${summaryLine}
+        </div>`;
     document.getElementById('finalizeFooter').innerHTML = `
       <button class="btn btn-primary" onclick="closeModal('finalizeModal')">Done</button>`;
 
