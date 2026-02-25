@@ -218,7 +218,8 @@ exports.handler = async (event) => {
               materialName: d.materialName,
               quantity: d.quantity,
               timeWindow: d.timeWindow,
-              deliveryDate: d.deliveryDate
+              deliveryDate: d.deliveryDate,
+              source: d.source
             }))
           })
         };
