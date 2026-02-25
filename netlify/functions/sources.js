@@ -49,6 +49,20 @@ exports.handler = async (event) => {
       };
     }
 
+    // ─── DELETE — remove a source ─────────────────────────
+    if (event.httpMethod === 'DELETE') {
+      const body = JSON.parse(event.body);
+      if (!body.name) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'name required' }) };
+      }
+      const result = await sources.deleteOne({ name: body.name });
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true, deleted: result.deletedCount })
+      };
+    }
+
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 
   } catch (err) {
