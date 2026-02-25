@@ -198,9 +198,16 @@ exports.handler = async (event) => {
         );
 
         // Return the deliveries that need SMS (caller handles Brevo)
+        const alreadyNotified = await deliveries.countDocuments({
+          deliveryDate: date,
+          status: 'SCHEDULED',
+          scheduleSmsSent: true
+        });
+
         const toNotify = await deliveries.find({
           deliveryDate: date,
           status: 'SCHEDULED',
+          scheduleSmsSent: false,
           $or: [{ customerPhone: { $ne: '' } }, { customerEmail: { $ne: '' } }]
         }).toArray();
 
@@ -210,6 +217,7 @@ exports.handler = async (event) => {
           body: JSON.stringify({
             success: true,
             finalized: result.modifiedCount,
+            alreadyNotified,
             toNotify: toNotify.map(d => ({
               id: d._id,
               customerName: d.customerName,

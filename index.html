@@ -1142,12 +1142,18 @@ function openAssignModal(deliveryId) {
 
   document.getElementById('assignBtn').disabled = true;
 
-  // Pre-select Rocky's suggested truck if this is a Rocky-tentative delivery
+  // Pre-select assignment: Rocky suggestion takes priority, then existing assignment
   const ra = rockyAssignments[deliveryId];
   if (ra) {
     const truckSel = document.getElementById('assignTruckSelect');
     truckSel.value = ra.truckId;
     onAssignTruckChange(truckSel);
+  } else if (d.truckId) {
+    sel.value = d.truckId;
+    onAssignTruckChange(sel);
+    if (d.driverId) {
+      document.getElementById('assignDriverSelect').value = d.driverId;
+    }
   }
 
   openModal('assignModal');
@@ -1755,10 +1761,13 @@ async function executeFinalizeAndNotify() {
     }).catch(err => console.error('Owner alert error:', err));
 
     // Show success state
+    const newCount = finalData.toNotify?.length || 0;
+    const skippedCount = finalData.alreadyNotified || 0;
+    const totalCount = newCount + skippedCount;
     document.getElementById('finalizeBody').innerHTML = `
       <div class="finalize-success">
         <div class="check">✅</div>
-        <div class="msg">${notified || finalData.finalized || 0} notification${notified === 1 ? '' : 's'} sent successfully</div>
+        <div class="msg">${newCount} new notification${newCount !== 1 ? 's' : ''} sent${skippedCount > 0 ? `<br><span style="font-size:13px;font-weight:400;color:var(--text-muted);">${skippedCount} previously notified (skipped) · ${totalCount} total scheduled</span>` : ''}</div>
       </div>`;
     document.getElementById('finalizeFooter').innerHTML = `
       <button class="btn btn-primary" onclick="closeModal('finalizeModal')">Done</button>`;
