@@ -708,7 +708,7 @@
       </div>
     </div>
     <div class="modal-footer" style="display:flex;gap:8px;justify-content:space-between;">
-      <button class="btn-cancel-delivery" id="editDelCancelBtn" onclick="cancelDelivery()">🗑 Cancel Delivery</button>
+      <button class="btn-cancel-delivery" id="editDelCancelBtn" onclick="cancelEditDelivery()">🗑 Cancel Delivery</button>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-secondary" onclick="closeEditDelivery()">Close</button>
         <button class="btn btn-primary" onclick="saveEditDelivery()">Save Changes</button>
@@ -1780,7 +1780,7 @@ async function saveEditDelivery() {
   } catch(e) { toast('Error saving changes', true); console.error(e); }
 }
 
-async function cancelDelivery() {
+async function cancelEditDelivery() {
   if (!editingDeliveryId) return;
 
   const reason = prompt('Reason for cancellation (optional):');
