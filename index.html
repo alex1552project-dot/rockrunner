@@ -1510,7 +1510,7 @@ function showDetail(deliveryId) {
       <button class="btn btn-outline btn-sm" onclick="openReschedule('${d._id}')">Reschedule</button>
       <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>
       <button class="btn btn-outline btn-sm" onclick="unassignDelivery('${d._id}')">Unassign</button>
-      <button class="btn btn-primary btn-sm" onclick="saveDetailDriver('${d._id}',${JSON.stringify(d.fulfillmentGroupId)})">Save Driver</button>`;
+      <button class="btn btn-primary btn-sm" onclick="saveDetailDriver('${d._id}')">Save Driver</button>`;
   } else if (d.status === 'EN_ROUTE') {
     footerHtml = `
       <button class="btn btn-outline btn-sm" onclick="openReschedule('${d._id}')">Reschedule</button>`;
@@ -1518,7 +1518,7 @@ function showDetail(deliveryId) {
     footerHtml = `
       <button class="btn btn-primary btn-sm" onclick="closeModal('detailModal');openAssignModal('${d._id}')">Assign</button>
       <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveDetailDriver('${d._id}',${JSON.stringify(d.fulfillmentGroupId)})">Save Driver</button>`;
+      <button class="btn btn-primary btn-sm" onclick="saveDetailDriver('${d._id}')">Save Driver</button>`;
   }
   footerHtml += `<button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>`;
   document.getElementById('detailFooter').innerHTML = footerHtml;
@@ -1630,10 +1630,13 @@ async function updateDetailDriver(deliveryId, selectEl, fulfillmentGroupId) {
 }
 
 // Called by "Save Driver" button in detail modal footer
-async function saveDetailDriver(deliveryId, fulfillmentGroupId) {
+async function saveDetailDriver(deliveryId) {
   const selectEl = document.getElementById('detailDriverSel');
   if (!selectEl) return;
+  const d = deliveries.find(del => del._id === deliveryId);
+  const fulfillmentGroupId = d ? (d.fulfillmentGroupId || null) : null;
   await updateDetailDriver(deliveryId, selectEl, fulfillmentGroupId);
+  closeModal('detailModal');
 }
 
 let reschedulingDeliveryId = null;
