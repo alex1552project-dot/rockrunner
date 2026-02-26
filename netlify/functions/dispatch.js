@@ -53,9 +53,12 @@ exports.handler = async (event) => {
       }
 
       // Status filter (single or comma-separated)
+      // Default: exclude CANCELLED unless caller explicitly requests a status filter
       if (p.status) {
         const statuses = p.status.split(',');
         query.status = statuses.length === 1 ? statuses[0] : { $in: statuses };
+      } else {
+        query.status = { $ne: 'CANCELLED' };
       }
 
       // Truck filter
