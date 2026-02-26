@@ -1444,13 +1444,40 @@ function showDetail(deliveryId) {
   const sc = statusClass(d.status);
   const statusColors = { UNASSIGNED:'#f97316', SCHEDULED:'#eab308', EN_ROUTE:'#22c55e', DELIVERED:'#3b82f6', CANCELLED:'#ef4444' };
   const isEditable = d.status === 'UNASSIGNED' || d.status === 'SCHEDULED';
+  const isMultiLoad = (d.totalLoads || 1) > 1;
 
+  // Convert ISO scheduledStartTime → HH:MM (local time) for <input type="time">
+  const isoToHHMM = iso => {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+  };
+
+  // Time field: start-time picker for multi-load, 2-hr window dropdown for single-load
+  const inputStyle = 'background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:6px;color:#fff;padding:4px 8px;font-size:13px;';
   const timeOptions = ['','6:00 AM - 8:00 AM','8:00 AM - 10:00 AM','10:00 AM - 12:00 PM','12:00 PM - 2:00 PM','2:00 PM - 4:00 PM'];
-  const timeHtml = isEditable
-    ? `<select onchange="updateTimeWindow('${d._id}', this.value)" style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:6px;color:#fff;padding:4px 8px;font-size:13px;">
-        ${timeOptions.map(tw => `<option value="${tw}" ${tw === (d.timeWindow||'') ? 'selected' : ''}>${tw || 'Not set'}</option>`).join('')}
+  const timeFieldLabel = isMultiLoad ? 'Start Time' : 'Time Window';
+  let timeHtml;
+  if (isMultiLoad) {
+    const curTime = isoToHHMM(d.scheduledStartTime);
+    timeHtml = isEditable
+      ? `<input type="time" value="${curTime}" onchange="updateDetailStartTime('${d._id}',this.value,${JSON.stringify(d.fulfillmentGroupId)},'${d.deliveryDate||''}',${d.estimatedRoundTripMin||60})" style="${inputStyle}">`
+      : `<span>${curTime || 'Not set'}</span>`;
+  } else {
+    timeHtml = isEditable
+      ? `<select onchange="updateTimeWindow('${d._id}', this.value)" style="${inputStyle}">
+          ${timeOptions.map(tw => `<option value="${tw}" ${tw === (d.timeWindow||'') ? 'selected' : ''}>${tw || 'Not set'}</option>`).join('')}
+         </select>`
+      : `<span>${d.timeWindow || 'Not set'}</span>`;
+  }
+
+  // Driver field: dropdown when editable, static text otherwise
+  const driverHtml = isEditable
+    ? `<select onchange="updateDetailDriver('${d._id}',this,${JSON.stringify(d.fulfillmentGroupId)})" style="${inputStyle}">
+        <option value="">No driver</option>
+        ${activeDrivers.map(dr => `<option value="${esc(dr.driverId)}" data-name="${esc(dr.name)}" ${dr.driverId === (d.driverId||'') ? 'selected' : ''}>${esc(dr.name)}</option>`).join('')}
        </select>`
-    : `<span>${d.timeWindow || 'Not set'}</span>`;
+    : esc(d.driverName || '—');
 
   document.getElementById('detailBody').innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
@@ -1466,12 +1493,12 @@ function showDetail(deliveryId) {
           ? `<input type="date" value="${d.deliveryDate || ''}" onchange="updateDeliveryDate('${d._id}', this.value)" style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:6px;color:#fff;padding:4px 8px;font-size:13px;width:100%;box-sizing:border-box;">`
           : (d.deliveryDate || '—')
       }</div></div>
-      <div class="detail-field"><label>Time Window</label><div class="val">${timeHtml}</div></div>
+      <div class="detail-field"><label>${timeFieldLabel}</label><div class="val">${timeHtml}</div></div>
       <div class="detail-field"><label>Material</label><div class="val">${esc(d.materialName || '—')}</div></div>
       <div class="detail-field"><label>Quantity</label><div class="val">${fmtQty(d)}</div></div>
       <div class="detail-field" style="grid-column:1/-1;"><label>Address</label><div class="val">${esc([d.deliveryAddress, d.deliveryCity, d.deliveryState, d.deliveryZip].filter(Boolean).join(', ') || '—')}</div></div>
       ${d.truckNumber ? `<div class="detail-field"><label>Truck</label><div class="val">${esc(d.truckNumber)}</div></div>` : ''}
-      ${d.driverName ? `<div class="detail-field"><label>Driver</label><div class="val">${esc(d.driverName)}</div></div>` : ''}
+      <div class="detail-field"><label>Driver</label><div class="val">${driverHtml}</div></div>
       ${d.deliveryNotes ? `<div class="detail-field" style="grid-column:1/-1;"><label>Notes</label><div class="val">${esc(d.deliveryNotes)}</div></div>` : ''}
     </div>
     ${d.deliveryPhoto ? `<div class="detail-photo"><img src="${d.deliveryPhoto}" alt="Delivery photo"></div>` : ''}`;
@@ -1545,6 +1572,59 @@ async function updateTimeWindow(deliveryId, timeWindow) {
     await loadDeliveries();
     render();
   } catch(e) { toast('Error updating time', true); console.error(e); }
+}
+
+// Update staggered start time for multi-load (or single scheduledStartTime)
+async function updateDetailStartTime(deliveryId, timeVal, fulfillmentGroupId, deliveryDate, rtMin) {
+  if (!timeVal) return;
+  try {
+    const rtm = parseInt(rtMin) || 60;
+    const date = deliveryDate || new Date().toISOString().split('T')[0];
+    if (fulfillmentGroupId) {
+      const siblings = deliveries
+        .filter(del => del.fulfillmentGroupId === fulfillmentGroupId)
+        .sort((a, b) => (a.loadNumber || 1) - (b.loadNumber || 1));
+      let t = new Date(`${date}T${timeVal}:00`);
+      for (const sib of siblings) {
+        await fetch(`${API}/dispatch`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: sib._id, scheduledStartTime: t.toISOString(), updatedBy: 'dispatcher' })
+        });
+        t = new Date(t.getTime() + rtm * 60000);
+      }
+    } else {
+      await fetch(`${API}/dispatch`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deliveryId, scheduledStartTime: new Date(`${date}T${timeVal}:00`).toISOString(), updatedBy: 'dispatcher' })
+      });
+    }
+    toast('Start time updated');
+    await loadDeliveries();
+    render();
+  } catch(e) { toast('Error updating start time', true); console.error(e); }
+}
+
+// Update driver assignment from detail modal (all loads in group for multi-load)
+async function updateDetailDriver(deliveryId, selectEl, fulfillmentGroupId) {
+  const driverId = selectEl.value || null;
+  const driverName = driverId ? selectEl.options[selectEl.selectedIndex].dataset.name : null;
+  try {
+    const ids = fulfillmentGroupId
+      ? deliveries.filter(del => del.fulfillmentGroupId === fulfillmentGroupId).map(del => del._id)
+      : [deliveryId];
+    for (const id of ids) {
+      await fetch(`${API}/dispatch`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, driverId, driverName, updatedBy: 'dispatcher' })
+      });
+    }
+    toast(driverName ? `Driver set: ${driverName}` : 'Driver removed');
+    await loadDeliveries();
+    render();
+  } catch(e) { toast('Error updating driver', true); console.error(e); }
 }
 
 let reschedulingDeliveryId = null;
