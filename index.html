@@ -639,6 +639,24 @@
   </div>
 </div>
 
+<!-- ─── CANCEL CONFIRM MODAL ──────────────────────────── -->
+<div class="modal-overlay" id="cancelConfirmModal">
+  <div class="modal modal-sm">
+    <div class="modal-header" style="border-bottom:1px solid rgba(239,68,68,0.3);">
+      <h3 style="color:#f87171;">⚠️ Cancel Order</h3>
+      <button class="modal-close" onclick="closeModal('cancelConfirmModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="cancelConfirmMsg" style="font-size:14px;line-height:1.6;margin-bottom:8px;"></p>
+      <p style="font-size:13px;color:rgba(255,255,255,0.5);">This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="confirmCancelDelivery()">Yes, Cancel Order</button>
+      <button class="btn btn-outline" onclick="closeModal('cancelConfirmModal')">No, Keep It</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── RESCHEDULE MODAL ─────────────────────────────── -->
 <div class="modal-overlay" id="rescheduleModal">
   <div class="modal modal-sm">
@@ -1530,15 +1548,48 @@ function showDetail(deliveryId) {
 // ═══════════════════════════════════════════════════════
 // DELIVERY ACTIONS
 // ═══════════════════════════════════════════════════════
-async function cancelDelivery(id) {
-  if (!confirm('Cancel this delivery?')) return;
+let cancellingDeliveryId = null;
+
+function cancelDelivery(id) {
+  cancellingDeliveryId = id;
+  const d = deliveries.find(del => del._id === id);
+  const loads = d && d.fulfillmentGroupId ? (d.totalLoads || 1) : 1;
+  const customer = d ? (d.customerName || 'this order') : 'this order';
+  const msg = loads > 1
+    ? `Are you sure you want to cancel the entire order for <strong>${customer}</strong>? All <strong>${loads} loads</strong> will be cancelled.`
+    : `Are you sure you want to cancel the order for <strong>${customer}</strong>?`;
+  document.getElementById('cancelConfirmMsg').innerHTML = msg;
+  closeModal('detailModal');
+  openModal('cancelConfirmModal');
+}
+
+async function confirmCancelDelivery() {
+  if (!cancellingDeliveryId) return;
+  const d = deliveries.find(del => del._id === cancellingDeliveryId);
+
+  // Fetch all sibling loads from server (covers loads split across dates)
+  let ids;
+  if (d && d.fulfillmentGroupId) {
+    try {
+      const r = await fetch(`${API}/dispatch?fulfillmentGroupId=${encodeURIComponent(d.fulfillmentGroupId)}`);
+      const data = await r.json();
+      ids = (data.deliveries || []).map(del => del._id);
+    } catch(e) { ids = [cancellingDeliveryId]; }
+  } else {
+    ids = [cancellingDeliveryId];
+  }
+
   try {
-    await fetch(`${API}/dispatch?id=${id}&by=dispatcher`, { method: 'DELETE' });
-    toast('Delivery cancelled');
-    closeModal('detailModal');
+    for (const id of ids) {
+      await fetch(`${API}/dispatch?id=${id}&by=dispatcher`, { method: 'DELETE' });
+    }
+    const label = ids.length > 1 ? `${ids.length} loads cancelled` : 'Order cancelled';
+    toast(label);
+    closeModal('cancelConfirmModal');
+    cancellingDeliveryId = null;
     await loadDeliveries();
     render();
-  } catch(e) { toast('Error cancelling', true); console.error(e); }
+  } catch(e) { toast('Error cancelling order', true); console.error(e); }
 }
 
 async function unassignDelivery(id) {
