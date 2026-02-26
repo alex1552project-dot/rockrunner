@@ -67,6 +67,9 @@ exports.handler = async (event) => {
       // Source filter
       if (p.source) query.source = p.source;
 
+      // Fulfillment group (fetch all loads for a multi-load order regardless of date)
+      if (p.fulfillmentGroupId) query.fulfillmentGroupId = p.fulfillmentGroupId;
+
       const results = await deliveries
         .find(query)
         .sort({ deliveryDate: 1, timeWindow: 1, stopOrder: 1 })

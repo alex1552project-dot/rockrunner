@@ -1658,10 +1658,22 @@ async function confirmReschedule() {
   if (!newDate || !reschedulingDeliveryId) return;
 
   const d = deliveries.find(del => del._id === reschedulingDeliveryId);
-  const siblings = (d && d.fulfillmentGroupId)
-    ? deliveries.filter(del => del.fulfillmentGroupId === d.fulfillmentGroupId)
-                .sort((a, b) => (a.loadNumber || 1) - (b.loadNumber || 1))
-    : [d].filter(Boolean);
+
+  // Fetch all siblings from server by fulfillmentGroupId — covers loads split across dates
+  let siblings;
+  if (d && d.fulfillmentGroupId) {
+    try {
+      const r = await fetch(`${API}/dispatch?fulfillmentGroupId=${encodeURIComponent(d.fulfillmentGroupId)}`);
+      const data = await r.json();
+      siblings = (data.deliveries || []).sort((a, b) => (a.loadNumber || 1) - (b.loadNumber || 1));
+    } catch(e) {
+      siblings = d ? [d] : [];
+    }
+  } else {
+    siblings = d ? [d] : [];
+  }
+
+  if (!siblings.length) { toast('Could not find order to reschedule', true); return; }
 
   try {
     for (const sib of siblings) {
