@@ -1656,7 +1656,35 @@ function openReschedule(deliveryId) {
 async function confirmReschedule() {
   const newDate = document.getElementById('rescheduleDate').value;
   if (!newDate || !reschedulingDeliveryId) return;
-  await updateDeliveryDate(reschedulingDeliveryId, newDate, true);
+
+  const d = deliveries.find(del => del._id === reschedulingDeliveryId);
+  const siblings = (d && d.fulfillmentGroupId)
+    ? deliveries.filter(del => del.fulfillmentGroupId === d.fulfillmentGroupId)
+                .sort((a, b) => (a.loadNumber || 1) - (b.loadNumber || 1))
+    : [d].filter(Boolean);
+
+  try {
+    for (const sib of siblings) {
+      const payload = { id: sib._id, deliveryDate: newDate, status: 'SCHEDULED', updatedBy: 'dispatcher' };
+      // Rebase scheduledStartTime to the new date, preserving the original time-of-day
+      if (sib.scheduledStartTime) {
+        const orig = new Date(sib.scheduledStartTime);
+        const hh = String(orig.getHours()).padStart(2, '0');
+        const mm = String(orig.getMinutes()).padStart(2, '0');
+        payload.scheduledStartTime = new Date(`${newDate}T${hh}:${mm}:00`).toISOString();
+      }
+      await fetch(`${API}/dispatch`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+    const label = siblings.length > 1 ? `${siblings.length} loads` : 'Delivery';
+    toast(`${label} moved to ${newDate}`);
+    await loadDeliveries();
+    render();
+  } catch(e) { toast('Error rescheduling', true); console.error(e); }
+
   reschedulingDeliveryId = null;
   closeModal('rescheduleModal');
 }
