@@ -751,7 +751,14 @@ function renderRoute() {
       </div>`;
     }
 
+    const multiLoadHeader = (d.totalLoads > 1)
+      ? `<div style="background:rgba(234,179,8,0.12);border-bottom:1px solid rgba(234,179,8,0.2);padding:8px 18px;font-size:13px;font-weight:700;color:#eab308;">
+          ${d.materialName} → ${d.customerName || 'Customer'} &nbsp;·&nbsp; Load ${d.loadNumber} of ${d.totalLoads} &nbsp;·&nbsp; ${d.quantity}t this load
+        </div>`
+      : '';
+
     return `<div class="stop-card ${isEnRoute ? 'enroute' : ''}">
+      ${multiLoadHeader}
       <div class="stop-header">
         <div class="stop-number ${isEnRoute ? 'active' : ''}">${stopNum}</div>
         <div class="stop-info">
@@ -954,7 +961,14 @@ async function confirmDelivery() {
         }).catch(err => console.error('Review request error:', err));
       }, 5 * 60 * 1000);
 
-      toast('Delivery confirmed! Customer notified.');
+      // Check for next load in a multi-load fulfillment group (3G)
+      const confirmedDelivery = myDeliveries.find(d => d._id === confirmedDeliveryId);
+      if (confirmedDelivery && confirmedDelivery.totalLoads > 1 && confirmedDelivery.loadNumber < confirmedDelivery.totalLoads) {
+        const nextNum = confirmedDelivery.loadNumber + 1;
+        toast(`Load ${confirmedDelivery.loadNumber} of ${confirmedDelivery.totalLoads} complete ✅ — Starting Load ${nextNum}`);
+      } else {
+        toast('Delivery confirmed! Customer notified.');
+      }
       closePhoto();
       await loadMyRoute();
     }

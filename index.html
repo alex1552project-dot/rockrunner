@@ -470,6 +470,13 @@
           <option value="">No driver</option>
         </select>
       </div>
+      <div id="assignMultiLoadPreview" style="display:none;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:12px;margin-top:4px;">
+        <div id="assignMultiLoadContent"></div>
+        <div style="margin-top:8px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Start Time</label>
+          <input type="time" id="assignStartTime" value="07:00" style="width:100%;padding:9px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:7px;color:#fff;font-size:13px;">
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('assignModal')">Cancel</button>
@@ -611,10 +618,23 @@
         <label>Notes</label>
         <input type="text" id="delNotes" placeholder="Gate code, special instructions...">
       </div>
+      <div class="form-row" id="delTruckRow">
+        <label>Assign to Truck <span style="font-weight:400;color:var(--text-muted);">(optional — required for multi-load)</span></label>
+        <select id="delTruck" onchange="onDelTruckChange()">
+          <option value="">Unassigned</option>
+        </select>
+      </div>
+      <div id="multiLoadPreview" style="display:none;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:14px;margin-top:2px;">
+        <div id="multiLoadContent"></div>
+        <div style="margin-top:10px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Start Time</label>
+          <input type="time" id="delStartTime" value="07:00" style="width:100%;padding:9px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:7px;color:#fff;font-size:13px;">
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('deliveryModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveDelivery()">Add Delivery</button>
+      <button class="btn btn-primary" id="saveDeliveryBtn" onclick="saveDelivery()">Add Delivery</button>
     </div>
   </div>
 </div>
@@ -999,8 +1019,42 @@ function renderTruckRoutes() {
     const totalStops = dbDels.length + rockyDelsForTruck.length;
     if (totalStops > 0) activeTruckCount++;
 
-    // DB stop cards
+    // DB stop cards — group multi-load orders by fulfillmentGroupId (3F)
+    const seenGroups = new Set();
     const dbCards = dbDels.map((d, i) => {
+      // Multi-load grouped card
+      if (d.fulfillmentGroupId && d.totalLoads > 1) {
+        if (seenGroups.has(d.fulfillmentGroupId)) return ''; // already rendered
+        seenGroups.add(d.fulfillmentGroupId);
+        const groupLoads = dbDels.filter(del => del.fulfillmentGroupId === d.fulfillmentGroupId)
+          .sort((a, b) => a.loadNumber - b.loadNumber);
+        const deliveredTons = groupLoads.filter(l => l.status === 'DELIVERED').reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0);
+        const totalTons = d.totalTons || groupLoads.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0);
+        const pctDone = totalTons ? Math.round((deliveredTons / totalTons) * 100) : 0;
+        const statusIcon = s => s === 'DELIVERED' ? '✅' : s === 'EN_ROUTE' ? '🚛' : '⏳';
+        const loadsHtml = groupLoads.map(l =>
+          `<div style="font-size:12px;margin-top:3px;">
+            ${statusIcon(l.status)} Load ${l.loadNumber}: ${l.quantity}t
+            <span style="color:var(--text-muted);"> — ${l.status.replace('_',' ')}</span>
+          </div>`
+        ).join('');
+        const progressBar = `<div style="background:rgba(255,255,255,0.1);border-radius:4px;height:6px;margin-top:8px;">
+          <div style="background:var(--green);width:${pctDone}%;height:100%;border-radius:4px;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${deliveredTons.toFixed(1)} / ${totalTons.toFixed(1)} tons delivered</div>`;
+        return `<div class="delivery-card" onclick="showDetail('${d._id}')">
+          <span class="truck-stop-num">${i + 1}</span>
+          <div class="card-top">
+            <span class="card-customer">${esc(d.customerName || 'Unknown')}</span>
+            <span class="card-status-badge" style="background:rgba(234,179,8,0.2);color:#eab308;">${d.totalLoads} loads</span>
+          </div>
+          <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${totalTons.toFixed(1)}T total</div>
+          ${loadsHtml}
+          ${progressBar}
+          <button class="stop-edit-btn" onclick="event.stopPropagation();showDetail('${d._id}')">📋 Order Detail</button>
+        </div>`;
+      }
+      // Single-load card (existing behavior)
       const sc = statusClass(d.status);
       const clickFn = (d.status === 'SCHEDULED' || d.status === 'UNASSIGNED') ? `openAssignModal('${d._id}')` : `showDetail('${d._id}')`;
       return `<div class="delivery-card ${sc}" onclick="${clickFn}">
@@ -1175,8 +1229,29 @@ function onAssignTruckChange(sel) {
   if (truckId) {
     const truck = trucks.find(t => (t._id?.toString() || t._id) === truckId);
     dSel.value = truck?.defaultDriver?.id || '';
+
+    // Multi-load preview for assign modal (3D)
+    const d = deliveries.find(del => del._id === assigningDeliveryId);
+    const preview = document.getElementById('assignMultiLoadPreview');
+    if (d && truck) {
+      const cap = truck.capacity || 24;
+      const { totalLoads, loads } = calcLoads(parseFloat(d.quantity) || 0, cap);
+      if (totalLoads > 1) {
+        document.getElementById('assignMultiLoadContent').innerHTML = `
+          <div style="font-size:13px;font-weight:700;color:#eab308;margin-bottom:6px;">⚠ ${totalLoads} loads required for this truck:</div>
+          ${loads.map(l => `<div style="font-size:12px;color:rgba(255,255,255,0.85);">Load ${l.loadNumber}: ${l.quantity}t</div>`).join('')}
+        `;
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    } else {
+      if (preview) preview.style.display = 'none';
+    }
   } else {
     dSel.value = '';
+    const preview = document.getElementById('assignMultiLoadPreview');
+    if (preview) preview.style.display = 'none';
   }
 }
 
@@ -1237,6 +1312,76 @@ async function confirmAssign() {
     });
     const data = await r.json();
     if (data.success) {
+      // Check if this needs multi-load expansion (3D)
+      const d = deliveries.find(del => del._id === assigningDeliveryId);
+      const truck = trucks.find(t => (t._id?.toString() || t._id) === truckId);
+      if (d && truck) {
+        const cap = truck.capacity || 24;
+        const { totalLoads, loads } = calcLoads(parseFloat(d.quantity) || 0, cap);
+        if (totalLoads > 1) {
+          const { randomUUID } = { randomUUID: () => `${Date.now()}-${Math.random().toString(36).slice(2)}` };
+          const fulfillmentGroupId = randomUUID();
+          const startVal = document.getElementById('assignStartTime').value || '07:00';
+          const dateStr2 = formatDateISO(currentDate);
+          // Update Load 1 (original doc) with multi-load fields
+          await fetch(`${API}/dispatch`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: assigningDeliveryId,
+              fulfillmentGroupId,
+              loadNumber: 1,
+              totalLoads,
+              totalTons: parseFloat(d.quantity) || 0,
+              scheduledStartTime: new Date(`${dateStr2}T${startVal}:00`).toISOString(),
+              estimatedRoundTripMin: 60,
+              updatedBy: 'dispatcher'
+            })
+          });
+          // Create loads 2..N
+          const remainingLoads = loads.slice(1).map((l, idx) => {
+            const base = new Date(`${dateStr2}T${startVal}:00`);
+            base.setMinutes(base.getMinutes() + (idx + 1) * 60);
+            return { ...l, scheduledStartTime: base.toISOString() };
+          });
+          await fetch(`${API}/dispatch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'multi_load',
+              source: d.source,
+              customerName: d.customerName,
+              customerPhone: d.customerPhone || '',
+              customerEmail: d.customerEmail || '',
+              deliveryAddress: d.deliveryAddress || '',
+              deliveryCity: d.deliveryCity || '',
+              deliveryZip: d.deliveryZip || '',
+              deliveryLat: d.deliveryLat || null,
+              deliveryLng: d.deliveryLng || null,
+              productId: d.productId || null,
+              materialName: d.materialName,
+              deliveryDate: dateStr2,
+              timeWindow,
+              deliveryNotes: d.deliveryNotes || '',
+              sourceName: d.sourceName || null,
+              sourceAddress: d.sourceAddress || null,
+              truckId, truckNumber, driverId, driverName,
+              fulfillmentGroupId,
+              totalTons: parseFloat(d.quantity) || 0,
+              loads: remainingLoads,
+              stopOrder: existingStops.length + 2,
+              estimatedRoundTripMin: 60,
+              createdBy: 'dispatcher'
+            })
+          });
+          toast(`${totalLoads} loads assigned to ${truckNumber}`);
+          closeModal('assignModal');
+          assigningDeliveryId = null;
+          await loadDeliveries();
+          render();
+          return;
+        }
+      }
       toast(`Assigned to ${truckNumber}`);
       closeModal('assignModal');
       assigningDeliveryId = null;
@@ -1551,7 +1696,110 @@ function openAddDelivery() {
   // Populate datalist from saved sources
   const dl = document.getElementById('originSuggestions');
   dl.innerHTML = Object.keys(knownOrigins).map(n => `<option value="${esc(n)}">`).join('');
+  // Populate truck dropdown for multi-load
+  const truckSel = document.getElementById('delTruck');
+  truckSel.innerHTML = '<option value="">Unassigned</option>';
+  trucks.forEach(truck => {
+    const tid = truck._id?.toString() || truck._id;
+    const opt = document.createElement('option');
+    opt.value = tid;
+    opt.dataset.capacity = truck.capacity || 24;
+    opt.dataset.truckNumber = truck.truckNumber;
+    opt.textContent = `${truck.truckNumber} (${truck.capacity || 24}T cap)`;
+    truckSel.appendChild(opt);
+  });
+  // Reset multi-load state
+  document.getElementById('multiLoadPreview').style.display = 'none';
+  document.getElementById('saveDeliveryBtn').textContent = 'Add Delivery';
+  multiLoadEstRTMin = 60;
   openModal('deliveryModal');
+}
+
+// ═══════════════════════════════════════════════════════
+// MULTI-LOAD CALCULATION (3B/3C/3D)
+// ═══════════════════════════════════════════════════════
+let multiLoadEstRTMin = 60; // default round-trip; updated by async ETA fetch
+
+function calcLoads(totalTons, cap) {
+  const n = Math.ceil(totalTons / cap);
+  const loads = []; let rem = parseFloat(totalTons.toFixed(2));
+  for (let i = 1; i <= n; i++) {
+    const t = parseFloat(Math.min(rem, cap).toFixed(2));
+    loads.push({ loadNumber: i, quantity: t });
+    rem = parseFloat((rem - t).toFixed(2));
+  }
+  return { totalLoads: n, loads };
+}
+
+function onDelTruckChange() {
+  const truckId = document.getElementById('delTruck').value;
+  const qty = parseFloat(document.getElementById('delQty').value);
+  updateDelMultiLoadPreview(truckId, qty);
+}
+
+function updateDelMultiLoadPreview(truckId, qty) {
+  const preview = document.getElementById('multiLoadPreview');
+  const btn = document.getElementById('saveDeliveryBtn');
+  if (!truckId || !qty || isNaN(qty)) {
+    preview.style.display = 'none';
+    btn.textContent = 'Add Delivery';
+    return;
+  }
+  const truck = trucks.find(t => (t._id?.toString() || t._id) === truckId);
+  if (!truck) return;
+
+  // Convert CYD → tons if needed
+  let quantityTons = qty;
+  if (delQtyUnit === 'cyd') {
+    const materialSel = document.getElementById('delMaterial');
+    let weight = 1.4;
+    if (materialSel.value && materialSel.value !== '__custom__') {
+      weight = parseFloat(materialSel.options[materialSel.selectedIndex].dataset.weight) || 1.4;
+    }
+    quantityTons = qty * weight;
+  }
+
+  const cap = truck.capacity || 24;
+  const { totalLoads, loads } = calcLoads(quantityTons, cap);
+  if (totalLoads <= 1) {
+    preview.style.display = 'none';
+    btn.textContent = 'Add Delivery';
+    return;
+  }
+
+  const estTotalMin = totalLoads * multiLoadEstRTMin;
+  const estHr = Math.floor(estTotalMin / 60);
+  const estMin = estTotalMin % 60;
+  const estStr = estHr > 0 ? `~${estHr}h ${estMin}m total` : `~${estMin}m total`;
+
+  document.getElementById('multiLoadContent').innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:#eab308;margin-bottom:6px;">⚠ This order requires ${totalLoads} loads:</div>
+    ${loads.map(l => `<div style="font-size:13px;color:rgba(255,255,255,0.85);">Load ${l.loadNumber}: ${l.quantity}t</div>`).join('')}
+    <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Est. round-trip: ~${multiLoadEstRTMin} min · ${estStr}</div>
+  `;
+  preview.style.display = 'block';
+  btn.textContent = 'Confirm & Schedule';
+
+  // Async ETA fetch for accurate estimate
+  const origin = document.getElementById('delOriginAddr').value.trim() || '30.3119,-95.4561';
+  const addr = [
+    document.getElementById('delAddress').value.trim(),
+    document.getElementById('delCity').value.trim(),
+    'TX',
+    document.getElementById('delZip').value.trim()
+  ].filter(Boolean).join(', ');
+  if (addr.length > 5) {
+    fetch(`${API}/calculate-loads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ totalTons: quantityTons, truckCapacity: cap, origin, destination: addr })
+    }).then(r => r.json()).then(d => {
+      if (d.estimatedRoundTripMin) {
+        multiLoadEstRTMin = d.estimatedRoundTripMin;
+        updateDelMultiLoadPreview(truckId, qty); // re-render with actual ETA
+      }
+    }).catch(() => {});
+  }
 }
 
 function onOriginInput(value) {
@@ -1671,32 +1919,69 @@ async function saveDelivery() {
     quantityTons = Math.round(qty * weight * 100) / 100;
   }
 
+  // Determine truck assignment and multi-load breakdown
+  const delTruckSel = document.getElementById('delTruck');
+  const delTruckId = delTruckSel.value || null;
+  const delTruck = delTruckId ? trucks.find(t => (t._id?.toString() || t._id) === delTruckId) : null;
+  const delTruckCap = delTruck?.capacity || 24;
+  const delTruckNumber = delTruck?.truckNumber || null;
+  const { totalLoads, loads } = delTruckId ? calcLoads(quantityTons, delTruckCap) : { totalLoads: 1, loads: [{ loadNumber: 1, quantity: quantityTons }] };
+
+  // Base payload shared by single and multi-load paths
+  const basePayload = {
+    source: document.getElementById('delSource').value,
+    customerName: customer,
+    customerPhone: document.getElementById('delPhone').value.trim(),
+    customerEmail: document.getElementById('delEmail').value.trim(),
+    deliveryAddress: document.getElementById('delAddress').value.trim(),
+    deliveryCity: document.getElementById('delCity').value.trim(),
+    deliveryZip: document.getElementById('delZip').value.trim(),
+    productId: isCustom ? null : materialSel.value,
+    materialName,
+    deliveryDate: date,
+    timeWindow: document.getElementById('delTime').value || null,
+    deliveryNotes: document.getElementById('delNotes').value.trim(),
+    sourceName: document.getElementById('delOrigin').value.trim() || null,
+    sourceAddress: document.getElementById('delOriginAddr').value.trim() || null,
+    poNumber: document.getElementById('delPO').value.trim() || null,
+    deliveryLat: deliveryPinLat || null,
+    deliveryLng: deliveryPinLng || null,
+    truckId: delTruckId,
+    truckNumber: delTruckNumber,
+    createdBy: 'dispatcher'
+  };
+
+  // Stagger start times for multi-load
+  const startTimeVal = document.getElementById('delStartTime').value || '07:00';
+  const staggeredLoads = loads.map((l, idx) => {
+    const offsetMin = idx * multiLoadEstRTMin;
+    const base = new Date(`${date}T${startTimeVal}:00`);
+    base.setMinutes(base.getMinutes() + offsetMin);
+    return { ...l, scheduledStartTime: base.toISOString() };
+  });
+
   try {
-    const r = await fetch(`${API}/dispatch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        source: document.getElementById('delSource').value,
-        customerName: customer,
-        customerPhone: document.getElementById('delPhone').value.trim(),
-        customerEmail: document.getElementById('delEmail').value.trim(),
-        deliveryAddress: document.getElementById('delAddress').value.trim(),
-        deliveryCity: document.getElementById('delCity').value.trim(),
-        deliveryZip: document.getElementById('delZip').value.trim(),
-        productId: isCustom ? null : materialSel.value,
-        materialName,
-        quantity: quantityTons,
-        deliveryDate: date,
-        timeWindow: document.getElementById('delTime').value || null,
-        deliveryNotes: document.getElementById('delNotes').value.trim(),
-        sourceName: document.getElementById('delOrigin').value.trim() || null,
-        sourceAddress: document.getElementById('delOriginAddr').value.trim() || null,
-        poNumber: document.getElementById('delPO').value.trim() || null,
-        deliveryLat: deliveryPinLat || null,
-        deliveryLng: deliveryPinLng || null,
-        createdBy: 'dispatcher'
-      })
-    });
+    let r;
+    if (totalLoads > 1) {
+      r = await fetch(`${API}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'multi_load',
+          ...basePayload,
+          quantity: quantityTons,
+          totalTons: quantityTons,
+          loads: staggeredLoads,
+          estimatedRoundTripMin: multiLoadEstRTMin
+        })
+      });
+    } else {
+      r = await fetch(`${API}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...basePayload, quantity: quantityTons })
+      });
+    }
     const data = await r.json();
     if (data.success) {
       const sourceName = document.getElementById('delOrigin').value.trim();
@@ -1710,7 +1995,7 @@ async function saveDelivery() {
           body: JSON.stringify({ name: sourceName, address: sourceAddress })
         }).catch(() => {});
       }
-      toast('Delivery added');
+      toast(totalLoads > 1 ? `${totalLoads} loads scheduled` : 'Delivery added');
       closeModal('deliveryModal');
       // Reset unit toggle
       delQtyUnit = 'tons';

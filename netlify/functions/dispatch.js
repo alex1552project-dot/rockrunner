@@ -83,6 +83,86 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body);
 
+      // ── Multi-load batch creation (3E) ──────────────────────
+      // Creates N linked delivery documents for a single customer order
+      // that exceeds truck capacity. The caller supplies the load breakdown.
+      if (body.action === 'multi_load') {
+        const { randomUUID } = require('crypto');
+        const fulfillmentGroupId = body.fulfillmentGroupId || randomUUID();
+        const loads = body.loads || [];
+        const totalLoads = loads.length;
+        const totalTons = parseFloat(body.totalTons) || parseFloat(body.quantity) || 0;
+
+        const docs = loads.map(load => ({
+          source: body.source || 'Yard Sale',
+          orderId: body.orderId || null,
+          customerName: body.customerName,
+          customerPhone: body.customerPhone || '',
+          customerEmail: body.customerEmail || '',
+          deliveryAddress: body.deliveryAddress || '',
+          deliveryCity: body.deliveryCity || '',
+          deliveryState: body.deliveryState || 'TX',
+          deliveryZip: body.deliveryZip || '',
+          deliveryLat: body.deliveryLat || null,
+          deliveryLng: body.deliveryLng || null,
+          productId: body.productId || null,
+          materialName: body.materialName,
+          quantity: load.quantity,
+          unit: body.unit || 'tons',
+          deliveryDate: body.deliveryDate,
+          timeWindow: body.timeWindow || null,
+          hour: body.hour || null,
+          truckId: body.truckId || null,
+          truckNumber: body.truckNumber || null,
+          driverId: body.driverId || null,
+          driverName: body.driverName || null,
+          stopOrder: body.stopOrder != null ? body.stopOrder + load.loadNumber - 1 : null,
+          status: body.truckId ? 'SCHEDULED' : 'UNASSIGNED',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          scheduledAt: body.truckId ? new Date() : null,
+          enRouteAt: null,
+          deliveredAt: null,
+          cancelledAt: null,
+          sourceName: body.sourceName || null,
+          sourceAddress: body.sourceAddress || null,
+          deliveryPhoto: null,
+          proofPhotos: [],
+          deliveryNotes: body.deliveryNotes || '',
+          fulfillmentGroupId,
+          loadNumber: load.loadNumber,
+          totalLoads,
+          totalTons,
+          scheduledStartTime: load.scheduledStartTime || null,
+          estimatedRoundTripMin: body.estimatedRoundTripMin || null,
+          scheduleSmsSent: false,
+          scheduleEmailSent: false,
+          enRouteSmsSent: false,
+          enRouteEmailSent: false,
+          deliveredSmsSent: false,
+          deliveredEmailSent: false,
+          statusHistory: [{
+            status: body.truckId ? 'SCHEDULED' : 'UNASSIGNED',
+            timestamp: new Date(),
+            updatedBy: body.createdBy || 'system',
+            notes: `Multi-load order — Load ${load.loadNumber} of ${totalLoads}`
+          }],
+          createdBy: body.createdBy || 'system'
+        }));
+
+        const result = await deliveries.insertMany(docs);
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            fulfillmentGroupId,
+            insertedCount: result.insertedCount,
+            ids: Object.values(result.insertedIds).map(id => id.toString())
+          })
+        };
+      }
+
       const newDelivery = {
         // Order info
         source: body.source || 'Yard Sale',         // "Texas Got Rocks", "Yard Sale", "T&C Materials"
@@ -134,8 +214,17 @@ exports.handler = async (event) => {
         sourceName: body.sourceName || null,
         sourceAddress: body.sourceAddress || null,
 
+        // Multi-load fulfillment (null on single-load orders)
+        fulfillmentGroupId: body.fulfillmentGroupId || null,
+        loadNumber: body.loadNumber || 1,
+        totalLoads: body.totalLoads || 1,
+        totalTons: body.totalTons || (parseFloat(body.quantity) || 0),
+        scheduledStartTime: body.scheduledStartTime || null,
+        estimatedRoundTripMin: body.estimatedRoundTripMin || null,
+
         // Proof of delivery
         deliveryPhoto: null,
+        proofPhotos: [],
         deliveryNotes: body.deliveryNotes || '',
         
         // Notifications

@@ -407,7 +407,24 @@ exports.handler = async (event) => {
       }
 
       const brand = getBrand(delivery);
-      const smsMessage = `Thank you! Your ${delivery.materialName || 'material'} has been delivered. We appreciate your business! — ${brand.name}`;
+
+      // Multi-load aware SMS (3I)
+      const isMultiLoad = (delivery.totalLoads || 1) > 1;
+      const loadNum = delivery.loadNumber || 1;
+      const totalLoads = delivery.totalLoads || 1;
+      const totalTons = delivery.totalTons || delivery.quantity || 0;
+
+      let smsMessage;
+      if (!isMultiLoad) {
+        smsMessage = `Thank you! Your ${delivery.materialName || 'material'} has been delivered. We appreciate your business! — ${brand.name}`;
+      } else if (loadNum < totalLoads) {
+        // Calculate delivered so far (this load + previous)
+        const deliveredSoFar = ((delivery.quantity || 0) * loadNum).toFixed(1);
+        smsMessage = `Your ${brand.name} delivery is in progress! Load ${loadNum} of ${totalLoads} delivered (${deliveredSoFar} of ${totalTons} tons). Next load is on its way shortly.`;
+      } else {
+        // Final load
+        smsMessage = `Your full order of ${totalTons} tons of ${delivery.materialName || 'material'} has been delivered! Thank you for choosing ${brand.name}.`;
+      }
 
       let smsResult = null;
       let emailResult = null;

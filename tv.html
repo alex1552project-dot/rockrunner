@@ -436,7 +436,25 @@ function renderScoreboard() {
     if (!truckDels.length) {
       stopsHtml = '<span class="truck-empty">No deliveries assigned</span>';
     } else {
+      // Group multi-load orders by fulfillmentGroupId (3H)
+      const seenGrps = new Set();
       stopsHtml = truckDels.map(d => {
+        if (d.fulfillmentGroupId && d.totalLoads > 1) {
+          if (seenGrps.has(d.fulfillmentGroupId)) return '';
+          seenGrps.add(d.fulfillmentGroupId);
+          const grpLoads = truckDels.filter(x => x.fulfillmentGroupId === d.fulfillmentGroupId)
+            .sort((a, b) => a.loadNumber - b.loadNumber);
+          const deliveredTons = grpLoads.filter(l => l.status === 'DELIVERED').reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0);
+          const totalTons = d.totalTons || grpLoads.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0);
+          const pct = totalTons ? Math.round(deliveredTons / totalTons * 100) : 0;
+          const activeLd = grpLoads.find(l => l.status === 'EN_ROUTE') || grpLoads.find(l => l.status === 'SCHEDULED') || grpLoads[grpLoads.length - 1];
+          const sc = (activeLd?.status || '').replace('_', '-').toLowerCase();
+          const cls = sc === 'en-route' ? 'en-route' : sc;
+          return `<div class="stop-block ${cls}">
+            <span class="stop-name">${esc(d.customerName || '?')}</span>
+            <span class="stop-qty">${esc(d.materialName || '')} &middot; Load ${activeLd?.loadNumber || 1} of ${d.totalLoads} &middot; ${pct}%</span>
+          </div>`;
+        }
         const sc = (d.status||'').replace('_','-').toLowerCase();
         const cls = sc === 'en-route' ? 'en-route' : sc;
         return `<div class="stop-block ${cls}"><span class="stop-name">${esc(d.customerName||'?')}</span><span class="stop-qty">${esc(d.materialName||'')} &middot; ${fmtQty(d)}</span></div>`;
