@@ -486,10 +486,14 @@ body {
   <div class="photo-preview" id="photoPreview">
     <div class="photo-placeholder">Tap below to take photo</div>
   </div>
-  <div class="photo-actions">
+  <div id="photoCount" style="color:var(--text-dim);font-size:14px;font-weight:600;margin-bottom:8px;display:none;"></div>
+  <div class="photo-actions" id="photoActionsInitial">
     <button class="action-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);" onclick="closePhoto()">Cancel</button>
     <button class="action-btn" style="background:var(--blue);color:#fff;" onclick="takePhoto()">📷 Take Photo</button>
-    <button class="action-btn btn-delivered" id="confirmDeliverBtn" onclick="confirmDelivery()" style="display:none;">✓ Confirm</button>
+  </div>
+  <div class="photo-actions" id="photoActionsAfter" style="display:none;">
+    <button class="action-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);" onclick="addAnotherPhoto()">➕ Add Photo</button>
+    <button class="action-btn btn-delivered" id="confirmDeliverBtn" onclick="confirmDelivery()">✓ Done</button>
   </div>
   <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
 </div>
@@ -505,6 +509,7 @@ let myDeliveries = [];
 let materialWeights = {}; // materialName → tons/CYD
 let activeDeliveryId = null;
 let capturedPhoto = null;
+let capturedPhotos = []; // multi-photo accumulator
 let gpsWatchId = null;
 let lastGpsSend = 0;
 let viewingTomorrow = false;
@@ -855,8 +860,11 @@ async function markEnRoute(deliveryId) {
 function startDeliveryPhoto(deliveryId) {
   activeDeliveryId = deliveryId;
   capturedPhoto = null;
+  capturedPhotos = [];
   document.getElementById('photoPreview').innerHTML = '<div class="photo-placeholder">Tap below to take photo</div>';
-  document.getElementById('confirmDeliverBtn').style.display = 'none';
+  document.getElementById('photoCount').style.display = 'none';
+  document.getElementById('photoActionsInitial').style.display = 'flex';
+  document.getElementById('photoActionsAfter').style.display = 'none';
   document.getElementById('photoModal').classList.add('active');
 }
 
@@ -873,39 +881,56 @@ document.getElementById('cameraInput').addEventListener('change', function(e) {
   const reader = new FileReader();
   reader.onload = function(ev) {
     capturedPhoto = ev.target.result;
+    capturedPhotos.push(ev.target.result);
     document.getElementById('photoPreview').innerHTML = `<img src="${capturedPhoto}" alt="Delivery photo">`;
-    document.getElementById('confirmDeliverBtn').style.display = 'flex';
+    const count = capturedPhotos.length;
+    const countEl = document.getElementById('photoCount');
+    countEl.textContent = `${count} photo${count > 1 ? 's' : ''} captured`;
+    countEl.style.display = 'block';
+    document.getElementById('photoActionsInitial').style.display = 'none';
+    document.getElementById('photoActionsAfter').style.display = 'flex';
   };
   reader.readAsDataURL(file);
 });
 
+function addAnotherPhoto() {
+  const input = document.getElementById('cameraInput');
+  input.value = '';
+  input.click();
+}
+
 async function confirmDelivery() {
-  if (!capturedPhoto || !activeDeliveryId) return;
+  if (!capturedPhotos.length || !activeDeliveryId) return;
 
   const confirmBtn = document.getElementById('confirmDeliverBtn');
   confirmBtn.disabled = true;
-  confirmBtn.textContent = 'Uploading photo...';
 
   try {
-    // Step 1: Upload photo to Cloudinary
-    const uploadRes = await fetch(`${API}/upload-photo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: capturedPhoto, deliveryId: activeDeliveryId })
-    });
-    const uploadData = await uploadRes.json();
-    if (!uploadData.success) throw new Error(uploadData.error || 'Photo upload failed');
+    // Step 1: Upload all captured photos to Cloudinary
+    const photoUrls = [];
+    for (let i = 0; i < capturedPhotos.length; i++) {
+      confirmBtn.textContent = `Uploading ${i + 1}/${capturedPhotos.length}...`;
+      const uploadRes = await fetch(`${API}/upload-photo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: capturedPhotos[i], deliveryId: activeDeliveryId })
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadData.success) throw new Error(uploadData.error || 'Photo upload failed');
+      photoUrls.push(uploadData.url);
+    }
 
     confirmBtn.textContent = 'Saving delivery...';
 
-    // Step 2: Save delivery with Cloudinary URL
+    // Step 2: Save delivery with all photo URLs
     const r = await fetch(`${API}/dispatch`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: activeDeliveryId,
         status: 'DELIVERED',
-        deliveryPhoto: uploadData.url,
+        deliveryPhoto: photoUrls[0],   // backward compat (single URL)
+        proofPhotos: photoUrls,         // full array
         updatedBy: currentDriver.id,
         notes: 'Delivered with photo confirmation'
       })
@@ -937,7 +962,7 @@ async function confirmDelivery() {
     toast('Error confirming delivery', true);
     console.error(e);
     confirmBtn.disabled = false;
-    confirmBtn.textContent = '✓ Confirm';
+    confirmBtn.textContent = '✓ Done';
   }
 }
 
@@ -945,6 +970,7 @@ function closePhoto() {
   document.getElementById('photoModal').classList.remove('active');
   activeDeliveryId = null;
   capturedPhoto = null;
+  capturedPhotos = [];
 }
 
 // ─── TOAST ───────────────────────────────────────

@@ -292,7 +292,11 @@ exports.handler = async (event) => {
         }
         if (body.status === 'DELIVERED') {
           update.$set.deliveredAt = new Date();
-          if (body.deliveryPhoto) {
+          if (body.proofPhotos && body.proofPhotos.length) {
+            update.$set.proofPhotos = body.proofPhotos;
+            update.$set.deliveryPhoto = body.proofPhotos[0]; // backward compat
+            update.$set.photoConfirmedAt = new Date();
+          } else if (body.deliveryPhoto) {
             update.$set.deliveryPhoto = body.deliveryPhoto;
           }
           if (body.deliveryNotes) {
