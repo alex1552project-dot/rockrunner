@@ -1473,7 +1473,7 @@ function showDetail(deliveryId) {
 
   // Driver field: dropdown when editable, static text otherwise
   const driverHtml = isEditable
-    ? `<select onchange="updateDetailDriver('${d._id}',this,${JSON.stringify(d.fulfillmentGroupId)})" style="${inputStyle}">
+    ? `<select id="detailDriverSel" style="${inputStyle}">
         <option value="">No driver</option>
         ${activeDrivers.map(dr => `<option value="${esc(dr.driverId)}" data-name="${esc(dr.name)}" ${dr.driverId === (d.driverId||'') ? 'selected' : ''}>${esc(dr.name)}</option>`).join('')}
        </select>`
@@ -1509,14 +1509,16 @@ function showDetail(deliveryId) {
       <button class="btn btn-primary btn-sm" onclick="closeModal('detailModal');openAssignModal('${d._id}')">Reassign</button>
       <button class="btn btn-outline btn-sm" onclick="openReschedule('${d._id}')">Reschedule</button>
       <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>
-      <button class="btn btn-outline btn-sm" onclick="unassignDelivery('${d._id}')">Unassign</button>`;
+      <button class="btn btn-outline btn-sm" onclick="unassignDelivery('${d._id}')">Unassign</button>
+      <button class="btn btn-primary btn-sm" onclick="saveDetailDriver('${d._id}',${JSON.stringify(d.fulfillmentGroupId)})">Save Driver</button>`;
   } else if (d.status === 'EN_ROUTE') {
     footerHtml = `
       <button class="btn btn-outline btn-sm" onclick="openReschedule('${d._id}')">Reschedule</button>`;
   } else if (d.status === 'UNASSIGNED') {
     footerHtml = `
       <button class="btn btn-primary btn-sm" onclick="closeModal('detailModal');openAssignModal('${d._id}')">Assign</button>
-      <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>`;
+      <button class="btn btn-danger btn-sm" onclick="cancelDelivery('${d._id}')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveDetailDriver('${d._id}',${JSON.stringify(d.fulfillmentGroupId)})">Save Driver</button>`;
   }
   footerHtml += `<button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>`;
   document.getElementById('detailFooter').innerHTML = footerHtml;
@@ -1625,6 +1627,13 @@ async function updateDetailDriver(deliveryId, selectEl, fulfillmentGroupId) {
     await loadDeliveries();
     render();
   } catch(e) { toast('Error updating driver', true); console.error(e); }
+}
+
+// Called by "Save Driver" button in detail modal footer
+async function saveDetailDriver(deliveryId, fulfillmentGroupId) {
+  const selectEl = document.getElementById('detailDriverSel');
+  if (!selectEl) return;
+  await updateDetailDriver(deliveryId, selectEl, fulfillmentGroupId);
 }
 
 let reschedulingDeliveryId = null;

@@ -397,6 +397,17 @@ exports.handler = async (event) => {
         }
       }
 
+      // Standalone driver update (no truck reassign — from detail modal)
+      if (body.driverId !== undefined && body.truckId === undefined) {
+        update.$set.driverId = body.driverId || null;
+        update.$set.driverName = body.driverName || null;
+      }
+
+      // Scheduled start time (multi-load stagger from detail modal)
+      if (body.scheduledStartTime !== undefined) {
+        update.$set.scheduledStartTime = body.scheduledStartTime || null;
+      }
+
       // SMS tracking
       if (body.enRouteSmsSent) update.$set.enRouteSmsSent = true;
 
