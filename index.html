@@ -1646,9 +1646,8 @@ function openReschedule(deliveryId) {
   const d = deliveries.find(del => del._id === deliveryId);
   document.getElementById('rescheduleInfo').textContent =
     d ? `${d.customerName || 'Customer'} — ${d.materialName || 'material'} · ${d.deliveryDate || ''}` : '';
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById('rescheduleDate').min = tomorrow.toISOString().slice(0, 10);
+  const today = new Date();
+  document.getElementById('rescheduleDate').min = today.toISOString().slice(0, 10);
   document.getElementById('rescheduleDate').value = '';
   closeModal('detailModal');
   openModal('rescheduleModal');
