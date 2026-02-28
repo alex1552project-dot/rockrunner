@@ -25,6 +25,7 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'info@texasgotrocks.com';
 const SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Texas Got Rocks';
 const OWNER_PHONE = '9363635803'; // Corey Pelletier — owner alerts
+const INTERNAL_DELIVERY_EMAILS = ['tina@tcmaterialsllc.com', 'marisa@tcmaterialsllc.com'];
 
 // ─── Brand Configuration ─────────────────────────────
 const BRANDS = {
@@ -459,6 +460,34 @@ exports.handler = async (event) => {
           updatedAt: new Date()
         }}
       );
+
+      // ── Internal staff notification (Tina + Marisa) ───────────────────────
+      const internalHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;">
+  <div style="max-width:500px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;">
+    <div style="background:#001F3F;padding:20px 28px;">
+      <div style="color:#C65D2A;font-size:18px;font-weight:700;">✅ Delivery Completed</div>
+      <div style="color:#8891a0;font-size:12px;margin-top:4px;">RockRunner — Internal Notification</div>
+    </div>
+    <div style="padding:24px 28px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:5px 0;color:#666;font-size:13px;width:120px;">Customer</td><td style="padding:5px 0;font-weight:600;font-size:14px;">${delivery.customerName || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:#666;font-size:13px;">Material</td><td style="padding:5px 0;font-weight:600;font-size:14px;">${delivery.materialName || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:#666;font-size:13px;">Quantity</td><td style="padding:5px 0;font-weight:600;font-size:14px;">${delivery.quantity || '?'} tons</td></tr>
+        <tr><td style="padding:5px 0;color:#666;font-size:13px;">Address</td><td style="padding:5px 0;font-size:13px;">${[delivery.deliveryAddress,delivery.deliveryCity,delivery.deliveryState].filter(Boolean).join(', ') || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:#666;font-size:13px;">Driver</td><td style="padding:5px 0;font-size:13px;">${delivery.driverName || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:#666;font-size:13px;">Source</td><td style="padding:5px 0;font-size:13px;">${delivery.source || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:#666;font-size:13px;">Delivered At</td><td style="padding:5px 0;font-size:13px;">${new Date().toLocaleString('en-US',{timeZone:'America/Chicago'})}</td></tr>
+      </table>
+    </div>
+  </div>
+</body></html>`;
+
+      for (const email of INTERNAL_DELIVERY_EMAILS) {
+        await sendEmail(email, '', '✅ Delivery Completed — RockRunner', internalHtml,
+          { name: 'RockRunner', email: 'info@tcmaterialsllc.com' });
+      }
 
       return {
         statusCode: 200,
