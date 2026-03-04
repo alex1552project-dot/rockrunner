@@ -26,6 +26,16 @@
 const { connectToDatabase, headers, handleOptions } = require('./utils/db');
 const { ObjectId } = require('mongodb');
 
+// ─── Fire-and-forget driver notification ─────────────────────
+function fireDriverNotify(truckId, deliveryId, customerName, deliveryDate, type, extraDetail = null) {
+  if (!truckId || !process.env.URL) return;
+  fetch(`${process.env.URL}/.netlify/functions/driver-notify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ truckId, deliveryId, customerName, deliveryDate, type, extraDetail })
+  }).catch(err => console.error('[dispatch] Notify error:', err));
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return handleOptions();
 
@@ -157,6 +167,14 @@ exports.handler = async (event) => {
         }));
 
         const result = await deliveries.insertMany(docs);
+
+        // Notify driver once per load if truck assigned at creation
+        if (body.truckId) {
+          Object.values(result.insertedIds).forEach((insertedId, i) => {
+            fireDriverNotify(body.truckId, insertedId.toString(), body.customerName, body.deliveryDate, 'LOAD_ADDED');
+          });
+        }
+
         return {
           statusCode: 201,
           headers,
@@ -253,6 +271,11 @@ exports.handler = async (event) => {
 
       const result = await deliveries.insertOne(newDelivery);
 
+      // Notify driver if truck already assigned at creation
+      if (newDelivery.truckId) {
+        fireDriverNotify(newDelivery.truckId, result.insertedId.toString(), newDelivery.customerName, newDelivery.deliveryDate, 'LOAD_ADDED');
+      }
+
       return {
         statusCode: 201,
         headers,
@@ -331,6 +354,13 @@ exports.handler = async (event) => {
       const id = body.id || body._id;
       if (!id) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'id required' }) };
+      }
+
+      // Pre-fetch delivery when needed for notification logic
+      let currentDelivery = null;
+      const needsPrefetch = body.truckId !== undefined || body.status === 'CANCELLED' || body.deliveryDate !== undefined;
+      if (needsPrefetch) {
+        currentDelivery = await deliveries.findOne({ _id: new ObjectId(id) });
       }
 
       const update = { $set: { updatedAt: new Date() }, $push: {} };
@@ -429,6 +459,40 @@ exports.handler = async (event) => {
         update
       );
 
+      // ── Driver notifications ──────────────────────────────
+      const custName = body.customerName || currentDelivery?.customerName;
+      const delDate  = body.deliveryDate || currentDelivery?.deliveryDate;
+
+      // Truck assignment / reassignment
+      if (body.truckId !== undefined) {
+        const oldTruckId = currentDelivery?.truckId;
+        const newTruckId = body.truckId;
+        if (newTruckId && newTruckId !== oldTruckId) {
+          // New truck or reassigned
+          fireDriverNotify(newTruckId, id, custName, delDate, oldTruckId ? 'TRUCK_REASSIGNED' : 'LOAD_ADDED');
+          // Notify old driver their load is gone
+          if (oldTruckId) {
+            fireDriverNotify(oldTruckId, id, custName, currentDelivery?.deliveryDate || delDate, 'LOAD_CANCELLED');
+          }
+        }
+      }
+
+      // Date change (only when truck stays the same)
+      if (body.deliveryDate !== undefined && body.truckId === undefined) {
+        const truckId = currentDelivery?.truckId;
+        if (truckId) {
+          fireDriverNotify(truckId, id, custName, body.deliveryDate, 'DATE_CHANGED', body.deliveryDate);
+        }
+      }
+
+      // Cancellation
+      if (body.status === 'CANCELLED') {
+        const truckId = currentDelivery?.truckId;
+        if (truckId) {
+          fireDriverNotify(truckId, id, custName, delDate, 'LOAD_CANCELLED');
+        }
+      }
+
       // ── If DELIVERED, deplete inventory ──
       if (body.status === 'DELIVERED') {
         const delivery = await deliveries.findOne({ _id: new ObjectId(id) });
@@ -455,6 +519,9 @@ exports.handler = async (event) => {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'id required' }) };
       }
 
+      // Fetch before cancelling so we have truckId + customer info
+      const toCancel = await deliveries.findOne({ _id: new ObjectId(p.id) });
+
       const result = await deliveries.updateOne(
         { _id: new ObjectId(p.id) },
         {
@@ -469,6 +536,11 @@ exports.handler = async (event) => {
           }
         }
       );
+
+      // Notify driver their load was cancelled
+      if (toCancel?.truckId) {
+        fireDriverNotify(toCancel.truckId, p.id, toCancel.customerName, toCancel.deliveryDate, 'LOAD_CANCELLED');
+      }
 
       return {
         statusCode: 200,

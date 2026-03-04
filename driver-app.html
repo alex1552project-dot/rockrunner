@@ -71,6 +71,100 @@ body {
   font-weight: 700;
 }
 
+/* ─── NOTIFICATION BELL ─────────────────────── */
+.bell-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+.bell-wrap:active { opacity: 0.75; }
+.bell-icon { font-size: 22px; line-height: 1; }
+.bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #E8640A;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--surface);
+}
+.notif-panel {
+  position: fixed;
+  top: 72px;
+  right: 12px;
+  width: min(340px, calc(100vw - 24px));
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  z-index: 200;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  overflow: hidden;
+  display: none;
+}
+.notif-panel.open { display: block; }
+.notif-panel-header {
+  padding: 14px 16px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+.notif-card {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.notif-card:last-child { border-bottom: none; }
+.notif-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-title { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.notif-sub { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.notif-gotit {
+  margin-top: 10px;
+  background: #E8640A;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.notif-gotit:active { opacity: 0.8; }
+.notif-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.notif-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  display: none;
+}
+.notif-backdrop.open { display: block; }
+
 /* ─── LOGIN ──────────────────────────────────── */
 .login-screen {
   display: flex;
@@ -447,10 +541,23 @@ body {
     <div class="header-left">
       <h1>🚛 My Routes</h1>
     </div>
-    <div>
-      <div class="driver-badge" id="driverBadge">Driver</div>
-      <div class="header-date" id="headerDate"></div>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <div>
+        <div class="driver-badge" id="driverBadge">Driver</div>
+        <div class="header-date" id="headerDate"></div>
+      </div>
+      <div class="bell-wrap" id="bellBtn" onclick="toggleNotifPanel()">
+        <span class="bell-icon">🔔</span>
+        <span class="bell-badge" id="bellBadge" style="display:none;"></span>
+      </div>
     </div>
+  </div>
+
+  <!-- Notification panel -->
+  <div class="notif-backdrop" id="notifBackdrop" onclick="closeNotifPanel()"></div>
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-panel-header">Schedule Updates</div>
+    <div id="notifList"></div>
   </div>
 
   <div class="truck-badge" id="truckBadge" style="display:none;"></div>
@@ -592,6 +699,7 @@ async function login() {
 function selectTruck(truck) {
   currentTruckId = truck._id?.toString() || truck._id;
   document.getElementById('truckBadge').style.display = '';
+  startNotificationPolling(currentTruckId);
 
   if (myTrucks.length > 1) {
     document.getElementById('truckBadge').innerHTML = '🚛 ' + truck.truckNumber + ' <span class="truck-switch-hint">▼ tap to switch</span>';
@@ -985,6 +1093,104 @@ function closePhoto() {
   activeDeliveryId = null;
   capturedPhoto = null;
   capturedPhotos = [];
+}
+
+// ─── DRIVER NOTIFICATIONS ────────────────────────
+let driverNotifications = [];
+let notifPollInterval   = null;
+
+const NOTIF_ICONS = {
+  LOAD_ADDED:       '➕',
+  LOAD_CANCELLED:   '❌',
+  DATE_CHANGED:     '📅',
+  TRUCK_REASSIGNED: '🔄'
+};
+
+function startNotificationPolling(truckId) {
+  if (notifPollInterval) clearInterval(notifPollInterval);
+  pollNotifications(truckId);
+  notifPollInterval = setInterval(() => pollNotifications(truckId), 10000);
+}
+
+async function pollNotifications(truckId) {
+  if (!truckId) return;
+  try {
+    const res  = await fetch(`${API}/driver-notifications-get?truckId=${encodeURIComponent(truckId)}`);
+    const data = await res.json();
+    driverNotifications = data.notifications || [];
+    updateBellBadge(data.unreadCount || 0);
+  } catch (e) {
+    // silent — polling failure shouldn't disrupt the driver
+  }
+}
+
+function updateBellBadge(count) {
+  const badge = document.getElementById('bellBadge');
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  if (panel.classList.contains('open')) {
+    closeNotifPanel();
+  } else {
+    renderNotifPanel();
+    panel.classList.add('open');
+    document.getElementById('notifBackdrop').classList.add('open');
+  }
+}
+
+function closeNotifPanel() {
+  document.getElementById('notifPanel').classList.remove('open');
+  document.getElementById('notifBackdrop').classList.remove('open');
+}
+
+function renderNotifPanel() {
+  const list = document.getElementById('notifList');
+  if (!driverNotifications.length) {
+    list.innerHTML = '<div class="notif-empty">You\'re all caught up ✓</div>';
+    setTimeout(() => closeNotifPanel(), 1800);
+    return;
+  }
+  list.innerHTML = driverNotifications.map(n => {
+    const icon  = NOTIF_ICONS[n.type] || '🔔';
+    const date  = n.date ? n.date.replace(/(\d{4})-(\d{2})-(\d{2})/, '$2/$3/$1') : '';
+    return `
+      <div class="notif-card" id="notif-${n._id}">
+        <div class="notif-icon">${icon}</div>
+        <div class="notif-body">
+          <div class="notif-title">${n.message}</div>
+          <div class="notif-sub">${n.customerName}${date ? ' — ' + date : ''}</div>
+          <button class="notif-gotit" onclick="ackNotification('${n._id}')">Got It</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function ackNotification(notifId) {
+  try {
+    await fetch(`${API}/driver-notifications-ack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notificationId: notifId })
+    });
+    // Remove from local state and update UI
+    driverNotifications = driverNotifications.filter(n => n._id !== notifId);
+    updateBellBadge(driverNotifications.length);
+    const card = document.getElementById(`notif-${notifId}`);
+    if (card) card.remove();
+    if (!driverNotifications.length) {
+      document.getElementById('notifList').innerHTML = '<div class="notif-empty">You\'re all caught up ✓</div>';
+      setTimeout(() => closeNotifPanel(), 1500);
+    }
+  } catch (e) {
+    toast('Could not acknowledge — try again', true);
+  }
 }
 
 // ─── TOAST ───────────────────────────────────────
