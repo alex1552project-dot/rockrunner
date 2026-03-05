@@ -493,15 +493,71 @@ exports.handler = async (event) => {
         }
       }
 
-      // ── If DELIVERED, deplete inventory ──
+      // ── If DELIVERED, deplete inventory + write audit ──────────
       if (body.status === 'DELIVERED') {
         const delivery = await deliveries.findOne({ _id: new ObjectId(id) });
-        if (delivery && delivery.productId) {
-          const inventory = db.collection('inventory');
-          await inventory.updateOne(
-            { productId: delivery.productId },
-            { $inc: { quantity: -(delivery.quantity) } }
-          );
+        if (delivery) {
+          let resolvedProductId = delivery.productId;
+
+          // Legacy fix: delivery.productId was stored as a MongoDB ObjectId string instead of
+          // the slug-style product ID (e.g. "5-8-black-star"). Detect and resolve via products collection.
+          if (resolvedProductId && /^[0-9a-f]{24}$/i.test(resolvedProductId)) {
+            const productDoc = await db.collection('products').findOne({ _id: new ObjectId(resolvedProductId) });
+            if (productDoc?.id) {
+              resolvedProductId = productDoc.id;
+            } else {
+              console.warn(`[dispatch] DELIVERED ${id}: ObjectId productId ${resolvedProductId} not found in products — falling back to materialName`);
+              resolvedProductId = null;
+            }
+          }
+
+          // Final fallback: null productId → look up by materialName in inventory
+          if (!resolvedProductId && delivery.materialName) {
+            const invRecord = await db.collection('inventory').findOne({
+              $or: [
+                { productName: delivery.materialName },
+                { name: delivery.materialName }
+              ]
+            });
+            if (invRecord) resolvedProductId = invRecord.productId;
+          }
+
+          if (!resolvedProductId) {
+            console.error(`[dispatch] DELIVERED ${id}: could not resolve productId for "${delivery.materialName}". Inventory NOT deducted.`);
+          }
+
+          const deliverySource = delivery.source || 'Yard Sale';
+
+          // TGR inventory is already deducted at payment (square-webhook.js) — skip
+          if (resolvedProductId && deliverySource !== 'Texas Got Rocks') {
+            const now = new Date();
+
+            // Deduct both fields for cross-system compatibility (TGR + YTP)
+            await db.collection('inventory').updateOne(
+              { productId: resolvedProductId },
+              {
+                $inc: { quantity: -(delivery.quantity), currentStock: -(delivery.quantity) },
+                $set: { updatedAt: now }
+              }
+            );
+
+            // Map source to a distinct audit action type
+            const auditAction = deliverySource === 'T&C Materials' ? 'tc_delivery' : 'yard_delivery';
+
+            // Write to inventory_audit — shows in Command Center transaction history
+            db.collection('inventory_audit').insertOne({
+              productId:    resolvedProductId,
+              productName:  delivery.materialName || resolvedProductId,
+              action:       auditAction,
+              qty:          -(delivery.quantity),
+              source:       deliverySource,
+              reference:    delivery.orderNumber || null,
+              customerName: delivery.customerName || null,
+              recordedBy:   'rockrunner',
+              notes:        `${deliverySource} delivery — ${delivery.customerName || 'Customer'}`,
+              timestamp:    now
+            }).catch(err => console.error('[dispatch] Audit write failed:', err));
+          }
         }
       }
 

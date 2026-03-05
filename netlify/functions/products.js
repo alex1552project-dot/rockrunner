@@ -32,8 +32,7 @@ exports.handler = async (event) => {
     
     // Return list for dropdown + weight for CYD conversion
     const materials = products.map(p => ({
-      id: p._id,
-      productId: p.productId,
+      id: p.id || p._id.toString(),  // string product ID (e.g. "5-8-black-star") — must match inventory.productId
       name: p.name,
       category: p.category || '',
       weight: p.weight || null  // tons per CYD — used for CYD/tons display
