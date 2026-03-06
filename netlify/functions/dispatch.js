@@ -447,6 +447,21 @@ exports.handler = async (event) => {
       // SMS tracking
       if (body.enRouteSmsSent) update.$set.enRouteSmsSent = true;
 
+      // Dispatcher full-edit fields
+      if (body.source !== undefined) update.$set.source = body.source;
+      if (body.customerName !== undefined) update.$set.customerName = body.customerName;
+      if (body.customerPhone !== undefined) update.$set.customerPhone = body.customerPhone;
+      if (body.customerEmail !== undefined) update.$set.customerEmail = body.customerEmail;
+      if (body.deliveryAddress !== undefined) update.$set.deliveryAddress = body.deliveryAddress;
+      if (body.deliveryCity !== undefined) update.$set.deliveryCity = body.deliveryCity;
+      if (body.deliveryZip !== undefined) update.$set.deliveryZip = body.deliveryZip;
+      if (body.materialName !== undefined) update.$set.materialName = body.materialName;
+      if (body.productId !== undefined) update.$set.productId = body.productId;
+      if (body.quantity !== undefined) update.$set.quantity = parseFloat(body.quantity);
+      if (body.sourceName !== undefined) update.$set.sourceName = body.sourceName;
+      if (body.sourceAddress !== undefined) update.$set.sourceAddress = body.sourceAddress;
+      if (body.poNumber !== undefined) update.$set.poNumber = body.poNumber;
+
       // Push history entry if it has a status
       if (historyEntry.status) {
         update.$push.statusHistory = historyEntry;

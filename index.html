@@ -694,45 +694,132 @@
 
 <!-- ═══ EDIT DELIVERY MODAL ════════════════════════ -->
 <div class="modal-overlay" id="editDeliveryModal">
-  <div class="modal" style="max-width:480px;">
+  <div class="modal modal-md">
     <div class="modal-header">
       <h3>Edit Delivery</h3>
       <button class="modal-close" onclick="closeEditDelivery()">&times;</button>
     </div>
     <div class="modal-body">
-      <div id="editDelSummary" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;"></div>
-
-      <div class="form-row">
-        <label>Delivery Date</label>
-        <input type="date" id="editDelDate">
+      <div id="editDelStatusBanner" style="border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;"></div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Source</label>
+          <select id="editDelSource">
+            <option>Yard Sale</option>
+            <option>Texas Got Rocks</option>
+            <option>T&amp;C Materials</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Customer Name *</label>
+          <input type="text" id="editDelCustomer" placeholder="John Smith">
+        </div>
       </div>
-
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Phone</label>
+          <input type="tel" id="editDelPhone" placeholder="(936) 555-0123">
+        </div>
+        <div class="form-row">
+          <label>Email</label>
+          <input type="email" id="editDelEmail" placeholder="customer@email.com">
+        </div>
+      </div>
       <div class="form-row">
-        <label>Time Window</label>
-        <select id="editDelTime">
-          <option value="">No time window</option>
-          <option value="Flexible Timing">Flexible Timing</option>
-          <option value="7:00 AM - 9:00 AM">7:00 AM - 9:00 AM</option>
-          <option value="9:00 AM - 11:00 AM">9:00 AM - 11:00 AM</option>
-          <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
-          <option value="12:00 PM - 2:00 PM">12:00 PM - 2:00 PM</option>
-          <option value="1:00 PM - 3:00 PM">1:00 PM - 3:00 PM</option>
-          <option value="2:00 PM - 4:00 PM">2:00 PM - 4:00 PM</option>
-          <option value="3:00 PM - 5:00 PM">3:00 PM - 5:00 PM</option>
-          <option value="5:00 PM - 7:00 PM">5:00 PM - 7:00 PM</option>
+        <label>Delivery Address *</label>
+        <input type="text" id="editDelAddress" placeholder="123 Main St">
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>City</label>
+          <input type="text" id="editDelCity" placeholder="Conroe">
+        </div>
+        <div class="form-row">
+          <label>ZIP</label>
+          <input type="text" id="editDelZip" placeholder="77301">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>📍 Location Pin <span style="font-weight:400;color:var(--text-muted);">(optional — for sites with no street address)</span></label>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+          <input type="text" id="editDelLocationLink" placeholder="Paste a Google/Apple Maps link or coordinates..." oninput="onEditLocationLinkInput(this.value)" style="flex:1;">
+          <button type="button" id="editLocationLinkClearBtn" onclick="clearEditLocationLink()" style="display:none;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:rgba(239,68,68,0.15);color:var(--red);cursor:pointer;font-size:13px;">✕</button>
+        </div>
+        <div id="editLocationLinkStatus" style="margin-top:6px;font-size:12px;display:none;"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Material *</label>
+          <select id="editDelMaterial" onchange="onEditDelMaterialChange()"><option value="">Select material...</option></select>
+        </div>
+        <div class="form-row">
+          <label id="editDelQtyLabel">Quantity (tons) *</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" id="editDelQty" step="0.1" min="0.1" placeholder="8" style="flex:1" oninput="onEditDelTruckChange()">
+            <button type="button" id="editDelQtyUnitBtn" onclick="toggleEditQtyUnit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,0.08);color:var(--text);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">tons</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-row" id="editDelMaterialCustomRow" style="display:none;">
+        <label>Custom Material Name *</label>
+        <input type="text" id="editDelMaterialCustom" placeholder="Enter material name...">
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Delivery Date *</label>
+          <input type="date" id="editDelDate">
+        </div>
+        <div class="form-row">
+          <label>Time Window</label>
+          <select id="editDelTime">
+            <option value="">Assign later</option>
+            <option value="Flexible Timing">Flexible Timing</option>
+            <option>6:00 AM - 8:00 AM</option>
+            <option>8:00 AM - 10:00 AM</option>
+            <option>10:00 AM - 12:00 PM</option>
+            <option>12:00 PM - 2:00 PM</option>
+            <option>2:00 PM - 4:00 PM</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Origin / Pickup Location</label>
+          <input type="text" id="editDelOrigin" placeholder="Conroe Yard, supplier name..." list="editOriginSuggestions" autocomplete="off" oninput="onEditOriginInput(this.value)">
+          <datalist id="editOriginSuggestions"></datalist>
+        </div>
+        <div class="form-row">
+          <label>PO Number</label>
+          <input type="text" id="editDelPO" placeholder="Optional">
+        </div>
+      </div>
+      <div class="form-row" id="editDelOriginAddrRow" style="display:none;">
+        <label>Origin Address</label>
+        <input type="text" id="editDelOriginAddr" placeholder="18565 Main St, Conroe, TX 77385">
+      </div>
+      <div class="form-row">
+        <label>Notes</label>
+        <input type="text" id="editDelNotes" placeholder="Gate code, special instructions...">
+      </div>
+      <div class="form-row">
+        <label>Assign to Truck <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
+        <select id="editDelTruck" onchange="onEditDelTruckChange()">
+          <option value="">Unassigned</option>
         </select>
       </div>
-
-      <div class="form-row">
-        <label>Delivery Notes</label>
-        <input type="text" id="editDelNotes" placeholder="Add or update notes...">
+      <div id="editDelMultiLoadPreview" style="display:none;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:14px;margin-top:2px;">
+        <div id="editDelMultiLoadContent"></div>
+        <div style="margin-top:10px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Start Time</label>
+          <input type="time" id="editDelStartTime" value="07:00" style="width:100%;padding:9px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:7px;color:#fff;font-size:13px;">
+        </div>
       </div>
     </div>
     <div class="modal-footer" style="display:flex;gap:8px;justify-content:space-between;">
       <button class="btn-cancel-delivery" id="editDelCancelBtn" onclick="cancelEditDelivery()">🗑 Cancel Delivery</button>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-secondary" onclick="closeEditDelivery()">Close</button>
-        <button class="btn btn-primary" onclick="saveEditDelivery()">Save Changes</button>
+        <button class="btn btn-primary" id="editDelSaveBtn" onclick="saveEditDelivery()">Save Changes</button>
       </div>
     </div>
   </div>
@@ -1780,20 +1867,134 @@ function openEditDelivery(deliveryId) {
   const delivery = deliveries.find(d => d._id === deliveryId);
   if (!delivery) { toast('Delivery not found', true); return; }
 
+  const isLocked = delivery.status === 'DELIVERED' || delivery.status === 'CANCELLED';
   const statusColor = { DELIVERED:'var(--green)', EN_ROUTE:'#a78bfa', CANCELLED:'var(--red)' }[delivery.status] || 'var(--blue)';
-  document.getElementById('editDelSummary').innerHTML = `
-    <div style="font-weight:700;font-size:15px;color:#fff;">${esc(delivery.customerName || 'Customer')}</div>
-    <div style="color:var(--text-muted);font-size:13px;margin-top:4px;">${esc(delivery.materialName || '')} · ${delivery.quantity || '?'} tons</div>
-    <div style="color:var(--text-muted);font-size:13px;margin-top:2px;">${esc(delivery.deliveryAddress || '')}${delivery.deliveryCity ? ', ' + esc(delivery.deliveryCity) : ''}</div>
-    <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">Status: <span style="color:${statusColor};">${delivery.status}</span></div>
-  `;
 
+  const banner = document.getElementById('editDelStatusBanner');
+  banner.style.background = isLocked ? 'rgba(239,68,68,0.08)' : 'rgba(59,130,246,0.08)';
+  banner.style.border = `1px solid ${isLocked ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`;
+  banner.style.color = statusColor;
+  banner.textContent = isLocked
+    ? `This delivery is ${delivery.status} — no further edits allowed.`
+    : `Status: ${delivery.status}`;
+
+  // Source
+  document.getElementById('editDelSource').value = delivery.source || 'Yard Sale';
+
+  // Customer
+  document.getElementById('editDelCustomer').value = delivery.customerName || '';
+  document.getElementById('editDelPhone').value = delivery.customerPhone || '';
+  document.getElementById('editDelEmail').value = delivery.customerEmail || '';
+
+  // Address
+  document.getElementById('editDelAddress').value = delivery.deliveryAddress || '';
+  document.getElementById('editDelCity').value = delivery.deliveryCity || '';
+  document.getElementById('editDelZip').value = delivery.deliveryZip || '';
+
+  // Location pin
+  editDeliveryPinLat = delivery.deliveryLat || null;
+  editDeliveryPinLng = delivery.deliveryLng || null;
+  document.getElementById('editDelLocationLink').value = '';
+  document.getElementById('editLocationLinkClearBtn').style.display = 'none';
+  const linkStatus = document.getElementById('editLocationLinkStatus');
+  if (editDeliveryPinLat && editDeliveryPinLng) {
+    linkStatus.style.display = 'block';
+    linkStatus.className = 'location-link-success';
+    linkStatus.innerHTML = `✅ <span class="location-link-coords">${editDeliveryPinLat.toFixed(6)}, ${editDeliveryPinLng.toFixed(6)}</span> (existing pin)`;
+  } else {
+    linkStatus.style.display = 'none';
+  }
+
+  // Material dropdown
+  const matSel = document.getElementById('editDelMaterial');
+  matSel.innerHTML = '<option value="">Select material...</option>';
+  products.filter(p => p.active !== false).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id || p._id;
+    opt.dataset.name = p.name;
+    opt.dataset.weight = p.weight || '1.4';
+    opt.textContent = p.name;
+    matSel.appendChild(opt);
+  });
+  const customOpt = document.createElement('option');
+  customOpt.value = '__custom__';
+  customOpt.textContent = '+ Custom material';
+  matSel.appendChild(customOpt);
+
+  const matchedProduct = products.find(p =>
+    (p.id && p.id.toString() === delivery.productId) ||
+    (p._id && p._id.toString() === delivery.productId) ||
+    p.name === delivery.materialName
+  );
+  if (matchedProduct) {
+    matSel.value = matchedProduct.id || matchedProduct._id;
+    document.getElementById('editDelMaterialCustomRow').style.display = 'none';
+  } else if (delivery.materialName) {
+    matSel.value = '__custom__';
+    document.getElementById('editDelMaterialCustomRow').style.display = 'block';
+    document.getElementById('editDelMaterialCustom').value = delivery.materialName;
+  }
+
+  // Quantity — always open in tons
+  editDelQtyUnit = 'tons';
+  const qtyBtn = document.getElementById('editDelQtyUnitBtn');
+  qtyBtn.textContent = 'tons';
+  qtyBtn.style.background = 'rgba(255,255,255,0.08)';
+  qtyBtn.style.color = 'var(--text)';
+  qtyBtn.style.borderColor = 'var(--border)';
+  document.getElementById('editDelQtyLabel').textContent = 'Quantity (tons) *';
+  document.getElementById('editDelQty').value = delivery.quantity || '';
+
+  // Date & time
   document.getElementById('editDelDate').value = delivery.deliveryDate || '';
   document.getElementById('editDelTime').value = delivery.timeWindow || '';
+
+  // Origin
+  const editDl = document.getElementById('editOriginSuggestions');
+  editDl.innerHTML = Object.keys(knownOrigins).map(n => `<option value="${esc(n)}">`).join('');
+  document.getElementById('editDelOrigin').value = delivery.sourceName || '';
+  document.getElementById('editDelOriginAddr').value = delivery.sourceAddress || '';
+  const originAddrRow = document.getElementById('editDelOriginAddrRow');
+  const originAddrInput = document.getElementById('editDelOriginAddr');
+  if (delivery.sourceAddress) {
+    originAddrRow.style.display = 'block';
+  } else {
+    originAddrRow.style.display = 'none';
+  }
+  originAddrInput.disabled = false;
+  originAddrInput.style.opacity = '';
+
+  // PO & notes
+  document.getElementById('editDelPO').value = delivery.poNumber || '';
   document.getElementById('editDelNotes').value = delivery.deliveryNotes || '';
 
-  const cancelBtn = document.getElementById('editDelCancelBtn');
-  cancelBtn.style.display = (delivery.status === 'DELIVERED' || delivery.status === 'CANCELLED') ? 'none' : 'block';
+  // Truck dropdown
+  const truckSel = document.getElementById('editDelTruck');
+  truckSel.innerHTML = '<option value="">Unassigned</option>';
+  trucks.forEach(truck => {
+    const tid = truck._id?.toString() || truck._id;
+    const opt = document.createElement('option');
+    opt.value = tid;
+    opt.dataset.capacity = truck.capacity || 24;
+    opt.dataset.truckNumber = truck.truckNumber;
+    opt.textContent = `${truck.truckNumber} (${truck.capacity || 24}T cap)`;
+    truckSel.appendChild(opt);
+  });
+  truckSel.value = delivery.truckId?.toString() || '';
+
+  // Multi-load reset
+  document.getElementById('editDelMultiLoadPreview').style.display = 'none';
+  editMultiLoadEstRTMin = 60;
+  if (delivery.scheduledStartTime) {
+    document.getElementById('editDelStartTime').value = delivery.scheduledStartTime;
+  }
+
+  // Lock all inputs if completed/cancelled
+  const inputs = document.querySelectorAll('#editDeliveryModal input, #editDeliveryModal select');
+  inputs.forEach(el => { el.disabled = isLocked; });
+  const editDelSaveBtn = document.getElementById('editDelSaveBtn');
+  document.getElementById('editDelCancelBtn').style.display = isLocked ? 'none' : 'block';
+  editDelSaveBtn.style.display = isLocked ? 'none' : 'block';
 
   openModal('editDeliveryModal');
 }
@@ -1806,15 +2007,62 @@ function closeEditDelivery() {
 async function saveEditDelivery() {
   if (!editingDeliveryId) return;
 
+  const matSel = document.getElementById('editDelMaterial');
+  const isCustomMat = matSel.value === '__custom__';
+  const materialName = isCustomMat
+    ? document.getElementById('editDelMaterialCustom').value.trim()
+    : (matSel.options[matSel.selectedIndex]?.dataset?.name || '');
+  const productId = isCustomMat ? null : (matSel.value || null);
+
+  let qtyRaw = parseFloat(document.getElementById('editDelQty').value);
+  if (editDelQtyUnit === 'cyd') {
+    let weight = 1.4;
+    if (matSel.value && matSel.value !== '__custom__') {
+      weight = parseFloat(matSel.options[matSel.selectedIndex].dataset.weight) || 1.4;
+    }
+    qtyRaw = qtyRaw * weight;
+  }
+
+  const truckSel = document.getElementById('editDelTruck');
+  const truckId = truckSel.value || null;
+  const truckOpt = truckSel.options[truckSel.selectedIndex];
+  const truckNumber = truckId ? (truckOpt?.dataset?.truckNumber || null) : null;
+
   const updateBody = {
     id: editingDeliveryId,
     updatedBy: 'dispatcher',
+    source: document.getElementById('editDelSource').value,
+    customerName: document.getElementById('editDelCustomer').value.trim(),
+    customerPhone: document.getElementById('editDelPhone').value.trim(),
+    customerEmail: document.getElementById('editDelEmail').value.trim(),
+    deliveryAddress: document.getElementById('editDelAddress').value.trim(),
+    deliveryCity: document.getElementById('editDelCity').value.trim(),
+    deliveryZip: document.getElementById('editDelZip').value.trim(),
+    materialName,
+    productId,
+    quantity: isNaN(qtyRaw) ? undefined : qtyRaw,
     deliveryDate: document.getElementById('editDelDate').value,
     timeWindow: document.getElementById('editDelTime').value,
+    sourceName: document.getElementById('editDelOrigin').value.trim() || null,
+    sourceAddress: document.getElementById('editDelOriginAddr').value.trim() || null,
+    poNumber: document.getElementById('editDelPO').value.trim() || null,
+    deliveryNotes: document.getElementById('editDelNotes').value.trim() || null,
+    truckId,
+    truckNumber,
   };
 
-  const notes = document.getElementById('editDelNotes').value;
-  if (notes) updateBody.deliveryNotes = notes;
+  if (editDeliveryPinLat !== null) {
+    updateBody.lat = editDeliveryPinLat;
+    updateBody.lng = editDeliveryPinLng;
+  }
+
+  const multiPrev = document.getElementById('editDelMultiLoadPreview');
+  if (multiPrev.style.display !== 'none') {
+    updateBody.scheduledStartTime = document.getElementById('editDelStartTime').value || null;
+  }
+
+  if (!updateBody.customerName) { toast('Customer name is required', true); return; }
+  if (!updateBody.deliveryDate) { toast('Delivery date is required', true); return; }
 
   try {
     const res = await fetch(`${API}/dispatch`, {
@@ -1855,6 +2103,218 @@ async function cancelEditDelivery() {
       toast('Error cancelling delivery', true);
     }
   } catch(e) { toast('Error cancelling delivery', true); console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════
+// EDIT DELIVERY — Helpers
+// ═══════════════════════════════════════════════════════
+let editDelQtyUnit = 'tons';
+let editDeliveryPinLat = null;
+let editDeliveryPinLng = null;
+let editMultiLoadEstRTMin = 60;
+let editLocationLinkDebounce = null;
+
+function onEditDelMaterialChange() {
+  const sel = document.getElementById('editDelMaterial');
+  const customRow = document.getElementById('editDelMaterialCustomRow');
+  const isCustom = sel.value === '__custom__';
+  customRow.style.display = isCustom ? 'block' : 'none';
+  if (!isCustom) document.getElementById('editDelMaterialCustom').value = '';
+  onEditDelTruckChange();
+}
+
+function toggleEditQtyUnit() {
+  const btn = document.getElementById('editDelQtyUnitBtn');
+  const label = document.getElementById('editDelQtyLabel');
+  const sel = document.getElementById('editDelMaterial');
+  const qtyInput = document.getElementById('editDelQty');
+  let weight = 1.4;
+  if (sel.value && sel.value !== '__custom__') {
+    weight = parseFloat(sel.options[sel.selectedIndex].dataset.weight) || 1.4;
+  }
+  const val = parseFloat(qtyInput.value);
+  if (editDelQtyUnit === 'tons') {
+    if (!isNaN(val) && val > 0) qtyInput.value = (val / weight).toFixed(1);
+    qtyInput.placeholder = '4';
+    btn.textContent = 'CYD';
+    btn.style.background = 'var(--blue)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--blue)';
+    label.textContent = 'Quantity (CYD) *';
+    editDelQtyUnit = 'cyd';
+  } else {
+    if (!isNaN(val) && val > 0) qtyInput.value = (val * weight).toFixed(1);
+    qtyInput.placeholder = '8';
+    btn.textContent = 'tons';
+    btn.style.background = 'rgba(255,255,255,0.08)';
+    btn.style.color = 'var(--text)';
+    btn.style.borderColor = 'var(--border)';
+    label.textContent = 'Quantity (tons) *';
+    editDelQtyUnit = 'tons';
+  }
+}
+
+function onEditOriginInput(value) {
+  const addrRow = document.getElementById('editDelOriginAddrRow');
+  const addrInput = document.getElementById('editDelOriginAddr');
+  const trimmed = value.trim();
+  if (!trimmed) {
+    addrRow.style.display = 'none';
+    addrInput.disabled = false;
+    addrInput.style.opacity = '';
+    return;
+  }
+  addrRow.style.display = 'block';
+  if (trimmed.toLowerCase() === CONROE_YARD_NAME.toLowerCase()) {
+    addrInput.value = CONROE_YARD_ADDR;
+    addrInput.disabled = true;
+    addrInput.style.opacity = '0.5';
+  } else {
+    addrInput.disabled = false;
+    addrInput.style.opacity = '';
+    if (knownOrigins[trimmed]) addrInput.value = knownOrigins[trimmed];
+    else addrInput.value = '';
+  }
+}
+
+function onEditDelTruckChange() {
+  const truckId = document.getElementById('editDelTruck').value;
+  const qty = parseFloat(document.getElementById('editDelQty').value);
+  updateEditDelMultiLoadPreview(truckId, qty);
+}
+
+function updateEditDelMultiLoadPreview(truckId, qty) {
+  const preview = document.getElementById('editDelMultiLoadPreview');
+  if (!truckId || !qty || isNaN(qty)) { preview.style.display = 'none'; return; }
+  const truck = trucks.find(t => (t._id?.toString() || t._id) === truckId);
+  if (!truck) return;
+
+  let quantityTons = qty;
+  if (editDelQtyUnit === 'cyd') {
+    const matSel = document.getElementById('editDelMaterial');
+    let weight = 1.4;
+    if (matSel.value && matSel.value !== '__custom__') {
+      weight = parseFloat(matSel.options[matSel.selectedIndex].dataset.weight) || 1.4;
+    }
+    quantityTons = qty * weight;
+  }
+
+  const cap = truck.capacity || 24;
+  const { totalLoads, loads } = calcLoads(quantityTons, cap);
+  if (totalLoads <= 1) { preview.style.display = 'none'; return; }
+
+  const estTotalMin = totalLoads * editMultiLoadEstRTMin;
+  const estHr = Math.floor(estTotalMin / 60);
+  const estMin = estTotalMin % 60;
+  const estStr = estHr > 0 ? `~${estHr}h ${estMin}m total` : `~${estMin}m total`;
+
+  document.getElementById('editDelMultiLoadContent').innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:#eab308;margin-bottom:6px;">⚠ This order requires ${totalLoads} loads:</div>
+    ${loads.map(l => `<div style="font-size:13px;color:rgba(255,255,255,0.85);">Load ${l.loadNumber}: ${l.quantity}t</div>`).join('')}
+    <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Est. round-trip: ~${editMultiLoadEstRTMin} min · ${estStr}</div>
+  `;
+  preview.style.display = 'block';
+
+  const origin = document.getElementById('editDelOriginAddr').value.trim() || '30.3119,-95.4561';
+  const addr = [
+    document.getElementById('editDelAddress').value.trim(),
+    document.getElementById('editDelCity').value.trim(),
+    'TX',
+    document.getElementById('editDelZip').value.trim()
+  ].filter(Boolean).join(', ');
+  if (addr.length > 5) {
+    fetch(`${API}/calculate-loads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ totalTons: quantityTons, truckCapacity: cap, origin, destination: addr })
+    }).then(r => r.json()).then(d => {
+      if (d.estimatedRoundTripMin) {
+        editMultiLoadEstRTMin = d.estimatedRoundTripMin;
+        updateEditDelMultiLoadPreview(truckId, qty);
+      }
+    }).catch(() => {});
+  }
+}
+
+function onEditLocationLinkInput(value) {
+  clearTimeout(editLocationLinkDebounce);
+  const trimmed = value.trim();
+  const statusEl = document.getElementById('editLocationLinkStatus');
+  const clearBtn = document.getElementById('editLocationLinkClearBtn');
+  if (!trimmed) {
+    statusEl.style.display = 'none';
+    clearBtn.style.display = 'none';
+    editDeliveryPinLat = null;
+    editDeliveryPinLng = null;
+    return;
+  }
+  clearBtn.style.display = 'block';
+  editLocationLinkDebounce = setTimeout(async () => {
+    let coords = parseMapUrl(trimmed);
+    if (coords) { applyEditParsedCoords(coords.lat, coords.lng); return; }
+    if (isShortMapUrl(trimmed)) {
+      statusEl.style.display = 'block';
+      statusEl.className = 'location-link-resolving';
+      statusEl.textContent = '⏳ Resolving link...';
+      try {
+        const r = await fetch(`${API}/resolve-map-link?url=${encodeURIComponent(trimmed)}`);
+        const data = await r.json();
+        if (data.success && data.resolvedUrl) {
+          coords = parseMapUrl(data.resolvedUrl);
+          if (coords) { applyEditParsedCoords(coords.lat, coords.lng); return; }
+        }
+        statusEl.className = 'location-link-error';
+        statusEl.textContent = '⚠ Could not extract coordinates from this link';
+      } catch(e) {
+        statusEl.className = 'location-link-error';
+        statusEl.textContent = '⚠ Error resolving link';
+      }
+      return;
+    }
+    if (trimmed.startsWith('http')) {
+      statusEl.style.display = 'block';
+      statusEl.className = 'location-link-error';
+      statusEl.textContent = '⚠ Unrecognized link format — try a Google or Apple Maps link';
+    } else {
+      statusEl.style.display = 'none';
+    }
+  }, 400);
+}
+
+async function applyEditParsedCoords(lat, lng) {
+  editDeliveryPinLat = lat;
+  editDeliveryPinLng = lng;
+  const statusEl = document.getElementById('editLocationLinkStatus');
+  statusEl.style.display = 'block';
+  statusEl.className = 'location-link-success';
+  statusEl.innerHTML = `✅ <span class="location-link-coords">${lat.toFixed(6)}, ${lng.toFixed(6)}</span> — resolving address...`;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`);
+    const data = await r.json();
+    if (data && data.address) {
+      const a = data.address;
+      const street = [a.house_number, a.road].filter(Boolean).join(' ');
+      const city = a.city || a.town || a.village || a.hamlet || '';
+      const zip = a.postcode || '';
+      if (street) document.getElementById('editDelAddress').value = street;
+      if (city) document.getElementById('editDelCity').value = city;
+      if (zip) document.getElementById('editDelZip').value = zip;
+      const resolvedText = [street, city, a.state, zip].filter(Boolean).join(', ');
+      statusEl.innerHTML = `✅ <span class="location-link-coords">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>${resolvedText || 'Coordinates saved (no street address found)'}`;
+    } else {
+      statusEl.innerHTML = `✅ <span class="location-link-coords">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>Coordinates saved`;
+    }
+  } catch(e) {
+    statusEl.innerHTML = `✅ <span class="location-link-coords">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>Coordinates saved`;
+  }
+}
+
+function clearEditLocationLink() {
+  document.getElementById('editDelLocationLink').value = '';
+  document.getElementById('editLocationLinkStatus').style.display = 'none';
+  document.getElementById('editLocationLinkClearBtn').style.display = 'none';
+  editDeliveryPinLat = null;
+  editDeliveryPinLng = null;
 }
 
 // ═══════════════════════════════════════════════════════
