@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dispatch Board | RockRunner</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Google Maps loaded dynamically via loadGoogleMaps() — key served by maps-config function -->
   <style>
     :root {
       --bg: #0b1426;
@@ -361,10 +360,46 @@
     }
     .loc-tab:hover { background:rgba(255,255,255,0.06); color:#fff; }
     .loc-tab.active { background:rgba(59,130,246,0.15); color:var(--blue); border-color:var(--blue); }
-    #pinDropMap {
-      height:280px; border-radius:8px; border:1px solid var(--border);
-      background:var(--bg-surface);
+    /* ─── MAP PICKER OVERLAY ───────────────────── */
+    #mapPickerOverlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.75);
+      z-index:9999; display:flex; align-items:center; justify-content:center;
     }
+    #mapPickerModal {
+      width:90vw; height:80vh; display:flex;
+      border-radius:12px; overflow:hidden; background:#1E293B;
+      box-shadow:0 24px 64px rgba(0,0,0,0.6);
+    }
+    #mapPickerPanel {
+      width:260px; flex-shrink:0; padding:20px; overflow-y:auto;
+      background:#1E293B; color:#fff; display:flex; flex-direction:column; gap:12px;
+    }
+    #mapPickerPanel h3 { margin:0; font-size:16px; font-weight:700; }
+    #mapPickerPanel p  { margin:0; font-size:12px; color:rgba(255,255,255,0.55); line-height:1.5; }
+    #pinCoordinates, #resolvedAddress {
+      font-size:12px; color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.06);
+      border-radius:6px; padding:8px 10px; min-height:32px;
+    }
+    #manualCoordsSection { display:flex; flex-direction:column; gap:6px; }
+    #manualCoordsSection label { font-size:11px; color:rgba(255,255,255,0.5); font-weight:600; }
+    #manualLat, #manualLng {
+      width:100%; padding:7px 10px; background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.15); border-radius:6px;
+      color:#fff; font-size:13px; box-sizing:border-box;
+    }
+    #manualCoordsBtn {
+      padding:7px 10px; background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4);
+      border-radius:6px; color:#60a5fa; cursor:pointer; font-size:12px; font-weight:600;
+    }
+    #confirmPinBtn {
+      margin-top:auto; padding:11px; background:#22c55e; border:none;
+      border-radius:8px; color:#fff; cursor:pointer; font-size:14px; font-weight:700;
+    }
+    #cancelPinBtn {
+      padding:9px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+      border-radius:8px; color:rgba(255,255,255,0.6); cursor:pointer; font-size:13px;
+    }
+    #mapPickerMap { flex:1; height:100%; }
 
     /* ─── EDIT DELIVERY BTN ──────────── */
     .stop-edit-btn {
@@ -559,8 +594,10 @@
         </div>
         <!-- Tab 2: Drop a Pin -->
         <div id="locPanelMap" class="loc-panel" style="display:none;">
-          <div id="pinDropMap" style="margin-top:8px;"></div>
-          <div style="margin-top:6px;font-size:11px;color:var(--text-muted);">Click to place pin · Drag to adjust</div>
+          <div id="pinDropStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);">No pin placed yet.</div>
+          <button type="button" onclick="openMapPicker()" style="margin-top:8px;width:100%;padding:10px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.35);border-radius:8px;color:#60a5fa;cursor:pointer;font-size:13px;font-weight:600;">
+            🗺 Open Map Picker
+          </button>
         </div>
         <!-- Shared status display -->
         <div id="locationLinkStatus" style="margin-top:6px;font-size:12px;display:none;"></div>
@@ -638,6 +675,27 @@
       <button class="btn btn-outline" onclick="closeModal('deliveryModal')">Cancel</button>
       <button class="btn btn-primary" id="saveDeliveryBtn" onclick="saveDelivery()">Add Delivery</button>
     </div>
+  </div>
+</div>
+
+<!-- ─── MAP PICKER OVERLAY ────────────────────────────── -->
+<div id="mapPickerOverlay" style="display:none;">
+  <div id="mapPickerModal">
+    <div id="mapPickerPanel">
+      <h3>📍 Drop a Pin</h3>
+      <p>Click anywhere on the map to place your pin. Drag to fine-tune the position.</p>
+      <div id="pinCoordinates" style="color:rgba(255,255,255,0.4);font-style:italic;">No pin placed yet</div>
+      <div id="resolvedAddress"></div>
+      <div id="manualCoordsSection">
+        <label>Or paste coordinates (iPhone / Apple Maps):</label>
+        <input id="manualLat" placeholder="Latitude" type="number" step="any">
+        <input id="manualLng" placeholder="Longitude" type="number" step="any">
+        <button id="manualCoordsBtn" type="button">Use These Coordinates</button>
+      </div>
+      <button id="confirmPinBtn" type="button">✓ Use This Location</button>
+      <button id="cancelPinBtn" type="button">✗ Cancel</button>
+    </div>
+    <div id="mapPickerMap"></div>
   </div>
 </div>
 
@@ -853,14 +911,13 @@ let rockyState = 'idle';    // 'idle' | 'loading' | 'suggested' | 'confirmed'
 let deliveryPinLat = null;
 let deliveryPinLng = null;
 let locationLinkDebounce = null;
-let pinDropMapInstance = null;
-let pinDropMarker = null;
 let activeLocTab = 'link';
 
 // ─── MAP GLOBALS ─────────────────────────────────
 let map = null;
-let deliveryMarkers = {};  // keyed by delivery _id
-let driverMarkers = {};    // keyed by driverId
+let deliveryInfoWindow = null;   // shared Google Maps InfoWindow for all markers
+let deliveryMarkers = {};        // keyed by delivery _id
+let driverMarkers = {};          // keyed by driverId
 let driverRefreshTimer = null;
 
 // ═══════════════════════════════════════════════════════
@@ -2329,6 +2386,11 @@ const CONROE_YARD_NAME = 'Conroe Yard';
 const CONROE_YARD_ADDR = '14211 Stuebner Airline Rd, Houston, TX 77069';
 
 function openAddDelivery() {
+  deliveryPinLat = null;
+  deliveryPinLng = null;
+  window._pinnedLat = null;
+  window._pinnedLng = null;
+  window._resolvedAddress = null;
   resetLocationLink();
   document.getElementById('delDate').value = formatDateISO(currentDate);
   document.getElementById('delOrigin').value = '';
@@ -2819,18 +2881,21 @@ const STATUS_COLORS = {
 
 function initMap() {
   if (map) return;
-  map = L.map('dispatchMap').setView([30.31, -95.46], 10);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap',
-    maxZoom: 18
-  }).addTo(map);
+  map = new google.maps.Map(document.getElementById('dispatchMap'), {
+    center: { lat: 30.31, lng: -95.46 },
+    zoom: 10,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    styles: [{ featureType: 'all', elementType: 'labels.text.fill', stylers: [{ color: '#ffffff' }] }]
+  });
 }
 
 function toggleMap() {
   const panel = document.getElementById('mapPanel');
   panel.classList.toggle('map-visible');
-  if (panel.classList.contains('map-visible')) {
-    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+  if (panel.classList.contains('map-visible') && map) {
+    setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
   }
 }
 
@@ -2888,27 +2953,39 @@ async function processGeocodeQueue() {
 function addDeliveryMarker(d, lat, lng, opts = {}) {
   if (!map) return;
   // Remove old marker if exists
-  if (deliveryMarkers[d._id]) { map.removeLayer(deliveryMarkers[d._id]); }
+  if (deliveryMarkers[d._id]) { deliveryMarkers[d._id].setMap(null); }
 
   const color = opts.color || STATUS_COLORS[d.status] || '#6b7280';
   const statusLabel = opts.statusLabel || d.status;
-  const marker = L.circleMarker([lat, lng], {
-    radius: 9,
-    fillColor: color,
-    color: '#fff',
-    weight: 2,
-    opacity: 1,
-    fillOpacity: 0.85
-  }).addTo(map);
 
-  marker.bindPopup(`
-    <div style="font-family:sans-serif;min-width:160px;">
+  const marker = new google.maps.Marker({
+    position: { lat, lng },
+    map,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 9,
+      fillColor: color,
+      fillOpacity: 0.85,
+      strokeColor: '#ffffff',
+      strokeWeight: 2
+    },
+    title: d.customerName || ''
+  });
+
+  const popupContent = `
+    <div style="font-family:sans-serif;min-width:160px;padding:4px;">
       <strong>${esc(d.customerName || 'Unknown')}</strong><br>
       ${esc(d.materialName || '?')} &middot; ${fmtQty(d)}<br>
       <span style="color:#666;font-size:12px;">${esc(d.deliveryAddress || '')}</span><br>
       <span style="color:${color};font-weight:600;font-size:12px;">${statusLabel}</span>
-    </div>
-  `);
+    </div>`;
+
+  marker._popupContent = popupContent;
+  marker.addListener('click', () => {
+    if (!deliveryInfoWindow) deliveryInfoWindow = new google.maps.InfoWindow();
+    deliveryInfoWindow.setContent(marker._popupContent);
+    deliveryInfoWindow.open(map, marker);
+  });
 
   deliveryMarkers[d._id] = marker;
 }
@@ -2917,7 +2994,7 @@ function updateMapPins() {
   if (!map) return;
   // Clear old markers and discard any stale geocode queue items so they
   // don't overwrite fresh Rocky-purple pins when they eventually resolve.
-  Object.values(deliveryMarkers).forEach(m => map.removeLayer(m));
+  Object.values(deliveryMarkers).forEach(m => m.setMap(null));
   deliveryMarkers = {};
   geocodeQueue.length = 0;
 
@@ -2932,14 +3009,21 @@ function updateMapPins() {
 function panToDelivery(deliveryId) {
   const marker = deliveryMarkers[deliveryId];
   if (marker && map) {
-    map.setView(marker.getLatLng(), 14);
-    marker.openPopup();
+    map.panTo(marker.getPosition());
+    map.setZoom(14);
+    if (!deliveryInfoWindow) deliveryInfoWindow = new google.maps.InfoWindow();
+    deliveryInfoWindow.setContent(marker._popupContent);
+    deliveryInfoWindow.open(map, marker);
     // On mobile, ensure map is visible
     const panel = document.getElementById('mapPanel');
     if (!panel.classList.contains('map-visible') && window.innerWidth <= 1024) {
       panel.classList.add('map-visible');
-      setTimeout(() => map.invalidateSize(), 100);
-      setTimeout(() => { map.setView(marker.getLatLng(), 14); marker.openPopup(); }, 200);
+      setTimeout(() => {
+        google.maps.event.trigger(map, 'resize');
+        map.panTo(marker.getPosition());
+        map.setZoom(14);
+        deliveryInfoWindow.open(map, marker);
+      }, 150);
     }
   }
 }
@@ -2956,13 +3040,13 @@ async function refreshDriverLocations() {
     const activeIds = new Set(locations.map(l => l.driverId));
     Object.keys(driverMarkers).forEach(id => {
       if (!activeIds.has(id)) {
-        map.removeLayer(driverMarkers[id]);
+        driverMarkers[id].setMap(null);
         delete driverMarkers[id];
       }
     });
 
     locations.forEach(loc => {
-      const latlng = [loc.lat, loc.lng];
+      const pos = { lat: loc.lat, lng: loc.lng };
       const ago = Math.round((Date.now() - new Date(loc.timestamp).getTime()) / 60000);
       const truck = trucks.find(t => t.defaultDriver?.id === loc.driverId);
       const truckNum = truck ? truck.truckNumber : null;
@@ -2970,23 +3054,36 @@ async function refreshDriverLocations() {
         ? `${truckNum} — ${esc(loc.driverName || loc.driverId)}`
         : esc(loc.driverName || loc.driverId);
       const popupHtml = `
-        <div style="font-family:sans-serif;">
+        <div style="font-family:sans-serif;padding:4px;">
           <strong>🚛 ${label}</strong><br>
           <span style="color:#666;font-size:12px;">Updated ${ago}m ago</span>
         </div>`;
 
       if (driverMarkers[loc.driverId]) {
-        driverMarkers[loc.driverId].setLatLng(latlng);
-        driverMarkers[loc.driverId].setPopupContent(popupHtml);
+        driverMarkers[loc.driverId].setPosition(pos);
+        driverMarkers[loc.driverId]._popupContent = popupHtml;
       } else {
-        const icon = L.divIcon({
-          className: '',
-          html: '<div style="background:#e67e22;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);">🚛</div>',
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
+        const marker = new google.maps.Marker({
+          position: pos,
+          map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 14,
+            fillColor: '#e67e22',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          },
+          label: { text: '🚛', fontSize: '13px', color: '#fff' },
+          title: label,
+          zIndex: 10
         });
-        const marker = L.marker(latlng, { icon }).addTo(map);
-        marker.bindPopup(popupHtml);
+        marker._popupContent = popupHtml;
+        marker.addListener('click', () => {
+          if (!deliveryInfoWindow) deliveryInfoWindow = new google.maps.InfoWindow();
+          deliveryInfoWindow.setContent(marker._popupContent);
+          deliveryInfoWindow.open(map, marker);
+        });
         driverMarkers[loc.driverId] = marker;
       }
     });
@@ -3265,58 +3362,200 @@ function switchLocTab(tab) {
   document.getElementById('locTabMap').classList.toggle('active', tab === 'map');
   document.getElementById('locPanelLink').style.display = tab === 'link' ? 'block' : 'none';
   document.getElementById('locPanelMap').style.display = tab === 'map' ? 'block' : 'none';
-
-  if (tab === 'map') {
-    initPinDropMap();
-  }
+  if (tab === 'map') openMapPicker();
 }
 
-function initPinDropMap() {
-  if (pinDropMapInstance) {
-    setTimeout(() => pinDropMapInstance.invalidateSize(), 150);
-    return;
-  }
-  pinDropMapInstance = L.map('pinDropMap').setView([30.3119, -95.4561], 11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 18
-  }).addTo(pinDropMapInstance);
+// ─── GOOGLE MAPS LOADER ──────────────────────────────
+async function loadGoogleMaps() {
+  if (window.google && window.google.maps) return; // already loaded
+  const res = await fetch('/.netlify/functions/maps-config');
+  const { apiKey } = await res.json();
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=_onGoogleMapsReady`;
+    script.async = true;
+    window._onGoogleMapsReady = resolve;
+    document.head.appendChild(script);
+  });
+}
 
-  pinDropMapInstance.on('click', function(e) {
-    placePin(e.latlng.lat, e.latlng.lng);
+// ─── MAP PICKER OVERLAY ──────────────────────────────
+function openMapPicker() {
+  document.getElementById('mapPickerOverlay').style.display = 'flex';
+
+  const address = document.getElementById('delAddress').value.trim();
+  const city    = document.getElementById('delCity').value.trim();
+  const defaultCenter = { lat: 30.3119, lng: -95.4561 };
+
+  const pickerMap = new google.maps.Map(document.getElementById('mapPickerMap'), {
+    center: defaultCenter,
+    zoom: 11,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false
   });
 
-  setTimeout(() => pinDropMapInstance.invalidateSize(), 250);
-}
+  let pickerMarker = null;
+  const geocoder = new google.maps.Geocoder();
 
-function placePin(lat, lng) {
-  if (pinDropMarker) {
-    pinDropMarker.setLatLng([lat, lng]);
-  } else {
-    pinDropMarker = L.marker([lat, lng], { draggable: true }).addTo(pinDropMapInstance);
-    pinDropMarker.on('dragend', function(e) {
-      const pos = e.target.getLatLng();
-      placePin(pos.lat, pos.lng);
+  // Zoom to address+city if already entered
+  if (address && city) {
+    geocoder.geocode({ address: `${address}, ${city}, TX` }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        pickerMap.panTo(results[0].geometry.location);
+        pickerMap.setZoom(15);
+      }
     });
   }
-  applyParsedCoords(lat, lng);
+
+  // Click to drop/move pin
+  pickerMap.addListener('click', (e) => {
+    if (pickerMarker) {
+      pickerMarker.setPosition(e.latLng);
+    } else {
+      pickerMarker = new google.maps.Marker({
+        position: e.latLng,
+        map: pickerMap,
+        draggable: true,
+        title: 'Delivery Location'
+      });
+      pickerMarker.addListener('dragend', (ev) => updatePin(ev.latLng, geocoder));
+    }
+    updatePin(e.latLng, geocoder);
+  });
+
+  window._mapPickerMap      = pickerMap;
+  window._mapPickerMarker   = pickerMarker;
+  window._mapPickerGeocoder = geocoder;
+
+  // Re-expose marker reference when it gets created inside the click listener
+  Object.defineProperty(window, '_mapPickerMarker', {
+    get: () => pickerMarker,
+    set: (v) => { pickerMarker = v; },
+    configurable: true
+  });
+}
+
+function updatePin(latLng, geocoder) {
+  const lat = latLng.lat();
+  const lng = latLng.lng();
+
+  document.getElementById('pinCoordinates').innerHTML =
+    `<strong>Lat:</strong> ${lat.toFixed(6)}<br><strong>Lng:</strong> ${lng.toFixed(6)}`;
+
+  geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      document.getElementById('resolvedAddress').innerHTML =
+        `<strong>Address:</strong><br>${results[0].formatted_address}`;
+      window._resolvedAddress = results[0];
+    }
+  });
+
+  window._pinnedLat = lat;
+  window._pinnedLng = lng;
+}
+
+// Task 3 — geocode address fields to re-center map inline (blur listener)
+function geocodeModalAddress() {
+  if (!window.google || !map) return;
+  const address = document.getElementById('delAddress').value.trim();
+  const city    = document.getElementById('delCity').value.trim();
+  if (!address || !city) return;
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ address: `${address}, ${city}, TX` }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      const loc = results[0].geometry.location;
+      map.panTo(loc);
+      map.setZoom(15);
+    }
+  });
 }
 
 function resetPinDrop() {
-  if (pinDropMarker && pinDropMapInstance) {
-    pinDropMapInstance.removeLayer(pinDropMarker);
-    pinDropMarker = null;
-  }
+  window._pinnedLat       = null;
+  window._pinnedLng       = null;
+  window._resolvedAddress = null;
+  window._mapPickerMap    = null;
+  window._mapPickerMarker = null;
+  const statusEl = document.getElementById('pinDropStatus');
+  if (statusEl) statusEl.textContent = 'No pin placed yet.';
+  document.getElementById('pinCoordinates').innerHTML = '<span style="color:rgba(255,255,255,0.4);font-style:italic;">No pin placed yet</span>';
+  document.getElementById('resolvedAddress').innerHTML = '';
+}
+
+// ─── MAP PICKER — Confirm / Cancel / Manual coords ───
+function _setupMapPickerHandlers() {
+  document.getElementById('confirmPinBtn').addEventListener('click', () => {
+    if (!window._pinnedLat || !window._pinnedLng) {
+      alert('Please click on the map to drop a pin first.');
+      return;
+    }
+    const resolved = window._resolvedAddress;
+    if (resolved) {
+      const c = resolved.address_components;
+      const streetNum = c.find(x => x.types.includes('street_number'))?.long_name || '';
+      const street    = c.find(x => x.types.includes('route'))?.long_name || '';
+      const city      = c.find(x => x.types.includes('locality'))?.long_name || '';
+      const zip       = c.find(x => x.types.includes('postal_code'))?.long_name || '';
+      if (streetNum || street) document.getElementById('delAddress').value = `${streetNum} ${street}`.trim();
+      if (city) document.getElementById('delCity').value = city;
+      if (zip)  document.getElementById('delZip').value  = zip;
+    }
+    // Save coords — picked up by basePayload via deliveryPinLat/Lng
+    deliveryPinLat = window._pinnedLat;
+    deliveryPinLng = window._pinnedLng;
+    // Update status label in the tab panel
+    const statusEl = document.getElementById('pinDropStatus');
+    if (statusEl) statusEl.innerHTML = `✅ <strong>${window._pinnedLat.toFixed(5)}, ${window._pinnedLng.toFixed(5)}</strong>`;
+    document.getElementById('mapPickerOverlay').style.display = 'none';
+  });
+
+  document.getElementById('cancelPinBtn').addEventListener('click', () => {
+    document.getElementById('mapPickerOverlay').style.display = 'none';
+    window._pinnedLat       = null;
+    window._pinnedLng       = null;
+    window._resolvedAddress = null;
+  });
+
+  document.getElementById('manualCoordsBtn').addEventListener('click', () => {
+    const lat = parseFloat(document.getElementById('manualLat').value);
+    const lng = parseFloat(document.getElementById('manualLng').value);
+    if (isNaN(lat) || isNaN(lng)) {
+      alert('Please enter valid latitude and longitude numbers.');
+      return;
+    }
+    const latLng = new google.maps.LatLng(lat, lng);
+    const pickerMap = window._mapPickerMap;
+    if (pickerMap) {
+      pickerMap.panTo(latLng);
+      pickerMap.setZoom(16);
+      if (window._mapPickerMarker) {
+        window._mapPickerMarker.setPosition(latLng);
+      } else {
+        window._mapPickerMarker = new google.maps.Marker({
+          position: latLng,
+          map: pickerMap,
+          draggable: true
+        });
+      }
+    }
+    updatePin(latLng, window._mapPickerGeocoder);
+  });
 }
 
 // ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   renderDateLabel();
+  await loadGoogleMaps();
   initMap();
   loadAll();
   startDriverRefresh();
+  _setupMapPickerHandlers();
+  // Task 3 — re-center map when address/city fields lose focus
+  document.getElementById('delAddress').addEventListener('blur', geocodeModalAddress);
+  document.getElementById('delCity').addEventListener('blur', geocodeModalAddress);
 });
 </script>
 </body>
