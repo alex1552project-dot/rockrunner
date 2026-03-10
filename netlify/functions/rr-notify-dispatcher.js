@@ -13,17 +13,25 @@ async function connectToDatabase() {
   return cachedDb;
 }
 
+function toE164(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+  return '+' + digits;
+}
+
 async function sendSms(to, content) {
+  const recipient = toE164(to);
   const res = await fetch('https://api.brevo.com/v3/transactionalSMS/sms', {
     method: 'POST',
     headers: {
       'api-key': process.env.BREVO_API_KEY,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ sender: 'RockRunner', recipient: to, content })
+    body: JSON.stringify({ sender: 'RockRunner', recipient, content })
   });
   const data = await res.json();
-  console.log('[rr-notify] Brevo response for', to, ':', JSON.stringify(data));
+  console.log('[rr-notify] Brevo response for', recipient, ':', JSON.stringify(data));
   return { status: res.status, messageId: data.messageId || null, error: data.code || data.message || null };
 }
 
@@ -64,7 +72,7 @@ exports.handler = async (event) => {
     // Build message
     const dateStr = deliveryDate ? ` for ${deliveryDate}` : '';
     const notesStr = notes ? ` — "${notes}"` : '';
-    const message = `🚛 New delivery added by ${addedBy || 'RockRunner'}${dateStr}:\n${customer || 'Unknown customer'}${address ? '\n' + address : ''}${notesStr}`;
+    const message = `New delivery added by ${addedBy || 'RockRunner'}${dateStr}:\n${customer || 'Unknown customer'}${address ? '\n' + address : ''}${notesStr}`;
 
     // Send to each dispatcher
     const results = await Promise.all(
