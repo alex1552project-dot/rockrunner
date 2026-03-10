@@ -421,6 +421,66 @@
 </head>
 <body>
 
+<!-- ─── PIN LOGIN SCREEN ─────────────────────────────── -->
+<div id="rrLoginScreen" style="
+  position:fixed; inset:0; z-index:9999;
+  background:#0b1426;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-family:inherit;
+">
+  <div style="text-align:center; margin-bottom:32px;">
+    <div style="font-size:40px; margin-bottom:8px;">🚛</div>
+    <div style="font-size:22px; font-weight:700; color:#e2e8f0; letter-spacing:0.02em;">RockRunner</div>
+    <div style="font-size:13px; color:#8892a4; margin-top:4px;">Enter your PIN to continue</div>
+  </div>
+
+  <!-- PIN dots -->
+  <div style="display:flex; gap:14px; margin-bottom:28px;" id="rrPinDots">
+    <div class="rr-dot" id="rrd1"></div>
+    <div class="rr-dot" id="rrd2"></div>
+    <div class="rr-dot" id="rrd3"></div>
+    <div class="rr-dot" id="rrd4"></div>
+  </div>
+
+  <!-- Error message -->
+  <div id="rrPinError" style="height:20px; margin-bottom:12px; font-size:13px; color:#ef4444; font-weight:600;"></div>
+
+  <!-- Keypad -->
+  <div style="display:grid; grid-template-columns:repeat(3,72px); gap:10px;">
+    <button class="rr-key" onclick="rrKey('1')">1</button>
+    <button class="rr-key" onclick="rrKey('2')">2</button>
+    <button class="rr-key" onclick="rrKey('3')">3</button>
+    <button class="rr-key" onclick="rrKey('4')">4</button>
+    <button class="rr-key" onclick="rrKey('5')">5</button>
+    <button class="rr-key" onclick="rrKey('6')">6</button>
+    <button class="rr-key" onclick="rrKey('7')">7</button>
+    <button class="rr-key" onclick="rrKey('8')">8</button>
+    <button class="rr-key" onclick="rrKey('9')">9</button>
+    <button class="rr-key" onclick="rrKey('back')" style="font-size:18px;">⌫</button>
+    <button class="rr-key" onclick="rrKey('0')">0</button>
+    <div></div>
+  </div>
+
+  <div id="rrPinSpinner" style="display:none; margin-top:24px; color:#8892a4; font-size:13px;">Checking PIN…</div>
+</div>
+
+<style>
+  .rr-dot {
+    width:16px; height:16px; border-radius:50%;
+    background:#1e2d4a; border:2px solid #3b82f6;
+    transition:background 0.15s;
+  }
+  .rr-dot.filled { background:#3b82f6; }
+  .rr-dot.error  { background:#ef4444; border-color:#ef4444; }
+  .rr-key {
+    height:56px; border-radius:12px;
+    background:#111d35; border:1px solid rgba(255,255,255,0.08);
+    color:#e2e8f0; font-size:20px; font-weight:600;
+    cursor:pointer; transition:background 0.1s;
+  }
+  .rr-key:active { background:#1e3a5f; }
+</style>
+
 <!-- ─── TOP BAR ──────────────────────────────────────── -->
 <div class="topbar">
   <div class="topbar-left">
@@ -439,6 +499,7 @@
     <div class="stat-pill delivered"><span class="num" id="statDelivered">0</span> Delivered</div>
   </div>
   <div class="topbar-actions">
+    <span id="rrUserBadge" style="font-size:12px; color:#8892a4; margin-right:4px;"></span>
     <button class="map-toggle-btn" onclick="toggleMap()">🗺 Map</button>
     <button class="btn btn-primary" onclick="openAddDelivery()">+ Delivery</button>
     <button class="btn btn-success" id="finalizeBtn" onclick="finalizeSchedule()" disabled>📤 Finalize &amp; Notify</button>
@@ -894,6 +955,7 @@
 // GLOBALS
 // ═══════════════════════════════════════════════════════
 const API = '/.netlify/functions';
+let currentUser = null; // set after PIN login
 let currentDate = new Date();
 let trucks = [];
 let deliveries = [];
@@ -2655,7 +2717,7 @@ async function saveDelivery() {
     deliveryLng: deliveryPinLng || null,
     truckId: delTruckId,
     truckNumber: delTruckNumber,
-    createdBy: 'dispatcher'
+    createdBy: currentUser ? currentUser.name : 'RockRunner'
   };
 
   // Stagger start times for multi-load
@@ -2703,6 +2765,18 @@ async function saveDelivery() {
         }).catch(() => {});
       }
       toast(totalLoads > 1 ? `${totalLoads} loads scheduled` : 'Delivery added');
+      // Notify dispatcher(s) via SMS — fire and forget
+      fetch(`${API}/rr-notify-dispatcher`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          addedBy: currentUser ? currentUser.name : 'RockRunner',
+          customer: basePayload.customerName,
+          address: [basePayload.deliveryAddress, basePayload.deliveryCity].filter(Boolean).join(', '),
+          deliveryDate: basePayload.deliveryDate,
+          notes: basePayload.deliveryNotes || ''
+        })
+      }).catch(() => {});
       closeModal('deliveryModal');
       // Reset unit toggle
       delQtyUnit = 'tons';
@@ -3546,6 +3620,64 @@ function _setupMapPickerHandlers() {
 // ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
+// ─── PIN LOGIN ───────────────────────────────────────────────────────────────
+let rrPin = '';
+
+function rrKey(val) {
+  const error = document.getElementById('rrPinError');
+  error.textContent = '';
+  document.querySelectorAll('.rr-dot').forEach(d => d.classList.remove('error'));
+
+  if (val === 'back') {
+    rrPin = rrPin.slice(0, -1);
+  } else if (rrPin.length < 4) {
+    rrPin += val;
+  }
+  rrUpdateDots();
+  if (rrPin.length === 4) rrValidate();
+}
+
+function rrUpdateDots() {
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById(`rrd${i}`);
+    dot.classList.toggle('filled', i <= rrPin.length);
+  }
+}
+
+async function rrValidate() {
+  document.getElementById('rrPinSpinner').style.display = 'block';
+  try {
+    const res = await fetch(`${API}/rr-auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: rrPin })
+    });
+    const data = await res.json();
+    if (data.success) {
+      currentUser = data.user;
+      document.getElementById('rrLoginScreen').style.display = 'none';
+      // Update topbar to show logged-in user
+      const userBadge = document.getElementById('rrUserBadge');
+      if (userBadge) userBadge.textContent = `${currentUser.name} (${currentUser.role})`;
+    } else {
+      document.querySelectorAll('.rr-dot').forEach(d => d.classList.add('error'));
+      document.getElementById('rrPinError').textContent = 'Incorrect PIN. Try again.';
+      setTimeout(() => {
+        rrPin = '';
+        rrUpdateDots();
+        document.querySelectorAll('.rr-dot').forEach(d => d.classList.remove('error'));
+      }, 600);
+    }
+  } catch (e) {
+    document.getElementById('rrPinError').textContent = 'Connection error. Try again.';
+    rrPin = '';
+    rrUpdateDots();
+  } finally {
+    document.getElementById('rrPinSpinner').style.display = 'none';
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', async () => {
   renderDateLabel();
   await loadGoogleMaps();
