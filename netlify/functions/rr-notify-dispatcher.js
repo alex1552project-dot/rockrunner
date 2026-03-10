@@ -13,16 +13,17 @@ async function connectToDatabase() {
   return cachedDb;
 }
 
-async function sendSms(to, body) {
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`;
-  const auth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
-  const res = await fetch(url, {
+async function sendSms(to, content) {
+  const res = await fetch('https://api.brevo.com/v3/transactionalSMS/sms', {
     method: 'POST',
-    headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ From: process.env.TWILIO_PHONE_NUMBER, To: to, Body: body }).toString()
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ sender: 'RockRunner', recipient: to, content })
   });
   const data = await res.json();
-  return { status: res.status, sid: data.sid, error: data.error_code || null };
+  return { status: res.status, messageId: data.messageId || null, error: data.code || null };
 }
 
 exports.handler = async (event) => {
