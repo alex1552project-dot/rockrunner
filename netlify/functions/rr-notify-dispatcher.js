@@ -23,7 +23,8 @@ async function sendSms(to, content) {
     body: JSON.stringify({ sender: 'RockRunner', recipient: to, content })
   });
   const data = await res.json();
-  return { status: res.status, messageId: data.messageId || null, error: data.code || null };
+  console.log('[rr-notify] Brevo response for', to, ':', JSON.stringify(data));
+  return { status: res.status, messageId: data.messageId || null, error: data.code || data.message || null };
 }
 
 exports.handler = async (event) => {
@@ -70,7 +71,7 @@ exports.handler = async (event) => {
       dispatchers.map(d => sendSms(d.phone, message))
     );
 
-    console.log('[rr-notify] SMS results:', results);
+    console.log('[rr-notify] SMS results:', JSON.stringify(results));
     return {
       statusCode: 200,
       headers,
