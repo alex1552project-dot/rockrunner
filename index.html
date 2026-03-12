@@ -937,8 +937,27 @@
       <button class="btn-cancel-delivery" id="editDelCancelBtn" onclick="cancelEditDelivery()">🗑 Cancel Delivery</button>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-secondary" onclick="closeEditDelivery()">Close</button>
+        <button class="btn" style="background:#16a34a;color:#fff;border:none;" onclick="promptCopyDate()">Copy</button>
         <button class="btn btn-primary" id="editDelSaveBtn" onclick="saveEditDelivery()">Save Changes</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Copy Date Picker Modal -->
+<div class="modal-overlay" id="copyDateModal" style="z-index:1100;">
+  <div class="modal-card" style="max-width:340px;">
+    <div class="modal-header">
+      <h3>Copy to Date</h3>
+      <button class="modal-close" onclick="closeModal('copyDateModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px;">Select a future delivery date</label>
+      <input type="date" id="copyDateInput" style="width:100%;padding:9px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:7px;color:#fff;font-size:14px;">
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeModal('copyDateModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmCopyDate()">Confirm</button>
     </div>
   </div>
 </div>
@@ -2122,6 +2141,34 @@ function closeEditDelivery() {
   editingDeliveryId = null;
 }
 
+function promptCopyDate() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const dateInput = document.getElementById('copyDateInput');
+  dateInput.min = tomorrowStr;
+  dateInput.value = tomorrowStr;
+  openModal('copyDateModal');
+}
+
+function confirmCopyDate() {
+  const newDate = document.getElementById('copyDateInput').value;
+  if (!newDate) { toast('Please select a date', true); return; }
+  closeModal('copyDateModal');
+  // Switch form to copy mode
+  editingDeliveryId = null;
+  document.getElementById('editDelDate').value = newDate;
+  document.getElementById('editDelSaveBtn').textContent = 'Save Copy';
+  document.getElementById('editDelCancelBtn').style.display = 'none';
+  const banner = document.getElementById('editDelStatusBanner');
+  banner.style.background = 'rgba(22,163,74,0.08)';
+  banner.style.border = '1px solid rgba(22,163,74,0.3)';
+  banner.style.color = '#4ade80';
+  banner.textContent = 'Copying delivery — update any fields then click Save Copy';
+  // Re-enable all inputs (in case source was locked)
+  document.querySelectorAll('#editDeliveryModal input, #editDeliveryModal select').forEach(el => { el.disabled = false; });
+}
+
 async function saveEditDelivery() {
   if (!editingDeliveryId) return;
 
@@ -2182,20 +2229,39 @@ async function saveEditDelivery() {
   if (!updateBody.customerName) { toast('Customer name is required', true); return; }
   if (!updateBody.deliveryDate) { toast('Delivery date is required', true); return; }
 
+  const isCopy = !editingDeliveryId;
+
   try {
-    const res = await fetch(`${API}/dispatch`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateBody)
-    });
+    let res;
+    if (isCopy) {
+      const postBody = { ...updateBody };
+      delete postBody.id;
+      delete postBody.updatedBy;
+      postBody.createdBy = currentUser ? currentUser.name : 'RockRunner';
+      if (editDeliveryPinLat !== null) {
+        postBody.deliveryLat = editDeliveryPinLat;
+        postBody.deliveryLng = editDeliveryPinLng;
+      }
+      res = await fetch(`${API}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postBody)
+      });
+    } else {
+      res = await fetch(`${API}/dispatch`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateBody)
+      });
+    }
     const data = await res.json();
-    if (data.success) {
-      toast('Delivery updated');
+    if (res.ok && (data.success || data._id || data.insertedId)) {
+      toast(isCopy ? 'Delivery copied' : 'Delivery updated');
       closeEditDelivery();
       await loadDeliveries();
       render();
     } else {
-      toast('Error saving changes', true);
+      toast(isCopy ? 'Error saving copy' : 'Error saving changes', true);
     }
   } catch(e) { toast('Error saving changes', true); console.error(e); }
 }
