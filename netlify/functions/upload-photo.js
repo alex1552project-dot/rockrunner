@@ -39,7 +39,7 @@ exports.handler = async (event) => {
 
     // Generate signature for signed upload
     const timestamp = Math.floor(Date.now() / 1000);
-    const folder = 'rockrunner/deliveries';
+    const folder = 'delivery_tickets';
     const publicId = deliveryId ? `delivery-${deliveryId}-${timestamp}` : `delivery-${timestamp}`;
 
     // Build signature string (params in alphabetical order)
