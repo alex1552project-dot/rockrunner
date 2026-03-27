@@ -266,6 +266,7 @@ exports.handler = async (event) => {
           updatedBy: body.createdBy || 'system',
           notes: 'Order created'
         }],
+        paid: body.paid != null ? body.paid : null,
         createdBy: body.createdBy || 'system'
       };
 
@@ -461,6 +462,7 @@ exports.handler = async (event) => {
       if (body.sourceName !== undefined) update.$set.sourceName = body.sourceName;
       if (body.sourceAddress !== undefined) update.$set.sourceAddress = body.sourceAddress;
       if (body.poNumber !== undefined) update.$set.poNumber = body.poNumber;
+      if (body.paid != null) update.$set.paid = body.paid;
 
       // Push history entry if it has a status
       if (historyEntry.status) {
