@@ -143,6 +143,14 @@
     .badge-scheduled { background:rgba(234,179,8,0.15); color:var(--yellow); }
     .badge-enroute { background:rgba(34,197,94,0.15); color:var(--green); }
     .badge-delivered { background:rgba(59,130,246,0.15); color:var(--blue); }
+    .paid-toggle { display:flex; gap:8px; margin-top:4px; }
+    .paid-opt { flex:1; padding:10px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+    .paid-opt:hover { border-color:rgba(255,255,255,0.3); }
+    .paid-opt.is-paid { background:#16a34a; border-color:#16a34a; color:#fff; }
+    .paid-opt.is-notpaid { background:#1a1a1a; border-color:#555; color:#fff; }
+    .pay-badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; vertical-align:middle; }
+    .pay-badge.paid { background:#16a34a; color:#fff; }
+    .pay-badge.notpaid { background:#111; color:#fff; border:1px solid #444; }
 
     .empty-state {
       text-align:center; padding:32px; color:var(--text-muted); font-size:14px;
@@ -604,7 +612,7 @@
       <div class="form-grid">
         <div class="form-row">
           <label>Source</label>
-          <select id="delSource">
+          <select id="delSource" onchange="onAddDelSourceChange()">
             <option>Yard Sale</option>
             <option>Texas Got Rocks</option>
             <option>T&amp;C Materials</option>
@@ -613,6 +621,13 @@
         <div class="form-row">
           <label>Customer Name *</label>
           <input type="text" id="delCustomer" placeholder="John Smith">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Payment Status *</label>
+        <div class="paid-toggle">
+          <button type="button" class="paid-opt" id="delPaidOptPaid" onclick="setDeliveryPaid(true)">✓ PAID</button>
+          <button type="button" class="paid-opt" id="delPaidOptNotPaid" onclick="setDeliveryPaid(false)">✗ NOT PAID</button>
         </div>
       </div>
       <div class="form-grid">
@@ -679,6 +694,34 @@
         <label>Custom Material Name *</label>
         <input type="text" id="delMaterialCustom" placeholder="Enter material name...">
       </div>
+      <div id="delSpecialtyRow" style="display:none;background:rgba(0,228,184,0.06);border:1px solid rgba(0,228,184,0.25);border-radius:8px;padding:12px;margin-top:2px;">
+        <div style="font-size:11px;font-weight:700;color:#00e4b8;letter-spacing:.07em;margin-bottom:10px;">SPECIALTY / ONE-OFF ITEM</div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <label>Product Name *</label>
+          <input type="text" id="delSpecialtyName" placeholder="e.g. Custom Rip Rap, Imported Flagstone...">
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Unit Price *</label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;">$</span>
+              <input type="number" id="delSpecialtyPrice" step="0.01" min="0" placeholder="0.00" style="padding-left:22px;">
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Unit *</label>
+            <select id="delSpecialtyUnit">
+              <option value="ton">Ton</option>
+              <option value="CYD">CYD</option>
+              <option value="each">Each</option>
+              <option value="sqft">Sq Ft</option>
+              <option value="lf">Linear Ft</option>
+              <option value="lb">Lb</option>
+              <option value="load">Load</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div class="form-grid">
         <div class="form-row">
           <label>Delivery Date *</label>
@@ -716,6 +759,17 @@
       <div class="form-row">
         <label>Notes</label>
         <input type="text" id="delNotes" placeholder="Gate code, special instructions...">
+      </div>
+      <div class="form-row">
+        <label>Delivery Rate <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
+        <div style="display:flex;gap:6px;">
+          <button type="button" id="delRateStdBtn" onclick="setDeliveryRateMode('standard')" style="flex:1;padding:9px 12px;border:1px solid var(--blue);border-radius:6px;background:var(--blue);color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Standard</button>
+          <button type="button" id="delRateManualBtn" onclick="setDeliveryRateMode('manual')" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,0.06);color:var(--text);cursor:pointer;font-size:13px;font-weight:600;">Manual Override</button>
+        </div>
+        <div id="delRateManualInput" style="display:none;margin-top:8px;position:relative;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;">$</span>
+          <input type="number" id="delManualRate" step="0.01" min="0" placeholder="e.g. 250.00" style="padding-left:22px;width:100%;box-sizing:border-box;">
+        </div>
       </div>
       <div class="form-row" id="delTruckRow">
         <label>Assign to Truck <span style="font-weight:400;color:var(--text-muted);">(optional — required for multi-load)</span></label>
@@ -822,7 +876,7 @@
       <div class="form-grid">
         <div class="form-row">
           <label>Source</label>
-          <select id="editDelSource">
+          <select id="editDelSource" onchange="onEditDelSourceChange()">
             <option>Yard Sale</option>
             <option>Texas Got Rocks</option>
             <option>T&amp;C Materials</option>
@@ -831,6 +885,13 @@
         <div class="form-row">
           <label>Customer Name *</label>
           <input type="text" id="editDelCustomer" placeholder="John Smith">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Payment Status *</label>
+        <div class="paid-toggle">
+          <button type="button" class="paid-opt" id="editDelPaidOptPaid" onclick="setEditDeliveryPaid(true)">✓ PAID</button>
+          <button type="button" class="paid-opt" id="editDelPaidOptNotPaid" onclick="setEditDeliveryPaid(false)">✗ NOT PAID</button>
         </div>
       </div>
       <div class="form-grid">
@@ -882,6 +943,34 @@
         <label>Custom Material Name *</label>
         <input type="text" id="editDelMaterialCustom" placeholder="Enter material name...">
       </div>
+      <div id="editDelSpecialtyRow" style="display:none;background:rgba(0,228,184,0.06);border:1px solid rgba(0,228,184,0.25);border-radius:8px;padding:12px;margin-top:2px;">
+        <div style="font-size:11px;font-weight:700;color:#00e4b8;letter-spacing:.07em;margin-bottom:10px;">SPECIALTY / ONE-OFF ITEM</div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <label>Product Name *</label>
+          <input type="text" id="editDelSpecialtyName" placeholder="e.g. Custom Rip Rap, Imported Flagstone...">
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Unit Price *</label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;">$</span>
+              <input type="number" id="editDelSpecialtyPrice" step="0.01" min="0" placeholder="0.00" style="padding-left:22px;">
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Unit *</label>
+            <select id="editDelSpecialtyUnit">
+              <option value="ton">Ton</option>
+              <option value="CYD">CYD</option>
+              <option value="each">Each</option>
+              <option value="sqft">Sq Ft</option>
+              <option value="lf">Linear Ft</option>
+              <option value="lb">Lb</option>
+              <option value="load">Load</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div class="form-grid">
         <div class="form-row">
           <label>Delivery Date *</label>
@@ -918,6 +1007,17 @@
       <div class="form-row">
         <label>Notes</label>
         <input type="text" id="editDelNotes" placeholder="Gate code, special instructions...">
+      </div>
+      <div class="form-row">
+        <label>Delivery Rate <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
+        <div style="display:flex;gap:6px;">
+          <button type="button" id="editDelRateStdBtn" onclick="setEditDeliveryRateMode('standard')" style="flex:1;padding:9px 12px;border:1px solid var(--blue);border-radius:6px;background:var(--blue);color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Standard</button>
+          <button type="button" id="editDelRateManualBtn" onclick="setEditDeliveryRateMode('manual')" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,0.06);color:var(--text);cursor:pointer;font-size:13px;font-weight:600;">Manual Override</button>
+        </div>
+        <div id="editDelRateManualInput" style="display:none;margin-top:8px;position:relative;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;">$</span>
+          <input type="number" id="editDelManualRate" step="0.01" min="0" placeholder="e.g. 250.00" style="padding-left:22px;width:100%;box-sizing:border-box;">
+        </div>
       </div>
       <div class="form-row">
         <label>Assign to Truck <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
@@ -981,6 +1081,31 @@ let products = [];
 let activeDrivers = [];
 let assigningDeliveryId = null; // for assignment modal
 let editingDeliveryId = null;   // for edit delivery modal
+let deliveryPaid = null;        // null=unset, true=paid, false=not paid (Add form)
+let editDeliveryPaid = null;    // same for Edit form
+
+function setDeliveryPaid(paid) {
+  deliveryPaid = paid;
+  document.getElementById('delPaidOptPaid').classList.toggle('is-paid', paid === true);
+  document.getElementById('delPaidOptNotPaid').classList.toggle('is-notpaid', paid === false);
+  document.getElementById('delPaidOptPaid').classList.remove('is-notpaid');
+  document.getElementById('delPaidOptNotPaid').classList.remove('is-paid');
+}
+function onAddDelSourceChange() {
+  const src = document.getElementById('delSource').value;
+  if (src === 'Texas Got Rocks' || src === 'T&C Materials') setDeliveryPaid(true);
+}
+function setEditDeliveryPaid(paid) {
+  editDeliveryPaid = paid;
+  document.getElementById('editDelPaidOptPaid').classList.toggle('is-paid', paid === true);
+  document.getElementById('editDelPaidOptNotPaid').classList.toggle('is-notpaid', paid === false);
+  document.getElementById('editDelPaidOptPaid').classList.remove('is-notpaid');
+  document.getElementById('editDelPaidOptNotPaid').classList.remove('is-paid');
+}
+function onEditDelSourceChange() {
+  const src = document.getElementById('editDelSource').value;
+  if (src === 'Texas Got Rocks' || src === 'T&C Materials') setEditDeliveryPaid(true);
+}
 
 // Rocky Suggests state
 let rockyPlan = null;
@@ -1134,12 +1259,38 @@ async function loadDrivers() {
 // ─── CUSTOM MATERIAL + CYD TOGGLE ───────────────────────
 let delQtyUnit = 'tons'; // 'tons' or 'cyd'
 
+let deliveryRateMode = 'standard';
+
 function onMaterialChange() {
   const sel = document.getElementById('delMaterial');
   const customRow = document.getElementById('delMaterialCustomRow');
+  const specialtyRow = document.getElementById('delSpecialtyRow');
   const isCustom = sel.value === '__custom__';
+  const isSpecialty = sel.value === '__specialty__';
   customRow.style.display = isCustom ? 'block' : 'none';
+  specialtyRow.style.display = isSpecialty ? 'block' : 'none';
   if (!isCustom) document.getElementById('delMaterialCustom').value = '';
+  if (!isSpecialty) {
+    document.getElementById('delSpecialtyName').value = '';
+    document.getElementById('delSpecialtyPrice').value = '';
+  }
+}
+
+function setDeliveryRateMode(mode) {
+  deliveryRateMode = mode;
+  const stdBtn = document.getElementById('delRateStdBtn');
+  const manBtn = document.getElementById('delRateManualBtn');
+  const manInput = document.getElementById('delRateManualInput');
+  if (mode === 'standard') {
+    stdBtn.style.background = 'var(--blue)'; stdBtn.style.borderColor = 'var(--blue)'; stdBtn.style.color = '#fff';
+    manBtn.style.background = 'rgba(255,255,255,0.06)'; manBtn.style.borderColor = 'var(--border)'; manBtn.style.color = 'var(--text)';
+    manInput.style.display = 'none';
+    document.getElementById('delManualRate').value = '';
+  } else {
+    manBtn.style.background = 'var(--blue)'; manBtn.style.borderColor = 'var(--blue)'; manBtn.style.color = '#fff';
+    stdBtn.style.background = 'rgba(255,255,255,0.06)'; stdBtn.style.borderColor = 'var(--border)'; stdBtn.style.color = 'var(--text)';
+    manInput.style.display = 'block';
+  }
 }
 
 function toggleQtyUnit() {
@@ -1185,6 +1336,11 @@ function populateMaterialDropdown() {
     opt.textContent = p.name;
     sel.appendChild(opt);
   });
+  // Specialty / one-off item
+  const specialtyOpt = document.createElement('option');
+  specialtyOpt.value = '__specialty__';
+  specialtyOpt.textContent = '── Specialty / One-Off Item ──';
+  sel.appendChild(specialtyOpt);
   // Custom entry option
   const customOpt = document.createElement('option');
   customOpt.value = '__custom__';
@@ -1311,9 +1467,12 @@ function renderTruckRoutes() {
         <div class="card-material"><strong>${esc(d.materialName || '?')}</strong> · ${fmtQty(d)}</div>
         <div class="card-bottom">
           <span class="card-city">${esc(d.deliveryCity || d.deliveryAddress || '—')}</span>
-          ${d.timeWindow ? (d.timeWindow === 'Morning' || d.timeWindow === 'Afternoon'
-            ? `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;${d.timeWindow === 'Morning' ? 'background:#dbeafe;color:#1d4ed8' : 'background:#fef9c3;color:#854d0e'};">${d.timeWindow === 'Morning' ? '🌅 Morning' : '☀️ Afternoon'}</span>`
-            : `<span class="card-time">${d.timeWindow}</span>`) : ''}
+          <span style="display:flex;align-items:center;gap:6px;">
+            ${d.timeWindow ? (d.timeWindow === 'Morning' || d.timeWindow === 'Afternoon'
+              ? `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;${d.timeWindow === 'Morning' ? 'background:#dbeafe;color:#1d4ed8' : 'background:#fef9c3;color:#854d0e'};">${d.timeWindow === 'Morning' ? '🌅 Morning' : '☀️ Afternoon'}</span>`
+              : `<span class="card-time">${d.timeWindow}</span>`) : ''}
+            ${d.paid === true ? '<span class="pay-badge paid">PAID</span>' : d.paid === false ? '<span class="pay-badge notpaid">NOT PAID</span>' : ''}
+          </span>
         </div>
         <button class="stop-edit-btn" onclick="event.stopPropagation();openEditDelivery('${d._id}')">✏️ Edit Delivery</button>
       </div>`;
@@ -2018,6 +2177,11 @@ function openEditDelivery(deliveryId) {
   // Source
   document.getElementById('editDelSource').value = delivery.source || 'Yard Sale';
 
+  // Payment status
+  editDeliveryPaid = delivery.paid != null ? delivery.paid : null;
+  document.getElementById('editDelPaidOptPaid').className = 'paid-opt' + (editDeliveryPaid === true ? ' is-paid' : '');
+  document.getElementById('editDelPaidOptNotPaid').className = 'paid-opt' + (editDeliveryPaid === false ? ' is-notpaid' : '');
+
   // Customer
   document.getElementById('editDelCustomer').value = delivery.customerName || '';
   document.getElementById('editDelPhone').value = delivery.customerPhone || '';
@@ -2058,18 +2222,40 @@ function openEditDelivery(deliveryId) {
   customOpt.textContent = '+ Custom material';
   matSel.appendChild(customOpt);
 
+  // Specialty option
+  const editSpecialtyOpt = document.createElement('option');
+  editSpecialtyOpt.value = '__specialty__';
+  editSpecialtyOpt.textContent = '── Specialty / One-Off Item ──';
+  matSel.appendChild(editSpecialtyOpt);
+
   const matchedProduct = products.find(p =>
     (p.id && p.id.toString() === delivery.productId) ||
     (p._id && p._id.toString() === delivery.productId) ||
     p.name === delivery.materialName
   );
-  if (matchedProduct) {
+  if (delivery.isSpecialty) {
+    matSel.value = '__specialty__';
+    document.getElementById('editDelSpecialtyRow').style.display = 'block';
+    document.getElementById('editDelSpecialtyName').value = delivery.materialName || '';
+    document.getElementById('editDelSpecialtyPrice').value = delivery.specialtyUnitPrice != null ? delivery.specialtyUnitPrice : '';
+    if (delivery.specialtyUnit) document.getElementById('editDelSpecialtyUnit').value = delivery.specialtyUnit;
+    document.getElementById('editDelMaterialCustomRow').style.display = 'none';
+  } else if (matchedProduct) {
     matSel.value = matchedProduct.id || matchedProduct._id;
     document.getElementById('editDelMaterialCustomRow').style.display = 'none';
+    document.getElementById('editDelSpecialtyRow').style.display = 'none';
   } else if (delivery.materialName) {
     matSel.value = '__custom__';
     document.getElementById('editDelMaterialCustomRow').style.display = 'block';
+    document.getElementById('editDelSpecialtyRow').style.display = 'none';
     document.getElementById('editDelMaterialCustom').value = delivery.materialName;
+  }
+
+  // Restore delivery rate
+  editDeliveryRateMode = delivery.deliveryRateType || 'standard';
+  setEditDeliveryRateMode(editDeliveryRateMode);
+  if (editDeliveryRateMode === 'manual' && delivery.deliveryRateManual != null) {
+    document.getElementById('editDelManualRate').value = delivery.deliveryRateManual;
   }
 
   // Quantity — always open in tons
@@ -2174,10 +2360,28 @@ async function saveEditDelivery() {
 
   const matSel = document.getElementById('editDelMaterial');
   const isCustomMat = matSel.value === '__custom__';
-  const materialName = isCustomMat
-    ? document.getElementById('editDelMaterialCustom').value.trim()
-    : (matSel.options[matSel.selectedIndex]?.dataset?.name || '');
-  const productId = isCustomMat ? null : (matSel.value || null);
+  const isSpecialtyMat = matSel.value === '__specialty__';
+  const specialtyEditName = isSpecialtyMat ? document.getElementById('editDelSpecialtyName').value.trim() : '';
+  const specialtyEditPrice = isSpecialtyMat ? parseFloat(document.getElementById('editDelSpecialtyPrice').value) : null;
+  const specialtyEditUnit = isSpecialtyMat ? document.getElementById('editDelSpecialtyUnit').value : null;
+  if (isSpecialtyMat) {
+    if (!specialtyEditName) { toast('Please enter the specialty product name', true); return; }
+    if (isNaN(specialtyEditPrice) || specialtyEditPrice < 0) { toast('Please enter a valid unit price', true); return; }
+  }
+  if (editDeliveryPaid === null) {
+    toast('Please select a payment status (Paid or Not Paid)', true);
+    return;
+  }
+  if (editDeliveryRateMode === 'manual') {
+    const mr = parseFloat(document.getElementById('editDelManualRate').value);
+    if (isNaN(mr) || mr < 0) { toast('Please enter a valid manual delivery rate', true); return; }
+  }
+  const materialName = isSpecialtyMat
+    ? specialtyEditName
+    : isCustomMat
+      ? document.getElementById('editDelMaterialCustom').value.trim()
+      : (matSel.options[matSel.selectedIndex]?.dataset?.name || '');
+  const productId = (isCustomMat || isSpecialtyMat) ? null : (matSel.value || null);
 
   let qtyRaw = parseFloat(document.getElementById('editDelQty').value);
   if (editDelQtyUnit === 'cyd') {
@@ -2205,6 +2409,11 @@ async function saveEditDelivery() {
     deliveryZip: document.getElementById('editDelZip').value.trim(),
     materialName,
     productId,
+    isSpecialty: isSpecialtyMat || false,
+    specialtyUnitPrice: isSpecialtyMat ? specialtyEditPrice : null,
+    specialtyUnit: isSpecialtyMat ? specialtyEditUnit : null,
+    deliveryRateType: editDeliveryRateMode,
+    deliveryRateManual: editDeliveryRateMode === 'manual' ? (parseFloat(document.getElementById('editDelManualRate').value) || null) : null,
     quantity: isNaN(qtyRaw) ? undefined : qtyRaw,
     deliveryDate: document.getElementById('editDelDate').value,
     timeWindow: document.getElementById('editDelTime').value,
@@ -2214,6 +2423,7 @@ async function saveEditDelivery() {
     deliveryNotes: document.getElementById('editDelNotes').value.trim() || null,
     truckId,
     truckNumber,
+    paid: editDeliveryPaid,
   };
 
   if (editDeliveryPinLat !== null) {
@@ -2296,10 +2506,36 @@ let editDeliveryPinLng = null;
 let editMultiLoadEstRTMin = 60;
 let editLocationLinkDebounce = null;
 
+let editDeliveryRateMode = 'standard';
+
+function setEditDeliveryRateMode(mode) {
+  editDeliveryRateMode = mode;
+  const stdBtn = document.getElementById('editDelRateStdBtn');
+  const manBtn = document.getElementById('editDelRateManualBtn');
+  const manInput = document.getElementById('editDelRateManualInput');
+  if (mode === 'standard') {
+    stdBtn.style.background = 'var(--blue)'; stdBtn.style.borderColor = 'var(--blue)'; stdBtn.style.color = '#fff';
+    manBtn.style.background = 'rgba(255,255,255,0.06)'; manBtn.style.borderColor = 'var(--border)'; manBtn.style.color = 'var(--text)';
+    manInput.style.display = 'none';
+    document.getElementById('editDelManualRate').value = '';
+  } else {
+    manBtn.style.background = 'var(--blue)'; manBtn.style.borderColor = 'var(--blue)'; manBtn.style.color = '#fff';
+    stdBtn.style.background = 'rgba(255,255,255,0.06)'; stdBtn.style.borderColor = 'var(--border)'; stdBtn.style.color = 'var(--text)';
+    manInput.style.display = 'block';
+  }
+}
+
 function onEditDelMaterialChange() {
   const sel = document.getElementById('editDelMaterial');
   const customRow = document.getElementById('editDelMaterialCustomRow');
+  const specialtyRow = document.getElementById('editDelSpecialtyRow');
   const isCustom = sel.value === '__custom__';
+  const isSpecialty = sel.value === '__specialty__';
+  specialtyRow.style.display = isSpecialty ? 'block' : 'none';
+  if (!isSpecialty) {
+    document.getElementById('editDelSpecialtyName').value = '';
+    document.getElementById('editDelSpecialtyPrice').value = '';
+  }
   customRow.style.display = isCustom ? 'block' : 'none';
   if (!isCustom) document.getElementById('editDelMaterialCustom').value = '';
   onEditDelTruckChange();
@@ -2544,6 +2780,12 @@ function openAddDelivery() {
   document.getElementById('multiLoadPreview').style.display = 'none';
   document.getElementById('saveDeliveryBtn').textContent = 'Add Delivery';
   multiLoadEstRTMin = 60;
+  // Reset paid toggle
+  deliveryPaid = null;
+  document.getElementById('delPaidOptPaid').className = 'paid-opt';
+  document.getElementById('delPaidOptNotPaid').className = 'paid-opt';
+  // Auto-set paid if current source is TGR/T&C
+  onAddDelSourceChange();
   openModal('deliveryModal');
 }
 
@@ -2724,11 +2966,15 @@ async function saveDelivery() {
   const customer = document.getElementById('delCustomer').value.trim();
   const materialSel = document.getElementById('delMaterial');
   const isCustom = materialSel.value === '__custom__';
+  const isSpecialty = materialSel.value === '__specialty__';
   const customMaterialName = isCustom ? document.getElementById('delMaterialCustom').value.trim() : '';
+  const specialtyName = isSpecialty ? document.getElementById('delSpecialtyName').value.trim() : '';
+  const specialtyPrice = isSpecialty ? parseFloat(document.getElementById('delSpecialtyPrice').value) : null;
+  const specialtyUnit = isSpecialty ? document.getElementById('delSpecialtyUnit').value : null;
   const qty = parseFloat(document.getElementById('delQty').value);
   const date = document.getElementById('delDate').value;
 
-  if (!customer || (!materialSel.value && !isCustom) || isNaN(qty) || !date) {
+  if (!customer || (!materialSel.value && !isCustom && !isSpecialty) || isNaN(qty) || !date) {
     toast('Please fill required fields', true);
     return;
   }
@@ -2736,10 +2982,24 @@ async function saveDelivery() {
     toast('Please enter the custom material name', true);
     return;
   }
+  if (isSpecialty) {
+    if (!specialtyName) { toast('Please enter the specialty product name', true); return; }
+    if (isNaN(specialtyPrice) || specialtyPrice < 0) { toast('Please enter a valid unit price', true); return; }
+  }
+  if (deliveryPaid === null) {
+    toast('Please select a payment status (Paid or Not Paid)', true);
+    return;
+  }
+  if (deliveryRateMode === 'manual') {
+    const mr = parseFloat(document.getElementById('delManualRate').value);
+    if (isNaN(mr) || mr < 0) { toast('Please enter a valid manual delivery rate', true); return; }
+  }
 
-  const materialName = isCustom
-    ? customMaterialName
-    : (materialSel.options[materialSel.selectedIndex].dataset.name || materialSel.options[materialSel.selectedIndex].text);
+  const materialName = isSpecialty
+    ? specialtyName
+    : isCustom
+      ? customMaterialName
+      : (materialSel.options[materialSel.selectedIndex].dataset.name || materialSel.options[materialSel.selectedIndex].text);
 
   // Convert CYD to tons if dispatcher entered CYD
   let quantityTons = qty;
@@ -2768,8 +3028,13 @@ async function saveDelivery() {
     deliveryAddress: document.getElementById('delAddress').value.trim(),
     deliveryCity: document.getElementById('delCity').value.trim(),
     deliveryZip: document.getElementById('delZip').value.trim(),
-    productId: isCustom ? null : materialSel.value,
+    productId: (isCustom || isSpecialty) ? null : materialSel.value,
     materialName,
+    isSpecialty: isSpecialty || false,
+    specialtyUnitPrice: isSpecialty ? specialtyPrice : null,
+    specialtyUnit: isSpecialty ? specialtyUnit : null,
+    deliveryRateType: deliveryRateMode,
+    deliveryRateManual: deliveryRateMode === 'manual' ? (parseFloat(document.getElementById('delManualRate').value) || null) : null,
     deliveryDate: date,
     timeWindow: document.getElementById('delTime').value || null,
     deliveryNotes: document.getElementById('delNotes').value.trim(),
@@ -2780,6 +3045,7 @@ async function saveDelivery() {
     deliveryLng: deliveryPinLng || null,
     truckId: delTruckId,
     truckNumber: delTruckNumber,
+    paid: deliveryPaid,
     createdBy: currentUser ? currentUser.name : 'RockRunner'
   };
 
@@ -2851,6 +3117,15 @@ async function saveDelivery() {
       document.getElementById('delQtyLabel').textContent = 'Quantity (tons) *';
       document.getElementById('delMaterialCustomRow').style.display = 'none';
       document.getElementById('delMaterialCustom').value = '';
+      document.getElementById('delSpecialtyRow').style.display = 'none';
+      document.getElementById('delSpecialtyName').value = '';
+      document.getElementById('delSpecialtyPrice').value = '';
+      // Reset delivery rate
+      deliveryRateMode = 'standard';
+      document.getElementById('delRateStdBtn').style.cssText = 'flex:1;padding:9px 12px;border:1px solid var(--blue);border-radius:6px;background:var(--blue);color:#fff;cursor:pointer;font-size:13px;font-weight:600;';
+      document.getElementById('delRateManualBtn').style.cssText = 'flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,0.06);color:var(--text);cursor:pointer;font-size:13px;font-weight:600;';
+      document.getElementById('delRateManualInput').style.display = 'none';
+      document.getElementById('delManualRate').value = '';
       const addrInput = document.getElementById('delOriginAddr');
       addrInput.disabled = false;
       addrInput.style.opacity = '';
